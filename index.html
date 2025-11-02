@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code Marketplace</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .tagline {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 2rem;
+        }
+        
+        .section {
+            margin-bottom: 2rem;
+        }
+        
+        h2 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+        }
+        
+        .plugins {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .plugin-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .plugin-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .plugin-type {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .plugin-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        
+        .plugin-description {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .plugin-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #999;
+        }
+        
+        .installation {
+            background: #f5f5f5;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        
+        code {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 4px;
+            display: block;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            margin-top: 0.5rem;
+        }
+        
+        .tags {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .tag {
+            background: #f0f0f0;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Claude Code Marketplace</h1>
+            <p class="tagline">Curated plugins, agents, and skills for Claude Code</p>
+        </header>
+        
+        <div class="content">
+            <div class="section">
+                <h2>Installation</h2>
+                <div class="installation">
+                    <p><strong>Using chezmoi:</strong></p>
+                    <code>chezmoi external add cc --type archive --url "https://github.com/fx/cc/archive/refs/heads/main.tar.gz" --stripComponents 1 --include "agents/**" --include "commands/**" --include "skills/**"</code>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>Available Plugins</h2>
+                <div class="plugins" id="plugins-container">
+                    <!-- Plugins will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Load marketplace.json and display plugins
+        fetch('marketplace.json')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('plugins-container');
+                data.plugins.forEach(plugin => {
+                    const card = document.createElement('div');
+                    card.className = 'plugin-card';
+                    
+                    const tags = plugin.tags.map(tag => 
+                        '<span class="tag">' + tag + '</span>'
+                    ).join('');
+                    
+                    card.innerHTML = '<div class="plugin-type">' + plugin.type + '</div>' +
+                        '<div class="plugin-name">' + plugin.name + '</div>' +
+                        '<div class="plugin-description">' + plugin.description + '</div>' +
+                        '<div class="tags">' + tags + '</div>' +
+                        '<div class="plugin-meta">' +
+                        '<span>v' + plugin.version + '</span>' +
+                        '<span>by ' + plugin.author + '</span>' +
+                        '</div>';
+                    
+                    container.appendChild(card);
+                });
+            })
+            .catch(error => console.error('Error loading plugins:', error));
+    </script>
+</body>
+</html>
