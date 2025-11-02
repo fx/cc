@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "plugins": [
+    {
+      "id": "test-skill",
+      "name": "Test Skill",
+      "type": "skill",
+      "description": "A simple test skill to verify marketplace functionality",
+      "author": "fx",
+      "version": "1.0.0",
+      "path": "skills/test-skill.md",
+      "tags": ["test", "example"]
+    },
+    {
+      "id": "test-agent",
+      "name": "Test Agent",
+      "type": "agent",
+      "description": "A simple test agent to verify marketplace functionality",
+      "author": "fx",
+      "version": "1.0.0",
+      "path": "agents/test-agent.md",
+      "tags": ["test", "example"]
+    }
+  ]
+}
