@@ -1,0 +1,131 @@
+name: Test Marketplace
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate marketplace.json
+        run: |
+          echo "Validating marketplace manifest..."
+          jq empty .claude-plugin/marketplace.json
+
+          # Check required fields
+          jq -e '.name' .claude-plugin/marketplace.json > /dev/null || (echo "Missing 'name' field" && exit 1)
+          jq -e '.owner' .claude-plugin/marketplace.json > /dev/null || (echo "Missing 'owner' field" && exit 1)
+          jq -e '.plugins' .claude-plugin/marketplace.json > /dev/null || (echo "Missing 'plugins' field" && exit 1)
+
+          echo "✓ marketplace.json is valid"
+
+      - name: Validate plugin manifests
+        run: |
+          echo "Validating plugin manifests..."
+          for plugin_json in plugins/*/.claude-plugin/plugin.json; do
+            if [ -f "$plugin_json" ]; then
+              echo "Validating $plugin_json..."
+              jq empty "$plugin_json"
+
+              # Check required fields
+              plugin_dir=$(dirname "$(dirname "$plugin_json")")
+              jq -e '.name' "$plugin_json" > /dev/null || (echo "Missing 'name' in $plugin_json" && exit 1)
+              jq -e '.version' "$plugin_json" > /dev/null || (echo "Missing 'version' in $plugin_json" && exit 1)
+
+              echo "✓ $plugin_json is valid"
+            fi
+          done
+
+      - name: Verify plugin files exist
+        run: |
+          echo "Verifying plugin files..."
+          for plugin_dir in plugins/*/; do
+            plugin_name=$(basename "$plugin_dir")
+            plugin_json="$plugin_dir.claude-plugin/plugin.json"
+
+            if [ ! -f "$plugin_json" ]; then
+              echo "Missing plugin.json for $plugin_name"
+              exit 1
+            fi
+
+            # Check if referenced files exist
+            if jq -e '.skills' "$plugin_json" > /dev/null; then
+              for skill in $(jq -r '.skills[]' "$plugin_json"); do
+                skill_path="$plugin_dir$skill"
+                if [ ! -f "$skill_path" ]; then
+                  echo "Missing skill file: $skill_path"
+                  exit 1
+                fi
+                echo "✓ Found skill: $skill_path"
+              done
+            fi
+
+            if jq -e '.agents' "$plugin_json" > /dev/null; then
+              for agent in $(jq -r '.agents[]' "$plugin_json"); do
+                agent_path="$plugin_dir$agent"
+                if [ ! -f "$agent_path" ]; then
+                  echo "Missing agent file: $agent_path"
+                  exit 1
+                fi
+                echo "✓ Found agent: $agent_path"
+              done
+            fi
+          done
+
+      - name: Validate markdown frontmatter
+        run: |
+          echo "Validating markdown files..."
+          for md_file in plugins/*/*.md; do
+            if [ -f "$md_file" ] && [ "$(basename "$md_file")" != "README.md" ]; then
+              echo "Checking $md_file..."
+
+              # Check for frontmatter
+              if ! head -n 1 "$md_file" | grep -q "^---$"; then
+                echo "Warning: $md_file may be missing frontmatter"
+              else
+                echo "✓ $md_file has frontmatter"
+              fi
+            fi
+          done
+
+      - name: Verify marketplace references plugins correctly
+        run: |
+          echo "Verifying marketplace plugin references..."
+          for plugin in $(jq -r '.plugins[].name' .claude-plugin/marketplace.json); do
+            source=$(jq -r ".plugins[] | select(.name==\"$plugin\") | .source" .claude-plugin/marketplace.json)
+
+            # Handle relative paths
+            if [[ "$source" == ./* ]]; then
+              plugin_dir="${source#./}"
+              if [ ! -d "$plugin_dir" ]; then
+                echo "Plugin directory not found: $plugin_dir"
+                exit 1
+              fi
+              if [ ! -f "$plugin_dir/.claude-plugin/plugin.json" ]; then
+                echo "Plugin manifest not found: $plugin_dir/.claude-plugin/plugin.json"
+                exit 1
+              fi
+              echo "✓ Plugin '$plugin' exists at $plugin_dir"
+            fi
+          done
+
+      - name: Test marketplace accessibility (after merge)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Waiting for GitHub Pages to deploy..."
+          sleep 30
+
+          # Try to fetch marketplace.json
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://cc.fx.gd/.claude-plugin/marketplace.json)
+
+          if [ "$STATUS" = "200" ]; then
+            echo "✓ Marketplace is accessible at https://cc.fx.gd/"
+          else
+            echo "⚠ Marketplace returned status $STATUS (may take a few minutes to deploy)"
+          fi
