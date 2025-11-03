@@ -81,7 +81,7 @@ jobs:
       - name: Validate markdown frontmatter
         run: |
           echo "Validating markdown files..."
-          for md_file in plugins/*/*.md; do
+          find plugins -name '*.md' | while read -r md_file; do
             if [ -f "$md_file" ] && [ "$(basename "$md_file")" != "README.md" ]; then
               echo "Checking $md_file..."
 

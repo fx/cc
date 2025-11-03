@@ -43,7 +43,7 @@ Expected output: Confirmation that marketplace was added successfully.
 /plugin marketplace list
 ```
 
-Expected output: Should show the fx/cc marketplace with available plugins (test-skill, test-agent).
+Expected output: Should show the fx/cc marketplace with available plugin (fx-test).
 
 ### 3. View Marketplace Details
 
