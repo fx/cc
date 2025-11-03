@@ -11,8 +11,16 @@
   },
   "plugins": [
     {
-      "name": "fx-test",
-      "source": "./plugins/fx-test"
+      "name": "fx-dev",
+      "source": "./plugins/fx-dev"
+    },
+    {
+      "name": "fx-research",
+      "source": "./plugins/fx-research"
+    },
+    {
+      "name": "fx-mcp",
+      "source": "./plugins/fx-mcp"
     }
   ]
 }
