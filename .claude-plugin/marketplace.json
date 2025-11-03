@@ -11,12 +11,8 @@
   },
   "plugins": [
     {
-      "name": "test-skill",
-      "source": "./plugins/test-skill"
-    },
-    {
-      "name": "test-agent",
-      "source": "./plugins/test-agent"
+      "name": "fx-test",
+      "source": "./plugins/fx-test"
     }
   ]
 }
