@@ -11,8 +11,24 @@
   },
   "plugins": [
     {
-      "name": "fx-test",
-      "source": "./plugins/fx-test"
+      "name": "fx-sdlc",
+      "source": "./plugins/fx-sdlc"
+    },
+    {
+      "name": "fx-pr",
+      "source": "./plugins/fx-pr"
+    },
+    {
+      "name": "fx-tech",
+      "source": "./plugins/fx-tech"
+    },
+    {
+      "name": "fx-git",
+      "source": "./plugins/fx-git"
+    },
+    {
+      "name": "fx-mcp",
+      "source": "./plugins/fx-mcp"
     }
   ]
 }
