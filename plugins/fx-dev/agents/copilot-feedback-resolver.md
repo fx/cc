@@ -65,6 +65,7 @@ After PR review, use the copilot-feedback-resolver agent to ensure all automated
      - Example entry under Code Reviews: "- Do not suggest removing `.sr-only` classes - they are required accessibility utilities"
      - This ensures Copilot learns project conventions and avoids repeat false positives
      - **NOTE**: If `.github/copilot-instructions.md` is a symlink, follow it and edit the target file, do not replace the symlink
+       - Example (shell): `[ -L .github/copilot-instructions.md ] && TARGET=$(readlink -f .github/copilot-instructions.md) && echo "Edit $TARGET instead of the symlink"`
 
 5. **Delegate Current Issues**: For valid, current concerns:
    - Create a comprehensive context package including:
