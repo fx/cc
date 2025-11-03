@@ -11,20 +11,12 @@
   },
   "plugins": [
     {
-      "name": "fx-sdlc",
-      "source": "./plugins/fx-sdlc"
+      "name": "fx-dev",
+      "source": "./plugins/fx-dev"
     },
     {
-      "name": "fx-pr",
-      "source": "./plugins/fx-pr"
-    },
-    {
-      "name": "fx-tech",
-      "source": "./plugins/fx-tech"
-    },
-    {
-      "name": "fx-git",
-      "source": "./plugins/fx-git"
+      "name": "fx-research",
+      "source": "./plugins/fx-research"
     },
     {
       "name": "fx-mcp",

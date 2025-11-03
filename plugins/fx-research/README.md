@@ -1,10 +1,10 @@
-# fx-tech
+# fx-research
 
-Technology research and recommendation agent for finding and evaluating libraries, frameworks, and software solutions.
+Research tools for finding and evaluating technologies, libraries, frameworks, and software solutions.
 
 ## Overview
 
-The fx-tech plugin provides specialized technology research capabilities through the tech-scout agent, which excels at finding the best tools for specific use cases with a strong preference for self-hosted solutions.
+The fx-research plugin provides specialized research capabilities for technical decision-making. Whether you're evaluating libraries, choosing technology stacks, finding self-hosted alternatives, or researching best practices, this plugin helps you make informed, data-backed decisions.
 
 ## Components
 
@@ -137,8 +137,7 @@ Task(
 ## Integration with Other Plugins
 
 Works well with:
-- **fx-sdlc** - Research technologies during planning phase
-- **fx-pr** - Document technology choices in PRs
+- **fx-dev** - Research technologies during planning phase, document choices in PRs
 
 ## Best Practices
 
@@ -147,6 +146,7 @@ Works well with:
 3. **State use case** - Explain what problem you're solving
 4. **Consider trade-offs** - tech-scout will highlight key decision factors
 5. **Verify recommendations** - Always review the suggested technologies against your specific needs
+6. **Self-hosted first** - tech-scout prefers self-hosted solutions; explicitly mention if cloud is acceptable
 
 ## Configuration
 
@@ -173,14 +173,35 @@ If recommendations don't match your needs:
 3. Mention technologies you've already tried
 4. Clarify deployment constraints
 
+## Future Research Agents
+
+The fx-research plugin is designed to accommodate various research agents:
+- **tech-scout** (current) - Technology and library research
+- Future agents could include:
+  - Architecture pattern research
+  - Best practices research
+  - Security vulnerability research
+  - Performance optimization research
+
 ## Contributing
 
-To enhance the tech-scout agent:
+To enhance this plugin:
 
-1. Update `agents/tech-scout.md` with improved methodology
-2. Add new evaluation criteria
-3. Update README with new examples
+1. Add new research agents to `agents/`
+2. Update README with new agent descriptions
+3. Ensure consistent research methodology
 4. Test with various use cases
+
+## Installation
+
+This plugin is part of the fx/cc marketplace. To install:
+
+```bash
+# Install from marketplace
+/plugin marketplace add /path/to/fx-cc
+
+# Enable fx-research plugin when prompted
+```
 
 ## License
 
