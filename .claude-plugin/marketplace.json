@@ -1,0 +1,22 @@
+{
+  "name": "fx-cc",
+  "owner": {
+    "name": "fx",
+    "url": "https://github.com/fx"
+  },
+  "metadata": {
+    "description": "Personal Claude Code plugins, skills, and subagents",
+    "version": "0.1.0",
+    "homepage": "https://cc.fx.gd"
+  },
+  "plugins": [
+    {
+      "name": "test-skill",
+      "source": "./plugins/test-skill"
+    },
+    {
+      "name": "test-agent",
+      "source": "./plugins/test-agent"
+    }
+  ]
+}
