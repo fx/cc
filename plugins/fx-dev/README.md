@@ -25,11 +25,9 @@ The fx-dev plugin provides a comprehensive suite of tools for the entire softwar
 - **copilot-feedback-resolver** - Processes and resolves GitHub Copilot automated review comments
 - **workflow-runner** - Executes complete workflows from start to finish, ensuring all phases complete
 
-### Commands (4)
+### Commands (2)
 
-- **/issue** - Implements GitHub issues through complete SDLC workflow
-- **/coder** - Implements coding tasks using specialized agents (no GitHub issue required)
-- **/fix** - Rapidly creates a branch and PR to fix a specific error
+- **/dev** - Unified command for all development tasks (GitHub issues, quick fixes, ad-hoc coding)
 - **/gitingest** - Analyzes public GitHub repositories to understand structure and contents
 
 ## Quick Start
@@ -37,25 +35,25 @@ The fx-dev plugin provides a comprehensive suite of tools for the entire softwar
 ### Implement a GitHub Issue
 
 ```bash
-/issue https://github.com/owner/repo/issues/123
+/dev https://github.com/owner/repo/issues/123
 ```
 
 Or find the next logical issue:
 
 ```bash
-/issue
+/dev
 ```
 
 ### Quick Fix for an Error
 
 ```bash
-/fix TypeError in auth.js:42 - Cannot read property 'id' of undefined
+/dev fix: TypeError in auth.js:42 - Cannot read property 'id' of undefined
 ```
 
 ### Implement a Feature
 
 ```bash
-/coder Add dark mode toggle to settings page
+/dev Add dark mode toggle to settings page
 ```
 
 ### Analyze a Repository
@@ -232,41 +230,31 @@ Executes complete workflows from start to finish without stopping, ensuring all 
 
 ## Command Details
 
-### /issue
+### /dev
 
-Implements GitHub issues through complete SDLC workflow (requirements → planning → implementation → PR → done).
-
-**Usage:**
-```bash
-/issue [github-issue-url]
-```
-
-If no URL provided, automatically finds the next logical issue from project boards.
-
-### /coder
-
-Implements coding tasks using specialized agents for planning, implementation, and review. No GitHub issue required.
+Unified development command that intelligently routes to the appropriate workflow based on input.
 
 **Usage:**
 ```bash
-/coder <task-description>
+# GitHub issue workflow
+/dev https://github.com/owner/repo/issues/123
+/dev  # Auto-selects next logical issue
+
+# Quick fix workflow
+/dev fix: TypeError in auth.js:42
+/dev error: Cannot read property 'id'
+
+# Ad-hoc coding workflow
+/dev Add dark mode toggle to settings page
+/dev Refactor auth module to use async/await
 ```
 
-### /fix
+**Intelligent Routing:**
+- GitHub issue URL or empty → Full SDLC with issue tracking
+- Prefix `fix:`, `error:`, `bug:` → Quick fix workflow
+- Other descriptions → Ad-hoc coding workflow
 
-Rapidly creates a new branch and PR to fix a specific error. Streamlines the error-fixing workflow.
-
-**Usage:**
-```bash
-/fix <error-description-or-message>
-```
-
-**Workflow:**
-1. Analyze error
-2. Create fix branch
-3. Implement fix
-4. Create PR
-5. Monitor checks
+**See:** `commands/dev.md` for complete workflow documentation
 
 ### /gitingest
 
@@ -283,7 +271,7 @@ Analyzes public GitHub repositories to understand structure and contents. Useful
 
 ```bash
 # Implement a feature from a GitHub issue
-/issue https://github.com/myorg/myapp/issues/456
+/dev https://github.com/myorg/myapp/issues/456
 ```
 
 This automatically:
@@ -299,7 +287,7 @@ This automatically:
 
 ```bash
 # Fix a specific error quickly
-/fix ReferenceError: user is not defined in api/auth.js:42
+/dev fix: ReferenceError: user is not defined in api/auth.js:42
 ```
 
 ### Example 3: Research Before Contributing
@@ -309,7 +297,7 @@ This automatically:
 /gitingest https://github.com/facebook/react
 
 # Then implement your contribution
-/coder Add custom hook for handling form validation
+/dev Add custom hook for handling form validation
 ```
 
 ### Example 4: Manual PR Workflow
@@ -355,10 +343,11 @@ Task(
 
 ### Development Workflow
 
-1. **Use /issue for tracked work** - Ensures proper documentation
-2. **Use /coder for quick tasks** - When you don't need full issue tracking
-3. **Use /fix for rapid fixes** - Streamlines error resolution
-4. **Let agents coordinate** - The SDLC agent handles orchestration
+1. **Use /dev for all tasks** - Unified command with intelligent routing
+2. **GitHub issues** - Use issue URLs for tracked work
+3. **Quick fixes** - Use `fix:` prefix for rapid error resolution
+4. **Ad-hoc tasks** - Just describe what you want to build
+5. **Let agents coordinate** - The SDLC agent handles orchestration
 
 ### Pull Request Management
 
@@ -371,7 +360,7 @@ Task(
 ### Git Utilities
 
 1. **Research before contributing** - Use /gitingest to understand project structure
-2. **Keep fixes focused** - One error per /fix command
+2. **Keep fixes focused** - One error per /dev fix command
 3. **Verify GitHub auth** - Ensure `gh auth status` succeeds
 
 ## Configuration
