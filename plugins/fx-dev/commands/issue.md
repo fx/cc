@@ -1,10 +1,10 @@
-# Coder Command
+# Issue Command
 
 Implements GitHub issues through a complete SDLC workflow.
 
 ## Usage
 ```
-/coder [<github-issue-url>]
+/issue [<github-issue-url>]
 ```
 
 - Accepts GitHub issue URLs or finds next logical issue automatically

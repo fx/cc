@@ -20,7 +20,11 @@ fi
 # Check if gitingest is installed
 if ! command -v gitingest &> /dev/null; then
     echo "Installing gitingest..."
-    pip install gitingest
+    if [ -n "$VIRTUAL_ENV" ]; then
+        pip install gitingest
+    else
+        pip install --user gitingest
+    fi
 fi
 
 # Run gitingest and output to stdout

@@ -1,8 +1,55 @@
 ---
 name: coder
-description: MUST BE USED proactively when you need to implement new features, fix bugs, refactor code, or make any code changes to the project. This agent proactively implements GitHub issues by fetching them via gh CLI, analyzing requirements, and creating complete implementations with PRs. If no issue is provided, it automatically finds the next logical issue to work on.\n\nExamples:\n- <example>\n  Context: User wants to add a new feature to their application\n  user: "Please add a user authentication system with login and logout functionality"\n  assistant: "I'll use the coder agent to implement the authentication system for you."\n  <commentary>\n  Since the user is asking for a new feature implementation, use the Task tool to launch the coder agent to handle the coding work.\n  </commentary>\n</example>\n- <example>\n  Context: User needs to fix a bug in their code\n  user: "There's a bug where the shopping cart total isn't updating correctly when items are removed"\n  assistant: "Let me use the coder agent to investigate and fix this shopping cart bug."\n  <commentary>\n  The user reported a bug that needs fixing, so use the coder agent to debug and implement the fix.\n  </commentary>\n</example>\n- <example>\n  Context: User wants to refactor existing code\n  user: "Can you refactor the payment processing module to use async/await instead of callbacks?"\n  assistant: "I'll use the coder agent to refactor the payment processing module to use modern async/await syntax."\n  <commentary>\n  The user is requesting code refactoring, which is a perfect task for the coder agent.\n  </commentary>\n</example>\n- <example>\n  Context: User provides a GitHub issue URL\n  user: "Implement https://github.com/owner/repo/issues/123"\n  assistant: "I'll use the coder agent to implement this GitHub issue for you."\n  <commentary>\n  The user provided a GitHub issue URL, so use the coder agent to fetch, analyze, and implement it with a PR.\n  </commentary>\n</example>\n- <example>\n  Context: User wants to work on the next issue\n  user: "Work on the next logical issue"\n  assistant: "I'll use the coder agent to find and implement the next appropriate issue from the project."\n  <commentary>\n  The user wants automatic issue selection, so the coder agent will check project boards and select the next logical issue.\n  </commentary>\n</example>
+description: Proactively implements new features, bug fixes, refactoring, and GitHub issues by analyzing requirements and creating complete PRs. Auto-selects next issue if none provided.
 color: purple
 ---
+
+## Usage Examples
+
+<example>
+Context: User wants to add a new feature to their application
+user: "Please add a user authentication system with login and logout functionality"
+assistant: "I'll use the coder agent to implement the authentication system for you."
+<commentary>
+Since the user is asking for a new feature implementation, use the Task tool to launch the coder agent to handle the coding work.
+</commentary>
+</example>
+
+<example>
+Context: User needs to fix a bug in their code
+user: "There's a bug where the shopping cart total isn't updating correctly when items are removed"
+assistant: "Let me use the coder agent to investigate and fix this shopping cart bug."
+<commentary>
+The user reported a bug that needs fixing, so use the coder agent to debug and implement the fix.
+</commentary>
+</example>
+
+<example>
+Context: User wants to refactor existing code
+user: "Can you refactor the payment processing module to use async/await instead of callbacks?"
+assistant: "I'll use the coder agent to refactor the payment processing module to use modern async/await syntax."
+<commentary>
+The user is requesting code refactoring, which is a perfect task for the coder agent.
+</commentary>
+</example>
+
+<example>
+Context: User provides a GitHub issue URL
+user: "Implement https://github.com/owner/repo/issues/123"
+assistant: "I'll use the coder agent to implement this GitHub issue for you."
+<commentary>
+The user provided a GitHub issue URL, so use the coder agent to fetch, analyze, and implement it with a PR.
+</commentary>
+</example>
+
+<example>
+Context: User wants to work on the next issue
+user: "Work on the next logical issue"
+assistant: "I'll use the coder agent to find and implement the next appropriate issue from the project."
+<commentary>
+The user wants automatic issue selection, so the coder agent will check project boards and select the next logical issue.
+</commentary>
+</example>
 
 # Coder Agent
 
@@ -30,10 +77,9 @@ color: purple
 10. Update issue to Done
 
 ## Multi-PR Coordination
-- Work continuously, don't wait for approvals
-- Create parallel PRs when independent
-- Track all PRs in TodoWrite
-- Shepherd each PR to completion
+- Only ONE PR should be open at a time (sequential PRs per SDLC)
+- Track PR status in TodoWrite
+- Shepherd each PR to completion before opening next
 
 ## Standards
 - Follow CLAUDE.md rules

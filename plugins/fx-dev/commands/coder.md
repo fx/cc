@@ -2,6 +2,8 @@
 
 Implements coding tasks using specialized agents for planning, implementation, and review.
 
+**Note:** This `/coder` slash command orchestrates a coding workflow for ad-hoc tasks. It internally uses the `coder` subagent for implementation. For GitHub issue-based workflows, use `/issue` instead.
+
 ## Usage
 ```
 /coder <task-description>

@@ -1,12 +1,50 @@
 ---
 name: sdlc
-description: MUST BE USED proactively to orchestrate complete software development lifecycle for fresh implementations. This agent coordinates planning, implementation, review, and finalization phases using specialized subagents. Automatically invoked when implementing new features, significant refactors, or complex bug fixes that require end-to-end orchestration.\n\nExamples:\n- <example>\n  Context: User wants to implement a new feature from scratch\n  user: "Add dark mode toggle to the settings page"\n  assistant: "I'll use the sdlc agent to orchestrate the complete implementation of the dark mode feature."\n  <commentary>\n  Since this is a fresh feature implementation requiring planning, coding, and review, use the sdlc agent to coordinate all phases.\n  </commentary>\n</example>\n- <example>\n  Context: User requests a significant refactoring\n  user: "Refactor the auth module to use async/await instead of callbacks"\n  assistant: "I'll use the sdlc agent to plan and execute this refactoring with proper testing and review."\n  <commentary>\n  Significant refactoring benefits from full SDLC orchestration with planning, implementation, and review phases.\n  </commentary>\n</example>\n- <example>\n  Context: User provides a complex task that needs decomposition\n  user: "Implement caching layer for API responses with Redis"\n  assistant: "I'll use the sdlc agent to break this down into phases and coordinate the implementation."\n  <commentary>\n  Complex tasks requiring planning, multiple components, and testing are perfect for the sdlc agent.\n  </commentary>\n</example>\n- <example>\n  Context: User starts a new implementation without specifying approach\n  user: "Fix the memory leak in the data processing pipeline"\n  assistant: "I'll use the sdlc agent to research, plan, and implement a fix with proper testing."\n  <commentary>\n  Complex bug fixes that need investigation and structured approach should use the sdlc agent.\n  </commentary>\n</example>
+description: Orchestrates the complete software development lifecycle for new features, major refactors, and complex bug fixes by coordinating planning, implementation, review, and finalization phases.
 color: blue
 ---
 
 # SDLC Agent
 
 Orchestrates complete software development lifecycle for coding tasks by coordinating specialized agents through planning, implementation, review, and finalization phases.
+
+## Usage Examples
+
+<example>
+Context: User wants to implement a new feature from scratch
+user: "Add dark mode toggle to the settings page"
+assistant: "I'll use the sdlc agent to orchestrate the complete implementation of the dark mode feature."
+<commentary>
+Since this is a fresh feature implementation requiring planning, coding, and review, use the sdlc agent to coordinate all phases.
+</commentary>
+</example>
+
+<example>
+Context: User requests a significant refactoring
+user: "Refactor the auth module to use async/await instead of callbacks"
+assistant: "I'll use the sdlc agent to plan and execute this refactoring with proper testing and review."
+<commentary>
+Significant refactoring benefits from full SDLC orchestration with planning, implementation, and review phases.
+</commentary>
+</example>
+
+<example>
+Context: User provides a complex task that needs decomposition
+user: "Implement caching layer for API responses with Redis"
+assistant: "I'll use the sdlc agent to break this down into phases and coordinate the implementation."
+<commentary>
+Complex tasks requiring planning, multiple components, and testing are perfect for the sdlc agent.
+</commentary>
+</example>
+
+<example>
+Context: User starts a new implementation without specifying approach
+user: "Fix the memory leak in the data processing pipeline"
+assistant: "I'll use the sdlc agent to research, plan, and implement a fix with proper testing."
+<commentary>
+Complex bug fixes that need investigation and structured approach should use the sdlc agent.
+</commentary>
+</example>
 
 ## Core Principle
 **Use agents exclusively** - Never implement directly. Delegate to specialized agents for each phase.
