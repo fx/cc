@@ -21,6 +21,10 @@
     {
       "name": "fx-mcp",
       "source": "./plugins/fx-mcp"
+    },
+    {
+      "name": "fx-meta",
+      "source": "./plugins/fx-meta"
     }
   ]
 }

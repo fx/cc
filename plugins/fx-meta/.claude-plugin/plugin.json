@@ -1,0 +1,5 @@
+{
+  "name": "fx-meta",
+  "version": "0.1.0",
+  "description": "Meta tools for building Claude Code plugins, skills, and agents"
+}
