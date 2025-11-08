@@ -8,6 +8,10 @@ The fx-dev plugin provides a comprehensive suite of tools for the entire softwar
 
 ## Components
 
+### Skills (1)
+
+- **plugin-creator** - Auto-invoked when creating new Claude Code plugins for fx/cc marketplace
+
 ### SDLC Agents (5)
 
 - **sdlc** - Orchestrates complete workflows including planning, implementation, review, and finalization
@@ -29,6 +33,26 @@ The fx-dev plugin provides a comprehensive suite of tools for the entire softwar
 
 - **/dev** - Unified command for all development tasks (GitHub issues, quick fixes, ad-hoc coding)
 - **/gitingest** - Analyzes public GitHub repositories to understand structure and contents
+
+## Plugin Development
+
+The **plugin-creator** skill provides comprehensive guidance for creating new Claude Code plugins for the fx/cc marketplace. This skill is automatically invoked when you mention creating, building, or developing plugins.
+
+**Auto-invoked when:**
+- "Create a new Claude Code plugin for..."
+- "I want to add a new plugin to fx/cc..."
+- "Build a plugin that..."
+- "Develop a new plugin for..."
+
+The skill guides you through:
+1. **Planning** - Domain identification, component listing, naming strategy
+2. **Structure** - Directory scaffolding, manifest creation
+3. **Implementation** - Skills, agents, commands with proper frontmatter
+4. **Documentation** - Comprehensive README with examples
+5. **Registration** - Marketplace integration
+6. **Testing** - Validation and functionality verification
+
+All plugin work happens in `~/.claude/plugins/marketplaces/fx-cc/`, which is the default location for the fx/cc marketplace repository.
 
 ## Quick Start
 
