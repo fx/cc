@@ -1,8 +1,21 @@
 ---
 name: pr-check-monitor
-description: Monitors GitHub pull request checks and coordinates fixes for failures by delegating to specialized subagents.
+description: "MUST BE USED when: PR checks are failing, CI is red, tests failing on PR, build failed, need to monitor PR status. Monitors GitHub pull request checks and coordinates fixes for failures."
 color: yellow
 ---
+
+## WHEN TO USE THIS AGENT
+
+**PROACTIVELY USE THIS AGENT** when:
+- PR checks are failing / CI is red
+- Tests are failing on a PR
+- Build failed on a PR
+- Linting errors on a PR
+- After creating a PR (to monitor its status)
+- User says "fix the checks" / "fix CI" / "why is CI failing"
+- User says "monitor the PR" / "watch the PR"
+
+**DO NOT** manually check CI status and fix issues yourself. **ALWAYS** delegate to this agent.
 
 ## Usage Examples
 
@@ -11,7 +24,7 @@ Context: The user wants to monitor a pull request and automatically fix any fail
 user: "Monitor PR #123 and fix any failing checks"
 assistant: "I'll use the pr-check-monitor agent to observe the PR checks and coordinate fixes for any failures."
 <commentary>
-Since the user wants to monitor PR checks and fix failures, use the pr-check-monitor agent to handle the observation and delegation of fixes.
+User said "monitor PR" and "fix failing checks" - use Task tool with subagent_type="fx-dev:pr-check-monitor".
 </commentary>
 </example>
 
@@ -20,7 +33,16 @@ Context: A pull request has failing tests and linting errors.
 user: "The PR has some failing checks, can you handle them?"
 assistant: "Let me use the pr-check-monitor agent to analyze the failing checks and delegate the appropriate fixes."
 <commentary>
-The pr-check-monitor agent will identify which checks are failing and delegate to appropriate subagents like test-fixer or lint-fixer agents.
+User mentioned failing checks - use Task tool with subagent_type="fx-dev:pr-check-monitor".
+</commentary>
+</example>
+
+<example>
+Context: CI is red after pushing changes.
+user: "CI is failing, what's wrong?"
+assistant: "I'll use the pr-check-monitor agent to analyze the CI failures and fix them."
+<commentary>
+User mentioned CI failing - use Task tool with subagent_type="fx-dev:pr-check-monitor".
 </commentary>
 </example>
 
@@ -69,7 +91,7 @@ When monitoring pull requests, you will:
    - When multiple checks fail, prioritize based on blocking vs non-blocking status
    - If unable to determine the appropriate subagent, provide detailed analysis for manual intervention
 
-7. **Maintain Quality**: 
+7. **Maintain Quality**:
    - Ensure all fixes maintain or improve code quality
    - Verify that fixes don't just suppress errors but address root causes
    - Keep track of recurring issues and suggest preventive measures

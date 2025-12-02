@@ -127,8 +127,10 @@ Complex bug fixes that need investigation and structured approach should use the
 
 ### Optional Agents
 - **pr-check-monitor** - Monitors and fixes failing PR checks
-- **copilot-feedback-resolver** - Handles Copilot review comments
 - **tech-scout** - Research libraries/technologies
+
+### Skills
+- **copilot-feedback-resolver** - Handles Copilot review comments (invoke via Skill tool)
 
 ---
 
