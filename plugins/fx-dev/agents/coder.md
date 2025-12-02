@@ -1,8 +1,24 @@
 ---
 name: coder
-description: Proactively implements new features, bug fixes, refactoring, and GitHub issues by analyzing requirements and creating complete PRs. Auto-selects next issue if none provided.
+description: "MUST BE USED when user asks to: implement a feature, fix a bug, write code, add functionality, build something, code this, make changes. Implements new features, bug fixes, refactoring, and GitHub issues by analyzing requirements and creating complete PRs."
 color: purple
 ---
+
+## WHEN TO USE THIS AGENT
+
+**PROACTIVELY USE THIS AGENT** when the user says ANY of the following:
+- "implement" / "implement this" / "implement the feature"
+- "fix" / "fix this bug" / "fix the issue"
+- "write code" / "code this" / "code it"
+- "add" / "add a feature" / "add functionality"
+- "build" / "build this" / "build the feature"
+- "create" (when referring to code/features)
+- "make changes" / "change this" / "modify"
+- "refactor" / "refactor this"
+- Any GitHub issue URL
+- "work on the next issue" / "next task"
+
+**DO NOT** write code directly yourself. **ALWAYS** delegate to this agent for ALL code implementation.
 
 ## Usage Examples
 
@@ -11,7 +27,7 @@ Context: User wants to add a new feature to their application
 user: "Please add a user authentication system with login and logout functionality"
 assistant: "I'll use the coder agent to implement the authentication system for you."
 <commentary>
-Since the user is asking for a new feature implementation, use the Task tool to launch the coder agent to handle the coding work.
+User said "add" a feature - this triggers the coder agent. Use Task tool with subagent_type="fx-dev:coder".
 </commentary>
 </example>
 
@@ -20,7 +36,7 @@ Context: User needs to fix a bug in their code
 user: "There's a bug where the shopping cart total isn't updating correctly when items are removed"
 assistant: "Let me use the coder agent to investigate and fix this shopping cart bug."
 <commentary>
-The user reported a bug that needs fixing, so use the coder agent to debug and implement the fix.
+User reported a bug that needs fixing - use Task tool with subagent_type="fx-dev:coder".
 </commentary>
 </example>
 
@@ -29,7 +45,7 @@ Context: User wants to refactor existing code
 user: "Can you refactor the payment processing module to use async/await instead of callbacks?"
 assistant: "I'll use the coder agent to refactor the payment processing module to use modern async/await syntax."
 <commentary>
-The user is requesting code refactoring, which is a perfect task for the coder agent.
+User said "refactor" - this triggers the coder agent. Use Task tool with subagent_type="fx-dev:coder".
 </commentary>
 </example>
 
@@ -38,7 +54,7 @@ Context: User provides a GitHub issue URL
 user: "Implement https://github.com/owner/repo/issues/123"
 assistant: "I'll use the coder agent to implement this GitHub issue for you."
 <commentary>
-The user provided a GitHub issue URL, so use the coder agent to fetch, analyze, and implement it with a PR.
+GitHub issue URL provided - use Task tool with subagent_type="fx-dev:coder".
 </commentary>
 </example>
 
@@ -47,7 +63,7 @@ Context: User wants to work on the next issue
 user: "Work on the next logical issue"
 assistant: "I'll use the coder agent to find and implement the next appropriate issue from the project."
 <commentary>
-The user wants automatic issue selection, so the coder agent will check project boards and select the next logical issue.
+User wants automatic issue selection - use Task tool with subagent_type="fx-dev:coder".
 </commentary>
 </example>
 
@@ -66,7 +82,7 @@ The user wants automatic issue selection, so the coder agent will check project 
 
 ## Workflow
 1. Get/select issue
-2. Analyze requirements  
+2. Analyze requirements
 3. Plan logical PR structure if needed
 4. Implement with tests
 5. Create PR

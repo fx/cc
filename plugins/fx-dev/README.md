@@ -8,6 +8,10 @@ The fx-dev plugin provides a comprehensive suite of tools for the entire softwar
 
 ## Components
 
+### Skills (1)
+
+- **copilot-feedback-resolver** - Processes and resolves GitHub Copilot automated PR review comments
+
 ### SDLC Agents (5)
 
 - **sdlc** - Orchestrates complete workflows including planning, implementation, review, and finalization
@@ -16,13 +20,12 @@ The fx-dev plugin provides a comprehensive suite of tools for the entire softwar
 - **planner** - Creates comprehensive implementation plans based on requirements
 - **issue-updater** - Updates GitHub issues with planning information and status changes
 
-### PR Management Agents (6)
+### PR Management Agents (5)
 
 - **pr-reviewer** - Reviews pull requests, identifies issues, provides actionable feedback
 - **pr-preparer** - Prepares PRs for submission, ensures compliance with project standards
 - **pr-check-monitor** - Monitors GitHub PR checks and coordinates fixes for failures
 - **pr-changeset-minimalist** - Reviews changesets to ensure only minimal necessary changes
-- **copilot-feedback-resolver** - Processes and resolves GitHub Copilot automated review comments
 - **workflow-runner** - Executes complete workflows from start to finish, ensuring all phases complete
 
 ### Commands (2)
@@ -81,7 +84,7 @@ Changeset Review (pr-changeset-minimalist)
     ↓
 Code Review (pr-reviewer)
     ↓
-Copilot Feedback (copilot-feedback-resolver)
+Copilot Feedback (copilot-feedback-resolver skill)
     ↓
 Check Monitoring (pr-check-monitor)
     ↓
@@ -204,18 +207,6 @@ Reviews pull requests to ensure they contain only the minimal necessary changes 
 - Hidden artifact detection
 - Change necessity assessment
 
-#### copilot-feedback-resolver
-
-Processes and resolves GitHub Copilot's automated PR review comments. Distinguishes between outdated, incorrect, and valid concerns.
-
-**Use when:** After Copilot reviews your PR
-
-**Key Features:**
-- Automated Copilot comment processing
-- Intelligent categorization (nitpicks, outdated, valid)
-- Professional explanations for outdated/incorrect feedback
-- Updates `.github/copilot-instructions.md` to prevent recurring false positives
-
 #### workflow-runner
 
 Executes complete workflows from start to finish without stopping, ensuring all phases complete and looping until success criteria are met.
@@ -227,6 +218,22 @@ Executes complete workflows from start to finish without stopping, ensuring all 
 - PR iteration loops
 - Multi-PR coordination
 - Continuous momentum
+
+## Skill Descriptions
+
+### copilot-feedback-resolver
+
+Processes and resolves GitHub Copilot's automated PR review comments. Distinguishes between outdated, incorrect, and valid concerns.
+
+**Use when:** After Copilot reviews your PR
+
+**Invocation:** Use the Skill tool with `skill="fx-dev:copilot-feedback-resolver"`
+
+**Key Features:**
+- Automated Copilot comment processing
+- Intelligent categorization (nitpicks, outdated, valid)
+- Professional explanations for outdated/incorrect feedback
+- Updates `.github/copilot-instructions.md` to prevent recurring false positives
 
 ## Command Details
 
@@ -324,12 +331,8 @@ Task(
     subagent_type="pr-reviewer"
 )
 
-# Handle Copilot feedback
-Task(
-    description="Resolve Copilot comments",
-    prompt="Process Copilot review comments on PR #42",
-    subagent_type="copilot-feedback-resolver"
-)
+# Handle Copilot feedback (this is a skill, not an agent)
+Skill(skill="fx-dev:copilot-feedback-resolver")
 
 # Monitor checks
 Task(
@@ -354,7 +357,7 @@ Task(
 1. **Always prepare PRs** - Use pr-preparer before creating PRs
 2. **Review for minimalism** - Run pr-changeset-minimalist to catch extraneous changes
 3. **Pragmatic reviews** - pr-reviewer focuses on blocking issues, not perfection
-4. **Auto-resolve Copilot nitpicks** - copilot-feedback-resolver handles [nitpick] comments automatically
+4. **Auto-resolve Copilot nitpicks** - copilot-feedback-resolver skill handles [nitpick] comments automatically
 5. **Monitor checks** - Use pr-check-monitor to catch and fix failures early
 
 ### Git Utilities
@@ -367,7 +370,7 @@ Task(
 
 The agents respect project conventions from:
 - `CLAUDE.md` - Project-specific guidelines
-- `.github/copilot-instructions.md` - AI coding guidelines (updated by copilot-feedback-resolver)
+- `.github/copilot-instructions.md` - AI coding guidelines (updated by copilot-feedback-resolver skill)
 - Git commit and branch conventions
 - GitHub Actions check configurations
 

@@ -1,6 +1,31 @@
 # Dev Command
 
-Unified development command that handles GitHub issues, quick fixes, and ad-hoc coding tasks through intelligent workflow routing.
+Unified development command that handles GitHub issues, quick fixes, and ad-hoc coding tasks through a single core workflow.
+
+## CRITICAL: Agent-Only Implementation
+
+**YOU MUST USE THE TASK TOOL TO DELEGATE ALL WORK TO AGENTS. NEVER IMPLEMENT CODE DIRECTLY.**
+
+- NEVER write code, create files, or make commits yourself - agents do ALL implementation
+- Use the Task tool with the appropriate `subagent_type` for each step
+
+## Agent Reference
+
+| Agent | subagent_type | Purpose |
+|-------|---------------|---------|
+| Requirements Analyzer | `fx-dev:requirements-analyzer` | **First step** - Researches, clarifies, and documents complete requirements |
+| Planner | `fx-dev:planner` | Creates implementation plans from requirements analysis |
+| Coder | `fx-dev:coder` | Implements code changes, fixes bugs, creates PRs |
+| PR Preparer | `fx-dev:pr-preparer` | Prepares and creates pull requests |
+| PR Reviewer | `fx-dev:pr-reviewer` | Reviews code quality |
+| PR Check Monitor | `fx-dev:pr-check-monitor` | Monitors CI/CD checks |
+| Issue Updater | `fx-dev:issue-updater` | Updates GitHub issue status |
+
+### Skills
+
+| Skill | Invocation | Purpose |
+|-------|------------|---------|
+| Copilot Feedback Resolver | Use Skill tool with `"fx-dev:copilot-feedback-resolver"` | Resolves Copilot review comments |
 
 ## Usage
 
@@ -18,188 +43,205 @@ Unified development command that handles GitHub issues, quick fixes, and ad-hoc 
 /dev Refactor auth module to use async/await
 ```
 
-## How It Works
+## Workflow Detection
 
-The `/dev` command automatically detects the appropriate workflow based on your input:
+The `/dev` command detects the workflow type based on input:
 
-1. **GitHub Issue Workflow** - If input contains a GitHub issue URL or is empty (auto-selects issue)
-2. **Quick Fix Workflow** - If input starts with `fix:`, `error:`, `bug:`, or contains error patterns
-3. **Ad-Hoc Coding Workflow** - For all other task descriptions
+| Input Pattern | Workflow Type |
+|---------------|---------------|
+| GitHub issue URL or empty | GitHub Issue |
+| Starts with `fix:`, `error:`, `bug:` | Quick Fix |
+| Any other task description | Ad-Hoc |
 
-## Workflows
+---
 
-### 1. GitHub Issue Workflow
+## Core Workflow (ALL TYPES)
 
-**Triggered by:**
-- GitHub issue URLs: `https://github.com/owner/repo/issues/123`
-- Empty input (auto-selects next logical issue)
+**Every workflow follows these same core steps. ALL workflows result in a Pull Request.**
 
-**Process:**
-1. **Requirements & Planning**
-   - Use `requirements-analyzer` to fetch and analyze issue
-   - Check for 'planned' label (skip planning if exists)
-   - Use `planner` to create implementation plan
-   - Use `issue-updater` to add plan and set status
+### Step 1: Requirements Analysis (ALWAYS FIRST)
 
-2. **Implementation**
-   - Use `coder` to implement all code changes
-   - Break large changes into logical chunks
-   - Only ONE PR open at a time - get user approval before next
-
-3. **Pull Request**
-   - Use `pr-preparer` to create PR with proper description
-   - Use `pr-reviewer` to review PR
-   - Use `copilot-feedback-resolver` to handle Copilot comments
-   - Use `coder` to fix any review issues
-   - Re-review after changes
-
-4. **Monitoring & Completion**
-   - Use `pr-check-monitor` to watch and fix PR check failures
-   - Get user approval for sub-PRs sequentially
-   - Use `issue-updater` to update status to Done after merge
-
-**Required Agents:** requirements-analyzer, planner, issue-updater, coder, pr-preparer, pr-reviewer, copilot-feedback-resolver, pr-check-monitor
-
-### 2. Quick Fix Workflow
-
-**Triggered by:**
-- Prefix: `fix:`, `error:`, `bug:`
-- Error patterns in description
-
-**Process:**
-1. **GitHub Authentication Check**
-   - Verify `gh auth status`
-   - Stop if not authenticated
-
-2. **Error Analysis & Fix**
-   - Use `coder` to analyze error and identify root cause
-   - Create new fix branch
-   - Implement fix with atomic commits
-   - Run tests to verify fix
-
-3. **Pull Request**
-   - Use `pr-preparer` to create PR with clear description
-   - Reference the error being fixed
-
-4. **Monitoring**
-   - Use `pr-check-monitor` to watch PR status checks
-   - Auto-fix any failures
-
-**Required Agents:** coder, pr-preparer, pr-check-monitor
-
-### 3. Ad-Hoc Coding Workflow
-
-**Triggered by:**
-- Any other task description
-
-**Process:**
-1. **Planning**
-   - Use `planner` to break down task into implementation steps
-   - Validate approach and dependencies
-
-2. **Implementation**
-   - Use `coder` to implement code changes
-   - Break large changes into logical commits
-   - Get user approval for each PR when using feature branches
-
-3. **Review & Testing**
-   - Use `pr-reviewer` to review code quality
-   - Use `coder` to fix any issues found
-   - Run tests and ensure all pass
-
-4. **Finalization**
-   - Create clean commits with proper messages
-   - Prepare code for integration
-   - Document changes if needed
-
-**Required Agents:** planner, coder, pr-reviewer
-
-## Examples
-
-### GitHub Issue Examples
-
-```bash
-# Implement specific issue
-/dev https://github.com/myorg/myapp/issues/456
-
-# Auto-select next logical issue from project board
-/dev
+```
+Task tool: subagent_type="fx-dev:requirements-analyzer"
+→ Analyze the task/issue/error to understand requirements
+→ Use WebSearch to research technologies and best practices
+→ Use WebFetch to retrieve content from referenced URLs
+→ Use AskUserQuestion to clarify ambiguous requirements
+→ Analyze existing codebase for relevant patterns
+→ Output: Complete requirements document for planner
 ```
 
-### Quick Fix Examples
+### Step 2: Planning
 
-```bash
-# Fix a TypeError
-/dev fix: TypeError in api/auth.js:42 - Cannot read property 'id' of undefined
-
-# Fix a build error
-/dev error: TypeScript compilation error in User model
-
-# Fix a bug
-/dev bug: Shopping cart total not updating when items removed
+```
+Task tool: subagent_type="fx-dev:planner"
+→ Receive requirements from requirements-analyzer
+→ Create implementation plan with specific steps
+→ Break down into logical, atomic changes
 ```
 
-### Ad-Hoc Coding Examples
+### Step 3: Implementation
 
-```bash
-# Add a new feature
-/dev Add dark mode toggle to settings page
-
-# Refactor code
-/dev Refactor authentication module to use async/await
-
-# Implement enhancement
-/dev Implement caching layer for API responses with Redis
 ```
+Task tool: subagent_type="fx-dev:coder"
+→ Implement all code changes
+→ Create atomic commits with clear messages
+→ Run tests to verify changes work
+```
+
+### Step 4: Pull Request Creation
+
+```
+Task tool: subagent_type="fx-dev:pr-preparer"
+→ Create PR with proper description
+→ Reference the task/issue being addressed
+```
+
+### Step 5: Review & Fix
+
+```
+Task tool: subagent_type="fx-dev:pr-reviewer"
+→ Review the PR for code quality
+```
+```
+Skill tool: skill="fx-dev:copilot-feedback-resolver"
+→ Handle any Copilot review comments (this is a skill, not an agent)
+```
+```
+Task tool: subagent_type="fx-dev:coder"
+→ Fix any issues found in review
+```
+
+### Step 6: CI/CD Monitoring
+
+```
+Task tool: subagent_type="fx-dev:pr-check-monitor"
+→ Watch PR status checks
+→ Fix any check failures
+```
+
+---
+
+## Workflow-Specific Additions
+
+### GitHub Issue Workflow
+
+**Additional steps beyond core workflow:**
+
+**Before Step 1** - Fetch the GitHub issue:
+```
+Use gh CLI or WebFetch to retrieve issue details
+→ Extract requirements, acceptance criteria, referenced URLs
+→ Pass all context to requirements-analyzer
+```
+
+**After Step 2** - Update the issue with the plan:
+```
+Task tool: subagent_type="fx-dev:issue-updater"
+→ Add implementation plan to issue
+→ Set appropriate status/labels
+```
+
+**After Step 6** - Update issue on completion:
+```
+Task tool: subagent_type="fx-dev:issue-updater"
+→ Update status to Done after PR merge
+→ Add any relevant notes
+```
+
+### Quick Fix Workflow
+
+**Additional steps beyond core workflow:**
+
+**Before Step 1** - Verify GitHub authentication:
+```bash
+gh auth status
+# STOP if not authenticated - request user to run: gh auth login
+```
+
+**Step 1 adjustment** - Requirements analyzer focuses on:
+- Error analysis and root cause identification
+- Reproducing the issue
+- Identifying affected files and code paths
+
+### Ad-Hoc Coding Workflow
+
+**No additional steps** - follows core workflow exactly.
+
+---
+
+## Example Task Tool Invocations
+
+### Requirements Analyzer (Step 1)
+```
+Task tool call:
+  subagent_type: "fx-dev:requirements-analyzer"
+  prompt: "Analyze the requirements for: [TASK DESCRIPTION]
+           Research relevant technologies, fetch any referenced URLs,
+           clarify ambiguous requirements with the user, and analyze
+           the existing codebase for patterns. Output complete
+           requirements documentation for the planner."
+  description: "Analyze requirements"
+```
+
+### Planner (Step 2)
+```
+Task tool call:
+  subagent_type: "fx-dev:planner"
+  prompt: "Create implementation plan based on these requirements:
+           [REQUIREMENTS FROM STEP 1]
+           Break down into specific implementation steps."
+  description: "Plan implementation"
+```
+
+### Coder (Step 3)
+```
+Task tool call:
+  subagent_type: "fx-dev:coder"
+  prompt: "Implement the following based on this plan:
+           [PLAN FROM STEP 2]
+           Follow existing patterns and create atomic commits."
+  description: "Implement changes"
+```
+
+### PR Preparer (Step 4)
+```
+Task tool call:
+  subagent_type: "fx-dev:pr-preparer"
+  prompt: "Create a pull request for the current branch.
+           Reference: [TASK/ISSUE DESCRIPTION]"
+  description: "Create PR"
+```
+
+---
 
 ## Key Principles
 
+### MANDATORY: Agent-Only Implementation
+- **NEVER write code directly** - Always use `fx-dev:coder`
+- **NEVER create files directly** - Always use `fx-dev:coder`
+- **NEVER make git commits directly** - Always use agents
+- **Use Task tool for ALL implementation work**
+
 ### All Workflows
-- **Use agents exclusively** - Never implement directly
+- **Always start with requirements-analyzer** - No exceptions
+- **Always end with a PR** - Every workflow produces a pull request
+- **Use agents exclusively** - This is NOT optional
 - **Follow conventions** - Match existing code style
 - **Test thoroughly** - Ensure changes don't break existing code
 - **Clean commits** - Atomic, well-described changes
 
-### GitHub Issue Workflow
-- **Complete SDLC** - Don't stop until issue is Done
-- **Sequential PRs** - Only ONE PR open at a time
-- **Iterate on feedback** - Fix all review comments and check failures
-
-### Quick Fix Workflow
-- **GitHub CLI required** - Must verify auth before work
-- **Quick turnaround** - Focus on rapid error resolution
-- **Verified fixes** - Ensure tests pass before creating PR
-
-### Ad-Hoc Coding Workflow
-- **Plan first** - Break down complex tasks
-- **Incremental PRs** - Create reviewable chunks
-- **Quality over speed** - Ensure code quality through review
-
-## Agent Coordination
-
-The command intelligently coordinates these agents based on workflow:
-
-**SDLC Agents:**
-- `sdlc` - Overall workflow orchestration
-- `requirements-analyzer` - GitHub issue analysis
-- `planner` - Implementation planning
-- `issue-updater` - GitHub issue status updates
-
-**Implementation Agents:**
-- `coder` - Code implementation and fixes
-
-**PR Management Agents:**
-- `pr-preparer` - PR preparation and creation
-- `pr-reviewer` - Code quality review
-- `pr-check-monitor` - CI/CD check monitoring
-- `copilot-feedback-resolver` - Copilot comment handling
+### GitHub Issue Workflow Specifics
+- **Fetch issue first** - Get all context before requirements analysis
+- **Update issue throughout** - Keep the issue updated with progress
+- **Sequential PRs** - Only ONE PR open at a time for an issue
 
 ## Error Handling
 
-**GitHub Authentication (Quick Fix Only):**
+**GitHub Authentication:**
 - If `gh auth status` fails: STOP immediately
 - Request user to run: `gh auth login`
-- Never proceed without GitHub access
+- Never proceed without GitHub access for issue workflows
 
 **Agent Failures:**
 - Capture error details
@@ -208,30 +250,13 @@ The command intelligently coordinates these agents based on workflow:
 - Never leave work incomplete
 
 **Ambiguous Requirements:**
-- Use agents to research codebase
-- Ask user for clarification
+- requirements-analyzer should use AskUserQuestion
 - Break into smaller subtasks if needed
-
-## Migration from Old Commands
-
-This unified command replaces three separate commands:
-
-| Old Command | New Command | Notes |
-|-------------|-------------|-------|
-| `/issue [url]` | `/dev [url]` | Same behavior for GitHub issues |
-| `/coder <task>` | `/dev <task>` | Same behavior for ad-hoc tasks |
-| `/fix <error>` | `/dev fix: <error>` | Add `fix:` prefix for clarity |
-
-**Why consolidate?**
-- Significant overlap in agent usage
-- Single entry point is more intuitive
-- Intelligent routing based on input
-- Easier to maintain and extend
 
 ## Tips
 
 1. **Be specific** - Clear descriptions get better results
 2. **Use prefixes** - `fix:`, `error:`, `bug:` for quick fixes
 3. **GitHub URLs** - Full issue URL for tracked work
-4. **Trust routing** - The command detects the right workflow
+4. **Trust the workflow** - Every type follows the same core steps
 5. **Review PRs** - Always review generated PRs before merging

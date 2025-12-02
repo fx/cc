@@ -1,41 +1,57 @@
-# FX Claude Code Marketplace
+# fx/cc Marketplace
 
-Personal marketplace for Claude Code plugins, skills, and subagents.
+Claude Code plugins for development workflows, research, and productivity.
 
 ## Installation
 
-Add this marketplace to Claude Code:
-
-```
+```bash
 /plugin marketplace add fx/cc
 ```
 
 ## Available Plugins
 
-### fx-test
-A combined test plugin for marketplace validation, including both a skill and an agent.
-
-**Install**: `/plugin install fx-test`
+### fx-dev
+Complete development workflow including SDLC, pull requests, and GitHub integration.
 
 **Components**:
-- `hello` skill - Auto-invoked greeting for testing
-- `test-agent` - Simple test subagent (`@agent-fx-test:test-agent`)
+- 10 agents: sdlc, coder, planner, requirements-analyzer, issue-updater, pr-reviewer, pr-preparer, pr-check-monitor, pr-changeset-minimalist, workflow-runner
+- 1 skill: copilot-feedback-resolver
+- 2 commands: /dev, /gitingest
+
+### fx-research
+Research tools for finding and evaluating technologies and libraries.
+
+**Components**:
+- 1 agent: tech-scout
+
+### fx-mcp
+MCP server management guidance and best practices.
+
+**Components**:
+- 1 skill: managing-mcp-servers
+
+### fx-meta
+Meta tools for building Claude Code plugins, skills, and agents.
+
+**Components**:
+- 2 skills: skill-creator, plugin-creator
+
+### fx-pa
+Personal assistant tools for task extraction and productivity.
+
+**Components**:
+- 1 agent: task-extractor
 
 ## Usage
 
 After installing plugins:
 - Skills are automatically invoked by Claude when relevant
 - Agents appear in `/agents` list and can be used via Task tool
+- Commands are available as slash commands
 
 ## Development
 
-### Adding New Plugins
-
-See [CLAUDE.md](CLAUDE.md) for comprehensive plugin development guidelines, including:
-- Naming conventions and namespace best practices
-- When to combine vs separate plugins
-- Plugin structure and quality standards
-- Testing and documentation requirements
+See [CLAUDE.md](CLAUDE.md) for plugin development guidelines.
 
 **Quick start**:
 1. Create plugin directory: `plugins/<plugin-name>/`
@@ -43,18 +59,6 @@ See [CLAUDE.md](CLAUDE.md) for comprehensive plugin development guidelines, incl
 3. Add plugin files (skills, agents, etc.)
 4. Update `.claude-plugin/marketplace.json`
 5. Create PR
-
-### Plugin Structure
-
-```
-plugins/
-  my-plugin/
-    .claude-plugin/
-      plugin.json
-    skill.md
-    agent.md
-    README.md
-```
 
 ## Resources
 
