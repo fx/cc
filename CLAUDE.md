@@ -232,13 +232,6 @@ Manual testing required for:
 
 ## Common Patterns
 
-### Testing/Development Plugins
-
-Use `fx-test` pattern for marketplace validation:
-- Combine minimal test components
-- Focus on structure validation
-- Clear "this is a test" naming
-
 ### Domain-Specific Plugins
 
 Pattern: `fx-{domain}`
