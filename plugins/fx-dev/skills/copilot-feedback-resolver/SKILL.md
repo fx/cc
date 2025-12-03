@@ -7,6 +7,35 @@ description: Process and resolve GitHub Copilot automated PR review comments. Us
 
 Process and resolve GitHub Copilot's automated PR review comments systematically.
 
+## ⚠️ CRITICAL REQUIREMENTS ⚠️
+
+### YOU MUST RESOLVE THREADS AFTER ADDRESSING THEM
+
+**After fixing any Copilot feedback, you MUST:**
+
+1. **Push the code changes** (`git push`)
+2. **Resolve EACH thread** using the GraphQL mutation (see below)
+3. **Verify resolution** by re-querying the PR
+
+**Addressing feedback without resolving the thread is INCOMPLETE WORK.**
+
+The thread resolution is NOT optional - it's the primary deliverable of this skill. Code changes alone are insufficient.
+
+### Thread Resolution Mutation (USE THIS!)
+
+```bash
+gh api graphql -f query='
+mutation($threadId: ID!) {
+  resolveReviewThread(input: {threadId: $threadId}) {
+    thread { isResolved }
+  }
+}' -f threadId="THREAD_ID"
+```
+
+**You MUST call this mutation for EVERY thread you address.**
+
+---
+
 ## WHEN TO USE THIS SKILL
 
 **USE THIS SKILL PROACTIVELY** when ANY of the following occur:
@@ -20,7 +49,7 @@ Process and resolve GitHub Copilot's automated PR review comments systematically
 
 **Invocation:** Use the Skill tool with `skill="fx-dev:copilot-feedback-resolver"`
 
-## CRITICAL RULE
+## Processing Rules
 
 **ONLY process UNRESOLVED comments. NEVER touch, modify, or re-process already resolved comments. Skip them entirely.**
 
@@ -122,11 +151,33 @@ This suggestion conflicts with our [convention name] convention. [Brief explanat
 
 ## Success Criteria
 
-Task complete ONLY when:
-- All Copilot conversations show "Resolved" in GitHub UI
-- Clear audit trail of what was resolved vs delegated
-- Any convention conflicts added to copilot-instructions.md
-- All code changes pushed
+**Task is INCOMPLETE until ALL of these are done:**
+
+1. ✅ All code changes pushed to the PR branch
+2. ✅ **EVERY addressed thread resolved via GraphQL mutation** (not just code fixed!)
+3. ✅ Re-query confirms `isResolved: true` for all processed threads
+4. ✅ Output summary table (see format below)
+
+### Required Output: Thread Summary Table
+
+**You MUST output this table after processing all threads:**
+
+```
+| Thread ID | File:Line | Category | Action Taken | Status |
+|-----------|-----------|----------|--------------|--------|
+| PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | ✅ Resolved |
+| PRRT_yyy  | src/bar.ts:15 | Valid | Fixed null check | ✅ Resolved |
+| PRRT_zzz  | lib/util.js:8 | Outdated | Code refactored | ✅ Resolved |
+```
+
+**Column definitions:**
+- **Thread ID**: GraphQL thread ID (truncated for readability)
+- **File:Line**: Location of the comment
+- **Category**: Nitpick, Valid, Outdated, or Incorrect
+- **Action Taken**: Brief description of resolution (10 words max)
+- **Status**: ✅ Resolved, ❌ Failed, or ⏳ Pending
+
+**Common failure mode:** Fixing code but forgetting to resolve the threads. This leaves the PR with unresolved conversations even though the issues are fixed. ALWAYS run the resolution mutation after pushing code.
 
 ## Error Handling
 
