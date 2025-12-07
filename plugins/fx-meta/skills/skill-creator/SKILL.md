@@ -128,20 +128,60 @@ Example: When building a `big-query` skill to handle queries like "How many user
 
 To establish the skill's contents, analyze each concrete example to create a list of the reusable resources to include: scripts, references, and assets.
 
+### Step 2.5: Select Target Plugin
+
+Before creating the skill, determine which plugin should contain it. Skills are organized into plugins based on their domain and purpose.
+
+**Available Plugins:**
+- **fx-dev** - Development workflows (PR management, code review, GitHub operations, CI/CD)
+- **fx-meta** - Meta skills for Claude Code itself (skill creation, plugin creation)
+- **fx-mcp** - MCP server development and integration
+- **fx-research** - Research and technology scouting
+
+**Plugin Selection Process:**
+
+1. **Check for obvious fit** - Does the skill clearly belong to an existing plugin?
+   - GitHub CLI operations → `fx-dev`
+   - Skill creation → `fx-meta`
+   - MCP server development → `fx-mcp`
+   - Technology research → `fx-research`
+
+2. **If uncertain or creating a new domain** - Use AskUserQuestion to confirm plugin selection:
+   ```
+   AskUserQuestion with options:
+   - fx-dev (existing)
+   - fx-meta (existing)
+   - fx-mcp (existing)
+   - fx-research (existing)
+   - Create new plugin (requires plugin name)
+   ```
+
+3. **Set plugin path** - Store the target plugin path for use in Step 3:
+   ```bash
+   PLUGIN_PATH=~/.claude/plugins/marketplaces/fx-cc/plugins/<plugin-name>
+   ```
+
+**Example**: For a `github` skill about GitHub CLI operations:
+- **Clear fit**: `fx-dev` (development workflows)
+- **Plugin path**: `~/.claude/plugins/marketplaces/fx-cc/plugins/fx-dev`
+
 ### Step 3: Initializing the Skill
 
 At this point, it is time to actually create the skill.
 
 Skip this step only if the skill being developed already exists, and iteration or packaging is needed. In this case, continue to the next step.
 
-When creating a new skill from scratch, initialize the skill directory structure manually or using a template generator:
+When creating a new skill from scratch, initialize the skill directory structure within the selected plugin:
 
 ```bash
-# Create skill directory structure
-mkdir -p <skill-name>/{scripts,references,assets}
+# Using the plugin path from Step 2.5
+PLUGIN_PATH=~/.claude/plugins/marketplaces/fx-cc/plugins/<plugin-name>
+
+# Create skill directory structure within the plugin
+mkdir -p $PLUGIN_PATH/skills/<skill-name>/{scripts,references,assets}
 
 # Create SKILL.md template
-cat > <skill-name>/SKILL.md <<'EOF'
+cat > $PLUGIN_PATH/skills/<skill-name>/SKILL.md <<'EOF'
 ---
 name: skill-name
 description: TODO - Describe when this skill should be used
