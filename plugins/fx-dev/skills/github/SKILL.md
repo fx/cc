@@ -19,6 +19,49 @@ This skill triggers automatically when:
 - Encountering `gh` CLI errors or unexpected behavior
 - Needing GraphQL queries for GitHub operations
 
+## Prerequisites
+
+### GitHub CLI Version
+
+**CRITICAL**: Many features require a recent `gh` CLI version. Before using this skill:
+
+1. **Check current version:**
+   ```bash
+   gh --version
+   ```
+
+2. **Compare with latest release:**
+   - Check https://github.com/cli/cli/releases for the current stable version
+   - If your version is >6 months old, upgrade
+
+3. **Upgrade `gh` CLI:**
+
+   **Preferred method (mise):**
+   ```bash
+   mise use -g gh@latest
+   ```
+
+   **Alternative (apt):**
+   ```bash
+   sudo apt update && sudo apt install -y gh
+   ```
+
+   **Why mise is preferred:**
+   - Always gets the latest version (apt repos lag behind)
+   - No sudo required
+   - Consistent across environments
+
+4. **Verify upgrade:**
+   ```bash
+   gh --version
+   # Should show version 2.80+ (as of Dec 2025)
+   ```
+
+**Known version issues:**
+- `gh < 2.20`: Limited GraphQL mutation support
+- `gh < 2.40`: Missing `--body-file` flag on `gh pr edit`
+- `gh < 2.50`: Incomplete review thread APIs
+
 ## Core Principles
 
 ### 1. Verify All Operations
