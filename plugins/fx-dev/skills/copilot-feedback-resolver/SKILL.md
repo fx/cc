@@ -131,7 +131,7 @@ mutation($threadId: ID!, $body: String!) {
 }' -f threadId="PRRT_xxx" -f body="Your explanation here"
 ```
 
-**NEVER use `gh pr review 13 --comment`** - this adds comments to the PR itself, not to the specific thread!
+**NEVER use `gh pr review <PR_NUMBER> --comment`** - this adds comments to the PR itself, not to the specific thread!
 
 1. Reply to the thread with professional explanation:
    - Outdated: "This comment refers to code refactored in commit abc123. The issue is no longer applicable."
