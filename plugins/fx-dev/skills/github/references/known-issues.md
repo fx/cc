@@ -38,11 +38,11 @@ gh pr edit 61 --body "$BODY"
 
 The `gh pr edit --body` command expects a literal string. When you use a heredoc with `<<'EOF'`, bash doesn't expand command substitutions inside the heredoc. The result is a literal string containing `$(cat /tmp/pr-body.md)` rather than the file contents.
 
-## Copilot Review Thread Resolution
+## Review Thread Resolution
 
 ### Issue: `gh pr review --comment` Comments on PR, Not Threads
 
-**Problem:** Using `gh pr review --comment` to reply to Copilot comments creates a new PR-level comment instead of replying to the specific review thread.
+**Problem:** Using `gh pr review --comment` to reply to review comments creates a new PR-level comment instead of replying to the specific review thread.
 
 **Solution:** Use GitHub GraphQL API to resolve threads:
 
@@ -107,7 +107,7 @@ When encountering a new `gh` CLI issue:
 
 ### Template for New Issues
 
-```markdown
+````markdown
 ### Issue: [Brief Description]
 
 **Problem:** [What went wrong]
@@ -123,4 +123,4 @@ When encountering a new `gh` CLI issue:
 ```
 
 **Why This Happens:** [Root cause explanation]
-```
+````

@@ -119,11 +119,12 @@ gh api graphql -f query='
   }' -f threadId="$THREAD_ID"
 ```
 
-## Copilot Review Workflow
+## Automated Review Workflows
 
-### Count Unresolved Copilot Threads
+### Count Unresolved Bot Review Threads
 
 ```bash
+# Filter by bot author (e.g., copilot-pull-request-reviewer, github-copilot[bot])
 gh api graphql -f query='
   query($owner: String!, $repo: String!, $pr: Int!) {
     repository(owner: $owner, name: $repo) {
@@ -144,12 +145,13 @@ gh api graphql -f query='
       }
     }
   }' -f owner="owner" -f repo="repo" -F pr=13 \
-  --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .comments.nodes[0].author.login == "github-advanced-security[bot]")] | length'
+  --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .comments.nodes[0].author.login == "copilot-pull-request-reviewer")] | length'
 ```
 
-### Get All Copilot Review Comments
+### Get All Bot Review Comments
 
 ```bash
+# Filter by bot author (e.g., copilot-pull-request-reviewer, github-copilot[bot])
 gh api graphql -f query='
   query($owner: String!, $repo: String!, $pr: Int!) {
     repository(owner: $owner, name: $repo) {
@@ -175,7 +177,7 @@ gh api graphql -f query='
       }
     }
   }' -f owner="owner" -f repo="repo" -F pr=13 \
-  --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].author.login == "github-advanced-security[bot]")'
+  --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].author.login == "copilot-pull-request-reviewer")'
 ```
 
 ## Batch Operations
