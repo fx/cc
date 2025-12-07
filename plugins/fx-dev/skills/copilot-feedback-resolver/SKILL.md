@@ -114,10 +114,29 @@ mutation($threadId: ID!) {
 - Optional brief acknowledgment reply
 
 #### Outdated/Incorrect Comments
-1. Reply with professional explanation:
-   - Outdated: "This comment refers to code refactored in commit abc123. No longer applicable."
-   - Incorrect: "This conflicts with our project convention for X. See CLAUDE.md."
-2. Resolve the conversation
+
+**CRITICAL: Reply directly to the review thread, NOT to the PR.**
+
+Use GraphQL to add a reply comment to the specific thread:
+
+```bash
+gh api graphql -f query='
+mutation($threadId: ID!, $body: String!) {
+  addPullRequestReviewThreadReply(input: {
+    pullRequestReviewThreadId: $threadId,
+    body: $body
+  }) {
+    comment { id }
+  }
+}' -f threadId="PRRT_xxx" -f body="Your explanation here"
+```
+
+**NEVER use `gh pr review <PR_NUMBER> --comment`** - this adds comments to the PR itself, not to the specific thread!
+
+1. Reply to the thread with professional explanation:
+   - Outdated: "This comment refers to code refactored in commit abc123. The issue is no longer applicable."
+   - Incorrect: "This conflicts with our [convention name] convention. [Brief explanation]. See [reference file] for project guidelines."
+2. Resolve the thread using the mutation from section 3
 3. **Update `.github/copilot-instructions.md`** to prevent recurrence:
    - Add to "## Code Reviews" section
    - Example: "- Do not suggest removing `.sr-only` classes - required accessibility utilities"
