@@ -34,7 +34,7 @@ gh api graphql -f query='
         }
       }
     }
-  }' -f owner="fx" -f repo="coderops" -F pr=13
+  }' -f owner="owner" -f repo="repo" -F pr=13
 ```
 
 ### Get Unresolved Review Threads Only
@@ -60,7 +60,7 @@ gh api graphql -f query='
         }
       }
     }
-  }' -f owner="fx" -f repo="coderops" -F pr=13 \
+  }' -f owner="owner" -f repo="repo" -F pr=13 \
   --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)'
 ```
 
@@ -143,7 +143,7 @@ gh api graphql -f query='
         }
       }
     }
-  }' -f owner="fx" -f repo="coderops" -F pr=13 \
+  }' -f owner="owner" -f repo="repo" -F pr=13 \
   --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .comments.nodes[0].author.login == "github-advanced-security[bot]")] | length'
 ```
 
@@ -174,7 +174,7 @@ gh api graphql -f query='
         }
       }
     }
-  }' -f owner="fx" -f repo="coderops" -F pr=13 \
+  }' -f owner="owner" -f repo="repo" -F pr=13 \
   --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].author.login == "github-advanced-security[bot]")'
 ```
 
@@ -243,5 +243,5 @@ gh api graphql -f query='
         }
       }
     }
-  }' -f owner="fx" -f repo="coderops" -F pr=13
+  }' -f owner="owner" -f repo="repo" -F pr=13
 ```

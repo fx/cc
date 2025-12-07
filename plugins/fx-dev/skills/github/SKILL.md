@@ -165,7 +165,7 @@ EOF
 
 **Solution found:**
 ```bash
-gh api repos/fx/coderops/pulls/13 -X PATCH -F body=@/tmp/pr-body.md
+gh api repos/owner/repo/pulls/13 -X PATCH -F body=@/tmp/pr-body.md
 # Result: PR description correctly updated
 ```
 
