@@ -2,6 +2,38 @@
 
 This document outlines principles and conventions for developing plugins in the fx/cc Claude Code marketplace.
 
+## Security and Privacy
+
+### Do Not Leak Private Information
+
+**CRITICAL**: Never include private or sensitive information in code, documentation, or examples.
+
+**Prohibited content includes**:
+- Private repository names (use `owner/repo` placeholders instead)
+- Internal URLs or endpoints
+- API keys or credentials
+- Company-specific naming or identifiers
+- Private infrastructure details
+
+**Good examples** (generic placeholders):
+```bash
+gh api repos/owner/repo/pulls/13
+gh api graphql -f owner="owner" -f repo="repo"
+```
+
+**Bad examples** (leaking private info):
+```bash
+gh api repos/fx/internal-project/pulls/13  # ❌ Private repo name
+gh api graphql -f owner="acme" -f repo="secret-service"  # ❌ Internal identifiers
+```
+
+This applies to:
+- Documentation files (README.md, CLAUDE.md)
+- Code examples and snippets
+- Skill references and patterns
+- Test cases and fixtures
+- Commit messages
+
 ## Plugin Naming and Namespacing
 
 ### Plugin Names

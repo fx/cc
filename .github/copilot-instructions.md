@@ -4,6 +4,12 @@ This file contains project-specific instructions for GitHub Copilot to improve c
 
 ## Code Reviews
 
+### Security and Privacy
+
+- **Do not allow private information leaks**: Flag any use of private repository names, internal URLs, API keys, credentials, or company-specific identifiers in code, documentation, or examples.
+- **Require generic placeholders**: Examples should use generic placeholders like `owner/repo`, `example.com`, `your-org`, etc.
+- **Check all files**: This applies to documentation (README.md, CLAUDE.md), code examples, skill references, test cases, and commit messages.
+
 ### HTML/Web Standards
 
 - Do not flag valid HTML closing tag structures. Standard HTML files should have `</body>` followed by `</html>` at the end of the file.
