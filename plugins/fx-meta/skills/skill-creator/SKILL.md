@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-description: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.
+description: "MUST BE USED when creating, updating, editing, or modifying any skill. This includes: creating new skills, editing SKILL.md files, updating skill descriptions, adding skill resources (scripts/references/assets), or iterating on existing skills. Load this skill BEFORE making changes to any skill files. (plugin:fx-meta@fx-cc)"
 ---
 
 # Skill Creator

@@ -1,6 +1,6 @@
 ---
 name: github
-description: This skill should be used whenever working with the GitHub CLI (`gh` command). Provides battle-tested patterns for PR operations, review thread management, and GraphQL queries. Self-improves by documenting solutions to newly encountered issues.
+description: "MUST BE USED when working with GitHub: updating PRs, editing PR descriptions/titles, creating PRs, merging, review threads, `gh` CLI commands, GitHub API, or any pull request operations. Load this skill BEFORE running gh commands or modifying PRs. (plugin:fx-dev@fx-cc)"
 ---
 
 # GitHub CLI Expert
