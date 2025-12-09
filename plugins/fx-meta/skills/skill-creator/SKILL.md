@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-description: "MUST BE USED when creating, updating, editing, or modifying any skill. This includes: creating new skills, editing SKILL.md files, updating skill descriptions, adding skill resources (scripts/references/assets), or iterating on existing skills. Load this skill BEFORE making changes to any skill files. (plugin:fx-meta@fx-cc)"
+description: "MUST BE USED when user says: 'create a skill', 'make a skill', 'new skill', 'build a skill', 'write a skill', 'add a skill', 'skill for X', or any variation. Also use when editing SKILL.md files, updating skill descriptions, adding skill resources, or iterating on existing skills. Load this skill BEFORE any skill-related work."
 ---
 
 # Skill Creator
