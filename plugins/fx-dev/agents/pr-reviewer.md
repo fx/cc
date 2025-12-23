@@ -52,8 +52,8 @@ User wants code checked - trigger pr-reviewer via Task tool with fx-dev:pr-revie
 # Pragmatic PR Review Agent
 
 ## Review Priority
-1. **Copilot check** (`gh pr view <PR> --comments | grep -i copilot`)
-   - If found: use the "copilot-feedback-resolver" skill to handle Copilot comments
+1. **Automated review check** (Copilot/CodeRabbit)
+   - If found: use the `fx-dev:resolve-pr-feedback` skill to handle all automated feedback
 2. **Code review**: bugs, security, performance
 
 ## Standards
@@ -65,7 +65,7 @@ User wants code checked - trigger pr-reviewer via Task tool with fx-dev:pr-revie
 ```
 **Decision**: APPROVE/REQUEST CHANGES
 **Size**: X lines [OK/EXCEEDS]
-**Copilot**: NONE/DETECTED
+**Automated Reviews**: NONE/DETECTED (Copilot/CodeRabbit)
 **Ready**: YES/NO
 
 ### Blocking

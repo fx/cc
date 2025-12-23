@@ -83,7 +83,17 @@ Then, your primary responsibilities:
    - Global coding standards and architectural decisions
    - Any custom requirements or patterns established in the codebase
 
-6. **Create the PR**: Use `gh pr create` to actually create the pull request on GitHub with the prepared title and description.
+6. **Create the PR as Draft**: Use `gh pr create --draft` to create the pull request on GitHub. **ALL PRs MUST be created as drafts initially.** Never create a PR that is immediately ready for review.
+
+   ```bash
+   gh pr create --draft --title "type: description" --body "$(cat <<'EOF'
+   ## Summary
+   ...
+   EOF
+   )"
+   ```
+
+   After PR creation, inform the user: "PR created as draft. After review feedback is addressed, mark ready with: `gh pr ready <PR_NUMBER>`"
 
 7. **Provide Actionable Feedback**: If issues are found:
    - Clearly explain what needs to be fixed

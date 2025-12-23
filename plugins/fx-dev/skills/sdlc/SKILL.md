@@ -15,10 +15,22 @@ This skill defines the **mandatory** workflow for all coding tasks. Follow these
 - ❌ NEVER create files yourself
 - ❌ NEVER make commits yourself
 - ❌ NEVER skip steps
+- ❌ NEVER skip tests (`test.skip`, `it.skip`, `describe.skip` are FORBIDDEN)
 - ✅ ALWAYS use Task tool with the specified `subagent_type`
 - ✅ ALWAYS verify each step before proceeding
+- ✅ ALWAYS fix, replace, refactor, or remove tests - never skip them
 
 **FAILURE TO USE AGENTS = WORKFLOW FAILURE**
+
+### Test Policy
+
+**⛔ NEVER skip tests.** If a test cannot pass:
+- **Fix it** - Update assertions to match correct behavior
+- **Replace it** - Write a new test that properly validates the behavior
+- **Refactor it** - Restructure to test what's actually testable
+- **Remove it** - Delete entirely if it tests something that no longer exists
+
+If tests require infrastructure (auth, database, external services), SET UP that infrastructure. Do not skip tests because setup is hard.
 
 ---
 
@@ -155,22 +167,24 @@ git diff main --stat
 
 ---
 
-### STEP 5: Pull Request Creation
+### STEP 5: Pull Request Creation (as Draft)
 
-**MANDATORY: Launch pr-preparer agent.**
+**MANDATORY: Launch pr-preparer agent. ALL PRs MUST be created as drafts.**
 
 ```
 Task tool:
   subagent_type: "fx-dev:pr-preparer"
-  prompt: "Create PR for current branch.
+  prompt: "Create DRAFT PR for current branch.
            Task: [ORIGINAL TASK]
            Summary: [WHAT WAS IMPLEMENTED]
 
+           CRITICAL: Use --draft flag. Never create non-draft PRs.
            - Push branch if needed
-           - Create PR with description
+           - Create PR with: gh pr create --draft
            - Reference related issues
-           - Return PR number and URL"
-  description: "Create PR"
+           - Return PR number and URL
+           - Tell user to run 'gh pr ready <NUMBER>' when ready"
+  description: "Create draft PR"
 ```
 
 **Capture the PR number for remaining steps.**
@@ -226,10 +240,10 @@ Script behavior:
 
 If timeout (exit 1): Proceed anyway, Copilot feedback can be handled later.
 
-#### 6.4 Handle Copilot Feedback (if any)
+#### 6.4 Handle Automated Review Feedback (Copilot/CodeRabbit)
 
 ```
-Skill tool: skill="fx-dev:copilot-feedback-resolver"
+Skill tool: skill="fx-dev:resolve-pr-feedback"
 ```
 
 **⛔ DO NOT PROCEED until all review issues resolved**
@@ -353,7 +367,7 @@ Awaiting your approval to merge.
 | 4,6.2,7 | Coder | `fx-dev:coder` |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
-| 6.4 | Copilot Resolver | Skill: `fx-dev:copilot-feedback-resolver` |
+| 6.4 | PR Feedback Resolver | Skill: `fx-dev:resolve-pr-feedback` |
 | 7 | PR Check Monitor | `fx-dev:pr-check-monitor` |
 
 ---
@@ -367,6 +381,6 @@ Workflow complete when ALL true:
 - ✅ Code implemented with atomic commits
 - ✅ PR created with description
 - ✅ Self-review done, issues fixed
-- ✅ Copilot feedback resolved
+- ✅ Automated review feedback resolved (Copilot/CodeRabbit)
 - ✅ All CI/CD checks pass
 - ✅ User notified, awaiting merge approval

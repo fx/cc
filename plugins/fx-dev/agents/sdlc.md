@@ -36,7 +36,7 @@ Orchestrates complete software development lifecycle for ALL coding tasks. **You
 
 | Skill | Invocation | Purpose |
 |-------|------------|---------|
-| Copilot Feedback Resolver | `Skill tool: skill="fx-dev:copilot-feedback-resolver"` | **STEP 6** - Resolve Copilot review comments |
+| PR Feedback Resolver | `Skill tool: skill="fx-dev:resolve-pr-feedback"` | **STEP 6** - Resolve automated review feedback (Copilot/CodeRabbit) |
 | GitHub CLI Expert | `Skill tool: skill="fx-dev:github"` | GitHub CLI patterns and troubleshooting |
 
 ---
@@ -205,24 +205,26 @@ git diff main --stat  # Verify changes
 
 ---
 
-### STEP 5: Pull Request Creation
+### STEP 5: Pull Request Creation (as Draft)
 
-**MANDATORY - Launch pr-preparer agent.**
+**MANDATORY - Launch pr-preparer agent. ALL PRs MUST be created as drafts initially.**
 
 ```
 Task tool:
   subagent_type: "fx-dev:pr-preparer"
-  prompt: "Create pull request for current branch.
+  prompt: "Create DRAFT pull request for current branch.
 
            Task context: [ORIGINAL TASK DESCRIPTION]
            Implementation summary: [BRIEF SUMMARY OF WHAT WAS DONE]
 
-           Requirements:
+           CRITICAL Requirements:
            - Push branch to remote if not pushed
-           - Create PR with proper title and description
+           - Create PR as DRAFT: gh pr create --draft
+           - Never create non-draft PRs
            - Reference any related issues
-           - Return the PR number and URL"
-  description: "Create PR"
+           - Return the PR number and URL
+           - Tell user to run 'gh pr ready <NUMBER>' when ready"
+  description: "Create draft PR"
 ```
 
 **Capture PR number for subsequent steps.**
@@ -272,14 +274,14 @@ sleep 45
 gh pr view [PR_NUMBER] --json reviews,reviewRequests
 ```
 
-#### 6.4 Handle Copilot Feedback (if any)
+#### 6.4 Handle Automated Review Feedback (Copilot/CodeRabbit)
 
-If Copilot left review comments:
+If automated reviewers left feedback:
 ```
-Skill tool: skill="fx-dev:copilot-feedback-resolver"
+Skill tool: skill="fx-dev:resolve-pr-feedback"
 ```
 
-Then follow the skill's instructions to resolve all Copilot comments.
+This skill checks for both Copilot and CodeRabbit feedback and resolves all comments.
 
 **DO NOT PROCEED TO STEP 7 UNTIL ALL REVIEW ISSUES RESOLVED**
 

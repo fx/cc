@@ -103,4 +103,18 @@ User wants automatic issue selection - use Task tool with subagent_type="fx-dev:
 - Match code style
 - Security best practices
 
+## Test Policy
+
+**⛔ NEVER skip tests.** Using `test.skip`, `it.skip`, `describe.skip` is FORBIDDEN.
+
+If a test cannot pass:
+- **Fix it** - Update assertions to match correct behavior
+- **Replace it** - Write a new test that validates the behavior
+- **Refactor it** - Restructure to test what's actually testable
+- **Remove it** - Delete entirely if testing something obsolete
+
+If tests require infrastructure (auth, database, APIs):
+- **Set it up** - Create test fixtures, auth helpers, mocks as needed
+- Do NOT skip tests because infrastructure setup is "hard"
+
 Remember: Ship working code in small PRs. You own the entire lifecycle - implement, review, fix, and prepare for user approval.
