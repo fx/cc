@@ -1,0 +1,5 @@
+{
+  "name": "release-please",
+  "version": "0.1.0",
+  "description": "Tools for managing release-please automated releases and PR descriptions"
+}

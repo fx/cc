@@ -25,6 +25,10 @@
     {
       "name": "fx-meta",
       "source": "./plugins/fx-meta"
+    },
+    {
+      "name": "release-please",
+      "source": "./plugins/release-please"
     }
   ]
 }
