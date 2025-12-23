@@ -62,6 +62,21 @@ This skill triggers automatically when:
 - `gh < 2.40`: Missing `--body-file` flag on `gh pr edit`
 - `gh < 2.50`: Incomplete review thread APIs
 
+## ⛔ PR Comments Prohibition (CRITICAL)
+
+**NEVER leave comments directly on GitHub PRs.** This is strictly forbidden:
+
+- ❌ `gh pr review --comment` - FORBIDDEN
+- ❌ `gh pr comment` - FORBIDDEN
+- ❌ `gh api` mutations that create new reviews or PR-level comments - FORBIDDEN
+- ❌ Responding to human review comments - FORBIDDEN
+
+**The ONLY permitted interaction with review threads:**
+- ✅ Reply to EXISTING threads created by **GitHub Copilot only** using `addPullRequestReviewThreadReply`
+- ✅ Resolve Copilot threads using `resolveReviewThread`
+
+**Never respond to or interact with human reviewer comments.** Only automated Copilot feedback should be addressed.
+
 ## Core Principles
 
 ### 1. Verify All Operations
@@ -95,7 +110,99 @@ Check `references/known-issues.md` before attempting operations that have failed
 - Review thread resolution vs. PR comments
 - Command substitution in heredoc strings
 
+### 4. Follow Messaging Conventions
+
+**Be Direct and Concise:**
+- All PR descriptions, commit messages, and comments must be direct and to the point
+- Eliminate unnecessary prose and filler content
+- Focus on what changed and why, not how the work was organized
+
+**Use Conventional Formats:**
+- **Commit messages**: Follow conventional commit format (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)
+- **PR titles**: Use conventional commit format (e.g., `feat: add user authentication`)
+- **Branch names**: Use conventional naming (e.g., `feat/user-auth`, `fix/login-bug`)
+- **Comments**: Use conventional comment markers where applicable
+
+**Content Rules:**
+- Describe the work being done and changes being made
+- Include issue/ticket references (e.g., `#123`, `JIRA-456`)
+- **Never mention**: implementation phases, steps of a process, project management terminology, or workflow stages
+- **Never include**: "Phase 1", "Step 2", "Part 3", "First iteration", "Initial implementation"
+
+**Examples:**
+
+✅ **Good PR Title:**
+```
+feat: add user authentication with JWT tokens (#123)
+```
+
+❌ **Bad PR Title:**
+```
+feat: add user authentication - Phase 1: Initial Implementation
+```
+
+✅ **Good Commit Message:**
+```
+fix: resolve login timeout issue
+
+- Increase session timeout to 30 minutes
+- Add retry logic for failed auth requests
+
+Fixes #456
+```
+
+❌ **Bad Commit Message:**
+```
+fix: resolve login timeout issue - Step 2 of authentication refactor
+
+This is the second phase of our authentication improvements...
+```
+
+✅ **Good Branch Name:**
+```
+feat/jwt-authentication
+fix/login-timeout
+```
+
+❌ **Bad Branch Name:**
+```
+feat/authentication-phase-1
+fix/login-step-2
+```
+
 ## Common Operations
+
+### Create Pull Requests
+
+**CRITICAL - Draft PR Requirement:**
+
+ALL pull requests MUST be created as drafts initially. Never create a PR that is immediately ready for review.
+
+**Workflow:**
+1. Create PR as draft with `--draft` flag
+2. Wait for `fx-dev:pr-reviewer` agent to review the changes
+3. Leave it to the USER to mark ready for review (do NOT do this automatically)
+
+**Correct approach:**
+```bash
+# Always include --draft flag
+gh pr create --draft --title "feat: add feature" --body "$(cat <<'EOF'
+## Summary
+...
+EOF
+)"
+```
+
+**After fx-dev:pr-reviewer completes:**
+- Inform user: "PR created as draft. After addressing any review feedback, you can mark it ready with: `gh pr ready <PR_NUMBER>`"
+- DO NOT run `gh pr ready` automatically
+- Let the user decide when to flag it ready
+
+**Why drafts:**
+- Ensures internal review happens before external visibility
+- Prevents premature notifications to team members
+- Gives opportunity to address issues found by automated reviewers
+- User maintains control over when PR is officially ready
 
 ### Update PR Description
 
@@ -114,12 +221,14 @@ gh api repos/owner/repo/pulls/13 -X PATCH -F body=@/tmp/pr-body.md
 
 See `references/known-issues.md` for failed approaches and why they don't work.
 
-### Resolve Review Threads
+### Resolve Copilot Review Threads
 
-Use GraphQL mutations, not `gh pr review --comment`:
+**ONLY resolve threads created by GitHub Copilot.** Never interact with human review threads.
+
+Use GraphQL mutations to resolve Copilot threads:
 
 ```bash
-# Get thread ID
+# Get thread ID (must be a Copilot thread)
 THREAD_ID="RT_kwDOQipvu86RqL7d"
 
 # Resolve it
@@ -131,7 +240,7 @@ gh api graphql -f query='
   }' -f threadId="$THREAD_ID"
 ```
 
-See `references/graphql-patterns.md` for complete patterns.
+**Reminder:** `gh pr review --comment` is FORBIDDEN. See the PR Comments Prohibition section above.
 
 ### Get PR Information
 
