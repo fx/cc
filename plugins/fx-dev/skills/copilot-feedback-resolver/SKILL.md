@@ -7,6 +7,21 @@ description: Process and resolve GitHub Copilot automated PR review comments. Us
 
 Process and resolve GitHub Copilot's automated PR review comments systematically.
 
+## ⛔ PR Comments Prohibition (CRITICAL)
+
+**NEVER leave comments directly on GitHub PRs.** This is strictly forbidden:
+
+- ❌ `gh pr review --comment` - FORBIDDEN
+- ❌ `gh pr comment` - FORBIDDEN
+- ❌ Any GraphQL mutation that creates new reviews or PR-level comments - FORBIDDEN
+- ❌ Responding to human review comments - FORBIDDEN
+
+**This skill ONLY processes GitHub Copilot threads.** Never interact with threads created by human reviewers.
+
+**Permitted operations:**
+- ✅ Reply to EXISTING Copilot threads using `addPullRequestReviewThreadReply`
+- ✅ Resolve Copilot threads using `resolveReviewThread`
+
 ## ⚠️ CRITICAL REQUIREMENTS ⚠️
 
 ### YOU MUST RESOLVE THREADS AFTER ADDRESSING THEM
@@ -23,18 +38,64 @@ The thread resolution is NOT optional - it's the primary deliverable of this ski
 
 ### Thread Resolution Mutation (USE THIS!)
 
+**IMPORTANT:** Use inline values, NOT `$variable` syntax. The `$` character causes shell escaping issues (`Expected VAR_SIGN, actual: UNKNOWN_CHAR`).
+
 ```bash
+# Replace THREAD_ID with actual thread ID (e.g., PRRT_kwDONZ...)
 gh api graphql -f query='
-mutation($threadId: ID!) {
-  resolveReviewThread(input: {threadId: $threadId}) {
+mutation {
+  resolveReviewThread(input: {threadId: "THREAD_ID"}) {
     thread { isResolved }
   }
-}' -f threadId="THREAD_ID"
+}'
 ```
 
 **You MUST call this mutation for EVERY thread you address.**
 
+### YOU MUST UPDATE COPILOT-INSTRUCTIONS.MD FOR INCORRECT FEEDBACK
+
+**When Copilot feedback is categorized as INCORRECT (conflicts with project conventions/patterns), you MUST:**
+
+1. **Update `.github/copilot-instructions.md`** to document the correct pattern
+2. This prevents Copilot from flagging the same or similar things in future PRs
+3. The update should be concise and explain why the pattern is intentional
+
+**Failure to update copilot-instructions.md = INCOMPLETE WORK for Incorrect category feedback.**
+
+#### CRITICAL: File Structure Requirements
+
+**Copilot only reads the first ~4000 characters for PR reviews.** Therefore:
+
+1. **Review instructions MUST go at the TOP** of the file, in a dedicated section
+2. **Use a specific review-targeted section** like `## PR Review Checklist (CRITICAL)` as the first section
+3. **Keep the review section under 4000 characters** - measure with `head -c 4000 .github/copilot-instructions.md | wc -c`
+4. **If exceeding 4000 chars, COMPRESS the section:**
+   - Remove redundant words
+   - Use terse bullet points
+   - Combine related items
+   - Move non-review guidance below the 4000 char threshold
+
+Example structure:
+```markdown
+# GitHub Copilot Instructions
+
+## PR Review Checklist (CRITICAL)
+<!-- KEEP THIS SECTION UNDER 4000 CHARS - Copilot only reads first ~4000 -->
+
+- **Pattern X**: Intentional, do not flag
+- **Pattern Y**: Required for Z reason
+
+## Code Style
+<!-- Less critical sections go below -->
+```
+
+**After updating, verify:** `head -c 4000 .github/copilot-instructions.md | tail -5` should show content from the review section, not unrelated sections.
+
 ---
+
+## Prerequisites
+
+**CRITICAL: Load the `fx-dev:github` skill FIRST** before running any GitHub API operations. This skill provides essential patterns and error handling for `gh` CLI commands.
 
 ## WHEN TO USE THIS SKILL
 
@@ -57,13 +118,16 @@ mutation($threadId: ID!) {
 
 ### 1. Fetch Unresolved Copilot Threads
 
-Query review threads using GraphQL:
+Query review threads using GraphQL.
+
+**IMPORTANT:** Use inline values, NOT `$variable` syntax. The `$` character causes shell escaping issues.
 
 ```bash
+# Replace OWNER, REPO, PR_NUMBER with actual values
 gh api graphql -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
-  repository(owner: $owner, name: $repo) {
-    pullRequest(number: $pr) {
+query {
+  repository(owner: "OWNER", name: "REPO") {
+    pullRequest(number: PR_NUMBER) {
       reviewThreads(first: 100) {
         nodes {
           id
@@ -78,7 +142,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
       }
     }
   }
-}' -f owner="OWNER" -f repo="REPO" -F pr=PR_NUMBER
+}'
 ```
 
 **Filter for:** `isResolved: false` AND author is Copilot (github-actions bot or copilot signature)
@@ -96,15 +160,18 @@ For each unresolved Copilot comment:
 
 ### 3. Resolve Threads
 
-Use GraphQL mutation to resolve:
+Use GraphQL mutation to resolve.
+
+**IMPORTANT:** Use inline values, NOT `$variable` syntax.
 
 ```bash
+# Replace THREAD_ID with actual thread ID (e.g., PRRT_kwDONZ...)
 gh api graphql -f query='
-mutation($threadId: ID!) {
-  resolveReviewThread(input: {threadId: $threadId}) {
+mutation {
+  resolveReviewThread(input: {threadId: "THREAD_ID"}) {
     thread { isResolved }
   }
-}' -f threadId="THREAD_ID"
+}'
 ```
 
 ### 4. Handle Each Category
@@ -113,25 +180,31 @@ mutation($threadId: ID!) {
 - Resolve immediately without changes
 - Optional brief acknowledgment reply
 
-#### Outdated/Incorrect Comments
+#### Outdated/Incorrect Copilot Comments
 
-**CRITICAL: Reply directly to the review thread, NOT to the PR.**
+**CRITICAL: Reply directly to the Copilot review thread, NOT to the PR.**
 
-Use GraphQL to add a reply comment to the specific thread:
+Use GraphQL to add a reply to the specific Copilot thread.
+
+**IMPORTANT:** Use inline values, NOT `$variable` syntax.
 
 ```bash
+# Replace THREAD_ID and message with actual values
 gh api graphql -f query='
-mutation($threadId: ID!, $body: String!) {
+mutation {
   addPullRequestReviewThreadReply(input: {
-    pullRequestReviewThreadId: $threadId,
-    body: $body
+    pullRequestReviewThreadId: "PRRT_xxx",
+    body: "Your explanation here"
   }) {
     comment { id }
   }
-}' -f threadId="PRRT_xxx" -f body="Your explanation here"
+}'
 ```
 
-**NEVER use `gh pr review <PR_NUMBER> --comment`** - this adds comments to the PR itself, not to the specific thread!
+**⛔ FORBIDDEN COMMANDS - NEVER USE:**
+- `gh pr review <PR_NUMBER> --comment` - adds PR-level comments, not thread replies
+- `gh pr comment` - adds PR-level comments
+- Any interaction with human reviewer threads
 
 1. Reply to the thread with professional explanation:
    - Outdated: "This comment refers to code refactored in commit abc123. The issue is no longer applicable."
@@ -174,8 +247,9 @@ This suggestion conflicts with our [convention name] convention. [Brief explanat
 
 1. ✅ All code changes pushed to the PR branch
 2. ✅ **EVERY addressed thread resolved via GraphQL mutation** (not just code fixed!)
-3. ✅ Re-query confirms `isResolved: true` for all processed threads
-4. ✅ Output summary table (see format below)
+3. ✅ **For INCORRECT feedback: `.github/copilot-instructions.md` updated** to prevent recurrence
+4. ✅ Re-query confirms `isResolved: true` for all processed threads
+5. ✅ Output summary table (see format below)
 
 ### Required Output: Thread Summary Table
 
