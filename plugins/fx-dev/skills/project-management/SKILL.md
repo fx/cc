@@ -1,6 +1,6 @@
 ---
-name: fx-dev:project-management
-description: MUST BE USED PROACTIVELY when user asks to: create PROJECT.md, set up PROJECT.md, initialize project tracking, create tickets, create issues, write feature documentation, create PRD, create product requirements, manage TODO.md, manage STATUS.md, track project progress, "add a feature", "improve X to allow Y", "work on next issue", "work on next feature", plan features, break down tasks, or any project/task management activity. Also load when user mentions PROJECT.md in any context. This skill handles all project planning, documentation, and work tracking through docs/PROJECT.md or external tools (GitHub Projects, Jira).
+name: project-management
+description: MUST BE USED PROACTIVELY when user mentions or references PROJECT.md in ANY form (docs/PROJECT.md, @docs/PROJECT.md, "the project file", etc.) or discusses tasks/tracking. Triggers include: "add a task", "add this task", "update PROJECT.md", "mark as done", "mark complete", "track this", "next task", "what's next", "work on next", create tickets/issues, write feature docs, create PRD, manage TODO.md/STATUS.md, "add a feature", "improve X to allow Y", plan features, break down tasks, or ANY project/task management discussion. This skill handles all project planning, documentation, and work tracking through docs/PROJECT.md or external tools (GitHub Projects, Jira).
 ---
 
 # Project Management
@@ -16,12 +16,16 @@ This skill manages project tasks and documentation for AI-driven development. Al
 
 ## When This Skill Triggers
 
-Use proactively when the user:
+**Load this skill IMMEDIATELY when user:**
+- Mentions PROJECT.md in ANY form: `docs/PROJECT.md`, `@docs/PROJECT.md`, "project file", "project tasks"
+- Says: "add a task", "add this task", "new task", "track this"
+- Says: "mark as done", "mark complete", "check off", "finished this"
+- Says: "next task", "what's next", "work on next", "next issue", "next feature"
+- Discusses tasks, features, or project tracking in general
 - Asks to create tickets, issues, or feature documentation
 - Requests PRD, product requirements, or feature specs
 - Mentions TODO.md, STATUS.md, or project tracking
 - Says "add a feature that does X" or "improve X to allow Y"
-- Says "work on next issue", "next feature", or "what's next"
 - Asks to plan, break down, or organize work
 
 ## Available Agents
