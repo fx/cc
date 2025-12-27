@@ -29,6 +29,10 @@
     {
       "name": "release-please",
       "source": "./plugins/release-please"
+    },
+    {
+      "name": "steam",
+      "source": "./plugins/steam"
     }
   ]
 }
