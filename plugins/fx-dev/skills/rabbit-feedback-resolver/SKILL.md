@@ -166,6 +166,7 @@ For each unresolved CodeRabbit comment:
 | **Actionable with AI Prompt** | Has `🤖 Prompt for AI Agents` section | Extract prompt, delegate to coder |
 | **Actionable with Committable** | Has `📝 Committable suggestion` | Apply suggestion directly |
 | **General Feedback** | No special sections | Analyze and delegate to coder |
+| **Deferred** | Valid but out of scope for this PR | Track in PROJECT.md, reply, resolve |
 
 ### 3. Process Each Category
 
@@ -204,6 +205,21 @@ values...
    - Reply with explanation and resolve
    - **Update `.github/copilot-instructions.md`** to document the correct pattern
    - This prevents both Copilot AND CodeRabbit from flagging it again (CodeRabbit reads this file via `knowledge_base.code_guidelines`)
+
+#### Deferred (Out of Scope)
+
+**When feedback is valid but out of scope for the current PR:**
+
+1. **Load the `fx-dev:project-management` skill** to track the follow-up work
+2. **Add task to PROJECT.md** under the appropriate feature/section:
+   - Read current PROJECT.md structure
+   - Add a concise task describing the improvement
+   - Commit the PROJECT.md update
+3. **Reply to the thread** explaining the deferral:
+   - "Valid suggestion. Tracked as follow-up task in PROJECT.md for a future PR."
+4. **Resolve the thread**
+
+**CRITICAL:** Never defer feedback without tracking it. "Acknowledged for follow-up" without a PROJECT.md entry is INCOMPLETE WORK.
 
 ### 4. Resolve Threads
 
@@ -257,17 +273,19 @@ echo "$COMMENT_BODY" | sed -n '/🤖 Prompt for AI Agents/,/<\/details>/p' | sed
 2. All code changes pushed to the PR branch
 3. **EVERY addressed thread resolved via GraphQL mutation**
 4. **For INCORRECT feedback:** `.github/copilot-instructions.md` updated to prevent recurrence
-5. Re-query confirms `isResolved: true` for all processed threads
-6. Output summary table
+5. **For DEFERRED feedback:** Task added to `docs/PROJECT.md` via project-management skill
+6. Re-query confirms `isResolved: true` for all processed threads
+7. Output summary table
 
 ### Required Output: Thread Summary Table
 
 ```
 | Thread ID | File:Line | Category | Action Taken | Status |
 |-----------|-----------|----------|--------------|--------|
-| PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | Resolved |
-| PRRT_yyy  | src/bar.ts:15 | AI Prompt | Applied JSDoc fix | Resolved |
-| PRRT_zzz  | lib/util.js:8 | Committable | Applied suggestion | Resolved |
+| PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | ✅ Resolved |
+| PRRT_yyy  | src/bar.ts:15 | AI Prompt | Applied JSDoc fix | ✅ Resolved |
+| PRRT_zzz  | lib/util.js:8 | Committable | Applied suggestion | ✅ Resolved |
+| PRRT_aaa  | src/ui.tsx:20 | Deferred | Tracked in PROJECT.md | ✅ Resolved |
 ```
 
 ## Error Handling

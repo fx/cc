@@ -36,6 +36,7 @@ Orchestrates complete software development lifecycle for ALL coding tasks. **You
 
 | Skill | Invocation | Purpose |
 |-------|------------|---------|
+| Project Management | `Skill tool: skill="fx-dev:project-management"` | **STEP 5 & 8** - Update PROJECT.md tasks (ALWAYS load before touching PROJECT.md) |
 | PR Feedback Resolver | `Skill tool: skill="fx-dev:resolve-pr-feedback"` | **STEP 6** - Resolve automated review feedback (Copilot/CodeRabbit) |
 | GitHub CLI Expert | `Skill tool: skill="fx-dev:github"` | GitHub CLI patterns and troubleshooting |
 
@@ -222,6 +223,7 @@ Task tool:
            - Create PR as DRAFT: gh pr create --draft
            - Never create non-draft PRs
            - Reference any related issues
+           - Check docs/PROJECT.md and mark completed tasks
            - Return the PR number and URL
            - Tell user to run 'gh pr ready <NUMBER>' when ready"
   description: "Create draft PR"
@@ -340,7 +342,30 @@ Verify:
 - ✅ All status checks pass
 - ✅ No unresolved review comments
 
-#### 8.2 Update GitHub Issue (if applicable)
+#### 8.2 Update Project Tasks (CRITICAL)
+
+**MANDATORY - Ensure PROJECT.md reflects completed work.**
+
+Check if `docs/PROJECT.md` exists:
+```bash
+test -f docs/PROJECT.md && echo "PROJECT.md exists"
+```
+
+If PROJECT.md exists and contains tasks related to this PR:
+
+**MANDATORY: Load the project-management skill FIRST:**
+```
+Skill tool: skill="fx-dev:project-management"
+```
+
+The project-management skill provides the correct format and workflow. After loading:
+1. Identify task(s) addressed by this PR
+2. Mark as complete: `- [x] Task name (PR #N)`
+3. Commit and push the update if not already included in PR
+
+**CRITICAL:** Never complete the workflow without updating PROJECT.md. Orphaned tasks cause confusion about project status.
+
+#### 8.3 Update GitHub Issue (if applicable)
 
 ```
 Task tool:
@@ -351,7 +376,7 @@ Task tool:
   description: "Update issue status"
 ```
 
-#### 8.3 Report to User
+#### 8.4 Report to User
 
 Output to user:
 - PR URL
@@ -436,6 +461,7 @@ Workflow is complete when ALL of the following are true:
 - ✅ Self-review completed, issues fixed
 - ✅ Copilot feedback resolved (if any)
 - ✅ All CI/CD checks passing
+- ✅ PROJECT.md updated with completed task(s) (if exists)
 - ✅ User notified and awaiting merge approval
 
 ---

@@ -1,6 +1,6 @@
 ---
 name: project-management
-description: MUST BE USED PROACTIVELY when user mentions or references PROJECT.md in ANY form (docs/PROJECT.md, @docs/PROJECT.md, "the project file", etc.) or discusses tasks/tracking. Triggers include: "add a task", "add this task", "update PROJECT.md", "mark as done", "mark complete", "track this", "next task", "what's next", "work on next", create tickets/issues, write feature docs, create PRD, manage TODO.md/STATUS.md, "add a feature", "improve X to allow Y", plan features, break down tasks, or ANY project/task management discussion. This skill handles all project planning, documentation, and work tracking through docs/PROJECT.md or external tools (GitHub Projects, Jira).
+description: MUST BE LOADED BEFORE modifying docs/PROJECT.md. Also load when user mentions PROJECT.md in ANY form (docs/PROJECT.md, @docs/PROJECT.md, "the project file", etc.) or discusses tasks/tracking. Triggers include: "add a task", "add this task", "update PROJECT.md", "mark as done", "mark complete", "track this", "next task", "what's next", "work on next", create tickets/issues, write feature docs, create PRD, manage TODO.md/STATUS.md, "add a feature", "improve X to allow Y", plan features, break down tasks, or ANY project/task management discussion. This skill handles all project planning, documentation, and work tracking through docs/PROJECT.md or external tools (GitHub Projects, Jira).
 ---
 
 # Project Management
@@ -16,7 +16,10 @@ This skill manages project tasks and documentation for AI-driven development. Al
 
 ## When This Skill Triggers
 
-**Load this skill IMMEDIATELY when user:**
+**CRITICAL:** Load this skill BEFORE reading, modifying, or editing `docs/PROJECT.md`. Do not use Read/Edit tools on PROJECT.md without loading this skill first.
+
+**Load this skill IMMEDIATELY when:**
+- **About to modify PROJECT.md** - Before ANY edit to docs/PROJECT.md, load this skill first
 - Mentions PROJECT.md in ANY form: `docs/PROJECT.md`, `@docs/PROJECT.md`, "project file", "project tasks"
 - Says: "add a task", "add this task", "new task", "track this"
 - Says: "mark as done", "mark complete", "check off", "finished this"

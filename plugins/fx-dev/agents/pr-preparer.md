@@ -83,7 +83,21 @@ Then, your primary responsibilities:
    - Global coding standards and architectural decisions
    - Any custom requirements or patterns established in the codebase
 
-6. **Create the PR as Draft**: Use `gh pr create --draft` to create the pull request on GitHub. **ALL PRs MUST be created as drafts initially.** Never create a PR that is immediately ready for review.
+6. **Update Project Tasks**: Before creating the PR, check if `docs/PROJECT.md` (or similar project tracking file) exists. If it does:
+
+   **MANDATORY: Load the project-management skill FIRST:**
+   ```
+   Skill tool: skill="fx-dev:project-management"
+   ```
+
+   The project-management skill provides the correct format and workflow for updating PROJECT.md. After loading:
+   - Identify which task(s) in PROJECT.md are addressed by this PR
+   - Mark the task(s) as complete with the PR reference: `- [x] Task name (PR #N)`
+   - Include the PROJECT.md update in the PR
+
+   **CRITICAL:** This step ensures completed work is tracked. Skipping this results in orphaned tasks that appear incomplete after merge.
+
+7. **Create the PR as Draft**: Use `gh pr create --draft` to create the pull request on GitHub. **ALL PRs MUST be created as drafts initially.** Never create a PR that is immediately ready for review.
 
    ```bash
    gh pr create --draft --title "type: description" --body "$(cat <<'EOF'
@@ -95,17 +109,17 @@ Then, your primary responsibilities:
 
    After PR creation, inform the user: "PR created as draft. After review feedback is addressed, mark ready with: `gh pr ready <PR_NUMBER>`"
 
-7. **Provide Actionable Feedback**: If issues are found:
+8. **Provide Actionable Feedback**: If issues are found:
    - Clearly explain what needs to be fixed
    - Suggest specific commands or changes to resolve issues
    - Offer to help with commit cleanup (squashing, rewriting messages, etc.)
 
-8. **Present Final Version**: Once everything is compliant:
+9. **Present Final Version**: Once everything is compliant:
    - Provide the final PR title (following commit message format)
    - Present the complete PR description ready for submission
    - Return the PR URL to the user
 
-9. **Monitor PR Checks**: When the PR has been pushed and created, pass it to the pr-check-monitor agent to watch for CI failures.
+10. **Monitor PR Checks**: When the PR has been pushed and created, pass it to the pr-check-monitor agent to watch for CI failures.
 
 When analyzing, pay special attention to:
 - Unnecessary files that should be removed

@@ -157,6 +157,7 @@ For each unresolved Copilot comment:
 | **Outdated** | Refers to code that no longer exists | Reply with explanation, resolve |
 | **Incorrect** | Misunderstands project conventions | Reply with explanation, resolve, update copilot-instructions.md |
 | **Valid** | Current, actionable concern | Delegate to coder agent to fix |
+| **Deferred** | Valid but out of scope for this PR | Track in PROJECT.md, reply, resolve |
 
 ### 3. Resolve Threads
 
@@ -223,6 +224,21 @@ mutation {
    - Thread ID for resolution after fix
 2. Ensure coder pushes changes and resolves thread
 
+#### Deferred (Out of Scope)
+
+**When feedback is valid but out of scope for the current PR:**
+
+1. **Load the `fx-dev:project-management` skill** to track the follow-up work
+2. **Add task to PROJECT.md** under the appropriate feature/section:
+   - Read current PROJECT.md structure
+   - Add a concise task describing the improvement
+   - Commit the PROJECT.md update
+3. **Reply to the thread** explaining the deferral:
+   - "Valid suggestion. Tracked as follow-up task in PROJECT.md for a future PR."
+4. **Resolve the thread**
+
+**CRITICAL:** Never defer feedback without tracking it. "Acknowledged for follow-up" without a PROJECT.md entry is INCOMPLETE WORK.
+
 ### 5. Verify Completion
 
 1. **Push any changes:** `git push`
@@ -248,8 +264,9 @@ This suggestion conflicts with our [convention name] convention. [Brief explanat
 1. ✅ All code changes pushed to the PR branch
 2. ✅ **EVERY addressed thread resolved via GraphQL mutation** (not just code fixed!)
 3. ✅ **For INCORRECT feedback: `.github/copilot-instructions.md` updated** to prevent recurrence
-4. ✅ Re-query confirms `isResolved: true` for all processed threads
-5. ✅ Output summary table (see format below)
+4. ✅ **For DEFERRED feedback: Task added to `docs/PROJECT.md`** via project-management skill
+5. ✅ Re-query confirms `isResolved: true` for all processed threads
+6. ✅ Output summary table (see format below)
 
 ### Required Output: Thread Summary Table
 
@@ -261,12 +278,13 @@ This suggestion conflicts with our [convention name] convention. [Brief explanat
 | PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | ✅ Resolved |
 | PRRT_yyy  | src/bar.ts:15 | Valid | Fixed null check | ✅ Resolved |
 | PRRT_zzz  | lib/util.js:8 | Outdated | Code refactored | ✅ Resolved |
+| PRRT_aaa  | src/ui.tsx:20 | Deferred | Tracked in PROJECT.md | ✅ Resolved |
 ```
 
 **Column definitions:**
 - **Thread ID**: GraphQL thread ID (truncated for readability)
 - **File:Line**: Location of the comment
-- **Category**: Nitpick, Valid, Outdated, or Incorrect
+- **Category**: Nitpick, Valid, Outdated, Incorrect, or Deferred
 - **Action Taken**: Brief description of resolution (10 words max)
 - **Status**: ✅ Resolved, ❌ Failed, or ⏳ Pending
 
