@@ -170,6 +170,114 @@ feat/authentication-phase-1
 fix/login-step-2
 ```
 
+## Recognizing Repository References
+
+When users refer to repositories, recognize the `owner/repo` shorthand format and expand it appropriately.
+
+### Shorthand Format
+
+The pattern `owner/repo` (e.g., `fx/dotfiles`, `anthropics/claude-code`) refers to a GitHub repository. Always expand this to a full URL.
+
+### Examples
+
+| User says | Interpretation |
+|-----------|----------------|
+| "clone fx/dotfiles" | Clone `git@github.com:fx/dotfiles.git` |
+| "look at anthropics/claude-code" | Repository at `github.com/anthropics/claude-code` |
+| "fork vercel/next.js" | Fork from `github.com/vercel/next.js` |
+
+### Clone Priority
+
+When cloning, **always try SSH first**, then fall back to `gh` CLI:
+
+```bash
+# User: "clone fx/dotfiles"
+
+# 1. Try SSH first (preferred)
+git clone git@github.com:fx/dotfiles.git
+
+# 2. If SSH fails, use gh CLI (handles auth automatically)
+gh repo clone fx/dotfiles
+```
+
+### URL Expansion Rules
+
+| Shorthand | SSH URL | HTTPS URL |
+|-----------|---------|-----------|
+| `owner/repo` | `git@github.com:owner/repo.git` | `https://github.com/owner/repo.git` |
+| `fx/dotfiles` | `git@github.com:fx/dotfiles.git` | `https://github.com/fx/dotfiles.git` |
+
+**IMPORTANT:** Never prompt the user to clarify `owner/repo` references - assume GitHub and proceed with cloning.
+
+## Git Operations via `gh` CLI
+
+When SSH keys aren't configured or `GIT_SSH_COMMAND` proxying fails, use `gh` CLI for git operations. The `gh` CLI handles authentication automatically when logged in.
+
+### Check Authentication Status
+
+Before using `gh` for git operations, verify authentication:
+
+```bash
+gh auth status
+```
+
+If authenticated, `gh` can handle cloning, pushing, and other git operations without SSH keys.
+
+### Clone Repositories
+
+**Preferred approach when SSH works:**
+```bash
+git clone git@github.com:owner/repo.git
+```
+
+**Alternative via `gh` (no SSH required):**
+```bash
+gh repo clone owner/repo
+```
+
+This uses HTTPS with automatic token authentication - no SSH key needed.
+
+### Configure Git to Use `gh` for Authentication
+
+Set up git to use `gh` as a credential helper for HTTPS:
+
+```bash
+gh auth setup-git
+```
+
+This configures git to use `gh` for HTTPS authentication, allowing standard git commands to work:
+
+```bash
+git clone https://github.com/owner/repo.git
+git push origin main
+```
+
+### When to Use `gh` vs SSH
+
+| Scenario | Use |
+|----------|-----|
+| SSH key configured and working | `git clone git@github.com:...` |
+| No SSH key, but `gh auth status` shows logged in | `gh repo clone ...` or HTTPS with `gh auth setup-git` |
+| Coder workspace with broken `GIT_SSH_COMMAND` | `gh repo clone ...` |
+| CI/CD with `GITHUB_TOKEN` | HTTPS with token auth |
+
+### Common `gh` Git Operations
+
+```bash
+# Clone
+gh repo clone owner/repo
+gh repo clone owner/repo -- --depth 1  # Shallow clone
+
+# Fork and clone
+gh repo fork owner/repo --clone
+
+# View repo info
+gh repo view owner/repo
+
+# Create repo
+gh repo create my-repo --private --clone
+```
+
 ## Common Operations
 
 ### Create Pull Requests
@@ -254,6 +362,146 @@ gh pr view 13 --json title,body,state,reviewThreads
 # Filter with jq
 gh pr view 13 --json reviewThreads --jq '.reviewThreads[] | select(.isResolved == false)'
 ```
+
+## Copilot Review Management
+
+GitHub Copilot can automatically review pull requests. This section covers how to check review status and manage Copilot reviews.
+
+### Key Facts
+
+- **Copilot username**: `copilot-pull-request-reviewer` (GraphQL) or `copilot-pull-request-reviewer[bot]` (REST API)
+- **Review state**: Copilot only leaves `COMMENTED` state reviews, never `APPROVED` or `CHANGES_REQUESTED`
+- **API limitation**: No direct API endpoint to request Copilot reviews; must use UI or automatic triggers
+
+### Request Copilot to Review a PR
+
+There is no API endpoint to programmatically request a Copilot review. Reviews are triggered by:
+
+1. **Automatic reviews via repository rulesets** (recommended)
+   - Configure in repo Settings → Rules → Rulesets
+   - Enable "Automatically request Copilot code review"
+   - Optionally enable "Review new pushes" for re-reviews on each commit
+
+2. **GitHub UI**
+   - Open PR → Reviewers menu → Select "Copilot"
+   - To re-request: Click the re-request button (🔄) next to Copilot's name
+
+3. **Push new commits** (if "Review new pushes" ruleset is enabled)
+   - Simply push to the PR branch to trigger a new review
+
+### Check if Copilot Review is Pending
+
+Query review requests for Bot reviewers:
+
+```bash
+# Replace OWNER, REPO, PR_NUMBER with actual values
+gh api graphql -f query='
+query {
+  repository(owner: "OWNER", name: "REPO") {
+    pullRequest(number: PR_NUMBER) {
+      reviewRequests(first: 10) {
+        nodes {
+          requestedReviewer {
+            ... on Bot { login }
+          }
+        }
+      }
+    }
+  }
+}' --jq '.data.repository.pullRequest.reviewRequests.nodes[] | select(.requestedReviewer.login == "copilot-pull-request-reviewer")'
+```
+
+If output is non-empty, Copilot review is pending (in progress).
+
+### Check if Copilot Has Finished Reviewing
+
+Query completed reviews via REST API:
+
+```bash
+gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews \
+  --jq '.[] | select(.user.login == "copilot-pull-request-reviewer[bot]") | {state, submitted_at}'
+```
+
+Or via GraphQL:
+
+```bash
+gh api graphql -f query='
+query {
+  repository(owner: "OWNER", name: "REPO") {
+    pullRequest(number: PR_NUMBER) {
+      reviews(first: 20) {
+        nodes {
+          author { login }
+          state
+          submittedAt
+        }
+      }
+    }
+  }
+}' --jq '.data.repository.pullRequest.reviews.nodes[] | select(.author.login == "copilot-pull-request-reviewer")'
+```
+
+### Full Copilot Review Status Summary
+
+Query all Copilot-related information in one call:
+
+```bash
+gh api graphql -f query='
+query {
+  repository(owner: "OWNER", name: "REPO") {
+    pullRequest(number: PR_NUMBER) {
+      reviewRequests(first: 10) {
+        nodes {
+          requestedReviewer {
+            ... on Bot { login }
+          }
+        }
+      }
+      reviews(first: 20) {
+        nodes {
+          author { login }
+          state
+          submittedAt
+        }
+      }
+      reviewThreads(first: 100) {
+        totalCount
+        nodes {
+          id
+          isResolved
+          comments(first: 1) {
+            nodes {
+              author { login }
+            }
+          }
+        }
+      }
+    }
+  }
+}'
+```
+
+Then filter for Copilot status:
+
+```bash
+# Pending review request
+jq '.data.repository.pullRequest.reviewRequests.nodes[] | select(.requestedReviewer.login == "copilot-pull-request-reviewer")'
+
+# Completed reviews
+jq '.data.repository.pullRequest.reviews.nodes[] | select(.author.login == "copilot-pull-request-reviewer")'
+
+# Unresolved Copilot threads
+jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .comments.nodes[0].author.login == "copilot-pull-request-reviewer")] | length'
+```
+
+### Status Interpretation
+
+| Condition | Meaning |
+|-----------|---------|
+| Review request exists for `copilot-pull-request-reviewer` | Review in progress |
+| Review with `submittedAt` exists, no pending request | Review completed |
+| Unresolved threads with Copilot author | Feedback needs attention |
+| No request, no reviews | Copilot not configured or not triggered |
 
 ## Bundled References
 
