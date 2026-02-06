@@ -222,25 +222,37 @@ Task tool:
   description: "Fix review issues"
 ```
 
-#### 6.3 Wait for Copilot Review
+#### 6.3 Request and Wait for Copilot Review (10 minute timeout)
 
-**Use the bundled script to poll for Copilot review (5 minute timeout):**
+**First, request Copilot review via the GitHub API:**
 
 ```bash
-# Path: skills/sdlc/scripts/wait-for-copilot-review.sh
-./wait-for-copilot-review.sh [PR_NUMBER]
+# Request Copilot review using JSON body format (most reliable)
+gh api --method POST /repos/{owner}/{repo}/pulls/[PR_NUMBER]/requested_reviewers \
+  --input - <<'EOF'
+{"reviewers":["copilot-pull-request-reviewer[bot]"]}
+EOF
 ```
+
+**Then use the bundled script to poll for completion (10 minute timeout):**
+
+```bash
+# IMPORTANT: Use the FULL path from the skill's base directory
+bash [SKILL_BASE_DIR]/skills/sdlc/scripts/wait-for-copilot-review.sh [PR_NUMBER]
+```
+
+**⚠️ CRITICAL: You MUST wait the full 10 minutes.** Do NOT fall back to manual polling with shorter waits. If the script exits with code 2 (review not detected as requested), re-request the review using the JSON body format above and run the script again.
 
 Script behavior:
 - Checks if Copilot review was requested
-- Polls every 10s until review is received (timeout: 300s)
-- Exit 0: Review received
-- Exit 1: Timeout
-- Exit 2: No Copilot review requested (continue workflow)
-
-If timeout (exit 1): Proceed anyway, Copilot feedback can be handled later.
+- Polls every 60s until review is received (timeout: 600s / 10 minutes)
+- Exit 0: Review received -> **proceed to Step 6.4 immediately**
+- Exit 1: Timeout after 10 minutes -> proceed to Step 6.4 anyway (will find no threads)
+- Exit 2: Review request not detected -> re-request using JSON body format above, then re-run script
 
 #### 6.4 Handle Automated Review Feedback (Copilot/CodeRabbit)
+
+**ALWAYS invoke this skill after Step 6.3, regardless of whether the Copilot review arrived or timed out.** This skill detects and resolves all unresolved automated review threads.
 
 ```
 Skill tool: skill="fx-dev:resolve-pr-feedback"

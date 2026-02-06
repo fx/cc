@@ -3,7 +3,7 @@
 # Polls a PR for Copilot review completion with timeout
 #
 # Usage: ./wait-for-copilot-review.sh <PR_NUMBER> [TIMEOUT_SECONDS]
-# Default timeout: 300 seconds (5 minutes)
+# Default timeout: 600 seconds (10 minutes)
 #
 # Exit codes:
 #   0 - Copilot review received
@@ -14,8 +14,8 @@
 set -euo pipefail
 
 PR_NUMBER="${1:-}"
-TIMEOUT="${2:-300}"
-POLL_INTERVAL=10
+TIMEOUT="${2:-600}"
+POLL_INTERVAL=60
 
 if [[ -z "$PR_NUMBER" ]]; then
     echo "Usage: $0 <PR_NUMBER> [TIMEOUT_SECONDS]" >&2
@@ -60,7 +60,8 @@ fi
 # If not requested, report and exit
 if [[ -z "$requested" ]]; then
     echo "No Copilot review requested on PR #${PR_NUMBER}"
-    echo "To request: gh pr edit $PR_NUMBER --add-reviewer copilot-pull-request-reviewer[bot]"
+    echo "To request via API (recommended): gh api --method POST /repos/{owner}/{repo}/pulls/${PR_NUMBER}/requested_reviewers -f 'reviewers[]=copilot-pull-request-reviewer[bot]'"
+    echo "See: https://github.com/cli/cli/issues/10598#issuecomment-2893526162"
     exit 2
 fi
 
