@@ -1,6 +1,6 @@
 ---
 name: steam-linux
-description: This skill should be used when working with Steam on Linux - managing non-Steam game shortcuts, configuring Proton/Wine compatibility, parsing VDF files, or finding Steam paths and prefixes.
+description: This skill should be used when working with Steam on Linux - managing non-Steam game shortcuts, configuring Proton/Wine compatibility, parsing VDF files, or finding Steam paths and prefixes. MUST BE USED when user mentions Steam launch options, modifying shortcuts.vdf, Proton environment variables (PROTON_*, WINE*), Battle.net/Blizzard games on Linux, or RTX 4000+ performance fixes. ALSO USE when troubleshooting Proton/Wine game issues (black screen, game won't launch, launcher issues, CEF/Chromium rendering problems).
 ---
 
 # Steam Linux Management
@@ -231,6 +231,89 @@ steam -applaunch {APP_ID}
 
 **Note**: These require Steam to be running and may not work reliably for non-Steam shortcuts.
 
+## Modifying LaunchOptions in shortcuts.vdf
+
+To modify launch options for a non-Steam shortcut programmatically:
+
+```python
+import shutil
+from pathlib import Path
+
+vdf_path = Path.home() / ".local/share/Steam/userdata/{USER_ID}/config/shortcuts.vdf"
+
+# Always backup first
+shutil.copy2(vdf_path, str(vdf_path) + '.bak')
+
+with open(vdf_path, 'rb') as f:
+    data = f.read()
+
+# Find LaunchOptions field (binary format: \x01LaunchOptions\x00value\x00)
+launch_options_marker = b'\x01LaunchOptions\x00'
+pos = data.find(launch_options_marker)
+
+if pos != -1:
+    value_start = pos + len(launch_options_marker)
+    value_end = data.find(b'\x00', value_start)
+
+    # Replace with new value
+    new_options = b'PROTON_NVIDIA_LIBS_NO_32BIT=1 %command%'
+    new_data = data[:value_start] + new_options + data[value_end:]
+
+    with open(vdf_path, 'wb') as f:
+        f.write(new_data)
+```
+
+### Common Launch Options
+
+RTX 4000+ performance fix:
+```
+PROTON_NVIDIA_LIBS_NO_32BIT=1 %command%
+```
+
+Disable FSYNC (fallback to ESYNC):
+```
+PROTON_NO_FSYNC=1 %command%
+```
+
+Force specific Proton prefix:
+```
+STEAM_COMPAT_DATA_PATH="/path/to/compatdata/APP_ID" %command%
+```
+
+## Troubleshooting
+
+### Steam/Proton Won't Launch - "User namespaces" or Mount Errors
+
+**Symptoms:** Steam fails to start with errors like:
+- `bwrap: Can't bind mount /oldroot/ on /newroot/: Unable to apply mount flags`
+- `Steam now requires user namespaces to be enabled`
+- Proton games silently fail to launch
+
+**Cause:** Steam's pressure-vessel container (bubblewrap) tries to bind-mount ALL existing mount points. If any mount is stale or unavailable (e.g., network share with `x-systemd.automount` when the server is offline), the entire container fails.
+
+**Diagnosis:**
+```bash
+# Check for problematic mounts
+mount | grep -E "autofs|cifs|nfs"
+ls -la /mnt/  # Look for entries showing "?" (stale mounts)
+```
+
+**Fix:**
+```bash
+# Find the problematic fstab entry
+grep -E "automount|cifs|nfs" /etc/fstab
+
+# Comment out unavailable automount entries
+sudo sed -i 's|^//server/share|#//server/share|' /etc/fstab
+sudo systemctl daemon-reload
+sudo systemctl stop mnt-sharename.automount  # Replace with actual unit name
+```
+
+**Prevention:** For network shares that may be unavailable, consider:
+- Using `x-systemd.automount` with `x-systemd.mount-timeout=5` to fail faster
+- Mounting on-demand via a script instead of fstab automount
+- Using `nofail` option (though this doesn't help with automount)
+
 ## Important Notes
 
 1. **Close Steam before modifying config files** - Steam may overwrite changes
@@ -238,3 +321,4 @@ steam -applaunch {APP_ID}
 3. **App IDs for shortcuts** - Must use the CRC32-based generation algorithm
 4. **Quote paths in Exe/StartDir** - Always wrap paths in double quotes
 5. **Template escaping** - When using in chezmoi templates, avoid `\n`, `\t`, use `chr()` instead
+6. **Binary VDF backups** - Always backup shortcuts.vdf before modifying
