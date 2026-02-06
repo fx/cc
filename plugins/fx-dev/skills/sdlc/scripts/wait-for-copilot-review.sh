@@ -22,28 +22,37 @@ if [[ -z "$PR_NUMBER" ]]; then
     exit 3
 fi
 
-# Copilot's bot user ID
-COPILOT_BOT_LOGIN="copilot-pull-request-reviewer[bot]"
+# Copilot bot identifiers vary by API:
+#   REST requested_reviewers: login="Copilot"
+#   REST /reviews:            login="copilot-pull-request-reviewer[bot]"
+#   gh pr view --json:        login="copilot-pull-request-reviewer" (no [bot] suffix)
 COPILOT_BOT_ID="BOT_kgDOCnlnWA"
+
+# Get repo owner/name for REST API calls
+REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null)
+if [[ -z "$REPO_NWO" ]]; then
+    echo "Error: Could not determine repository" >&2
+    exit 3
+fi
 
 echo "Checking PR #${PR_NUMBER} for Copilot review..."
 
-# Check if Copilot review was requested
+# Check if Copilot review was requested (must use REST API — gh pr view returns empty for bots)
 check_review_requested() {
-    gh pr view "$PR_NUMBER" --json reviewRequests --jq \
-        ".reviewRequests[] | select(.login == \"$COPILOT_BOT_LOGIN\" or .name == \"$COPILOT_BOT_LOGIN\") | .login" 2>/dev/null || true
+    gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}" --jq \
+        '.requested_reviewers[] | select(.login == "Copilot" or .node_id == "BOT_kgDOCnlnWA") | .login' 2>/dev/null || true
 }
 
-# Check if Copilot has submitted a review
+# Check if Copilot has submitted a review (gh pr view strips [bot] suffix from login)
 check_review_submitted() {
     gh pr view "$PR_NUMBER" --json reviews --jq \
-        ".reviews[] | select(.author.login == \"$COPILOT_BOT_LOGIN\") | .state" 2>/dev/null | head -1 || true
+        '.reviews[] | select(.author.login | startswith("copilot-pull-request-reviewer")) | .state' 2>/dev/null | head -1 || true
 }
 
 # Check for Copilot review comments (alternative detection)
 check_review_comments() {
     gh pr view "$PR_NUMBER" --json reviewThreads --jq \
-        ".reviewThreads[] | select(.comments[0].author.login == \"$COPILOT_BOT_LOGIN\") | .id" 2>/dev/null | head -1 || true
+        '.reviewThreads[] | select(.comments[0].author.login | startswith("copilot-pull-request-reviewer")) | .id' 2>/dev/null | head -1 || true
 }
 
 # Initial check - is Copilot review requested?
@@ -82,11 +91,11 @@ while [[ $elapsed -lt $TIMEOUT ]]; do
         echo ""
         echo "=== Copilot Review Summary ==="
         gh pr view "$PR_NUMBER" --json reviews --jq \
-            ".reviews[] | select(.author.login == \"$COPILOT_BOT_LOGIN\") | \"State: \(.state)\nBody: \(.body)\"" 2>/dev/null || true
+            '.reviews[] | select(.author.login | startswith("copilot-pull-request-reviewer")) | "State: \(.state)\nBody: \(.body)"' 2>/dev/null || true
 
         # Count review threads from Copilot
         thread_count=$(gh pr view "$PR_NUMBER" --json reviewThreads --jq \
-            "[.reviewThreads[] | select(.comments[0].author.login == \"$COPILOT_BOT_LOGIN\")] | length" 2>/dev/null || echo "0")
+            '[.reviewThreads[] | select(.comments[0].author.login | startswith("copilot-pull-request-reviewer"))] | length' 2>/dev/null || echo "0")
         echo "Review threads: $thread_count"
 
         exit 0
