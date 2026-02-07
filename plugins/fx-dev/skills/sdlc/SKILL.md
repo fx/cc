@@ -264,33 +264,76 @@ Skill tool: skill="fx-dev:resolve-pr-feedback"
 
 ### STEP 7: CI/CD Monitoring
 
-**MANDATORY: Launch pr-check-monitor agent.**
+**MANDATORY: Execute ALL sub-steps. Maximum 3 fix iterations.**
 
-```
-Task tool:
-  subagent_type: "fx-dev:pr-check-monitor"
-  prompt: "Monitor PR #[NUMBER] checks.
-           - Watch status checks
-           - Report failures
-           - Identify failure causes
+#### 7.1 Analyze Workflow Configuration
 
-           Output: Check status (pass/fail)"
-  description: "Monitor checks"
+Examine `.github/workflows/` to determine if CI checks trigger on draft PRs:
+
+```bash
+# Read all workflow files and check their trigger configuration
+ls .github/workflows/
 ```
 
-#### Fix Failures (if any)
+Look for `pull_request` event triggers in each workflow file:
+- **Triggers on drafts**: `pull_request:` with no `types:` filter, or `types:` includes `opened` / `synchronize` without special draft exclusion
+- **Does NOT trigger on drafts**: Workflow uses `pull_request_target`, or has conditional like `if: github.event.pull_request.draft == false`, or no `pull_request` trigger at all
+
+Output: Whether CI checks will run on a draft PR.
+
+#### 7.2 Ensure CI Checks Are Triggered
+
+**If workflows do NOT trigger on draft PRs:**
+
+```bash
+gh pr ready [PR_NUMBER]
+```
+
+This marks the PR as ready for review, which triggers CI workflows that only run on non-draft PRs.
+
+**If workflows DO trigger on drafts:** No action needed — checks should already be running or queued.
+
+#### 7.3 Wait for CI Checks to Start and Complete
+
+**Use the bundled script to poll for check completion (15 minute timeout):**
+
+```bash
+# IMPORTANT: Use the FULL path from the skill's base directory
+bash [SKILL_BASE_DIR]/skills/sdlc/scripts/wait-for-ci-checks.sh [PR_NUMBER]
+```
+
+**⚠️ CRITICAL: You MUST wait the full timeout.** Do NOT fall back to manual polling with shorter waits or use `gh pr checks` yourself. Let the script handle all polling.
+
+Script behavior:
+- Phase 1: Waits for checks to appear (some repos have a startup delay)
+- Phase 2: Polls every 30s until all checks complete (timeout: 900s / 15 minutes)
+- Exit 0: All checks passed → **proceed to Step 8**
+- Exit 1: One or more checks failed → **proceed to Step 7.4**
+- Exit 2: Timeout waiting for checks → report to user, ask whether to continue waiting or proceed
+- Exit 3: Invalid arguments or gh error
+
+#### 7.4 Handle CI Failures (LOOP — max 3 iterations)
+
+**If Step 7.3 exits with code 1 (failures detected):**
 
 ```
-Task tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "Fix failing checks for PR #[NUMBER]:
-           [FAILURE DETAILS]"
-  description: "Fix check failures"
+Skill tool: skill="fx-dev:resolve-ci-failures"
 ```
 
-**Repeat Step 7 until all checks pass.**
+Pass the failure details from the script output to the skill. The skill will:
+1. Analyze failure logs and identify root causes
+2. Delegate fixes to the coder agent
+3. Push the fixes
 
-**⛔ DO NOT PROCEED until all checks pass**
+**After the skill completes and fixes are pushed, GO BACK TO Step 7.3** — re-run the wait script to monitor the new check run. This creates a loop:
+
+```
+Step 7.3 (wait) → fail → Step 7.4 (fix) → Step 7.3 (wait) → ...
+```
+
+**⚠️ Maximum 3 iterations.** Track the current iteration count. If checks still fail after 3 fix attempts, STOP and report the persistent failures to the user with full details.
+
+**⛔ DO NOT PROCEED until all checks pass or max iterations reached**
 
 ---
 
@@ -376,11 +419,11 @@ Awaiting your approval to merge.
 | 2 | Requirements Analyzer | `fx-dev:requirements-analyzer` |
 | 3 | Planner | `fx-dev:planner` |
 | 3,8 | Issue Updater | `fx-dev:issue-updater` |
-| 4,6.2,7 | Coder | `fx-dev:coder` |
+| 4,6.2 | Coder | `fx-dev:coder` |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
 | 6.4 | PR Feedback Resolver | Skill: `fx-dev:resolve-pr-feedback` |
-| 7 | PR Check Monitor | `fx-dev:pr-check-monitor` |
+| 7.4 | CI Failure Resolver | Skill: `fx-dev:resolve-ci-failures` |
 
 ---
 
