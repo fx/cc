@@ -295,14 +295,23 @@ This marks the PR as ready for review, which triggers CI workflows that only run
 
 #### 7.3 Wait for CI Checks to Start and Complete
 
-**Use the bundled script to poll for check completion (15 minute timeout):**
+**Run the bundled CI check script in the background, then poll its output every 60 seconds:**
 
 ```bash
-# IMPORTANT: Use the FULL path from the skill's base directory
+# Step 1: Launch the script in the background using Bash tool with run_in_background=true
 bash [SKILL_BASE_DIR]/skills/sdlc/scripts/wait-for-ci-checks.sh [PR_NUMBER]
 ```
 
-**⚠️ CRITICAL: You MUST wait the full timeout.** Do NOT fall back to manual polling with shorter waits or use `gh pr checks` yourself. Let the script handle all polling.
+**⚠️ CRITICAL: Use `run_in_background: true`** on the Bash tool call. Then poll the background task output every 60 seconds using `TaskOutput` with `block: false` to check progress. This lets you report status updates to the user while waiting.
+
+**Polling loop:**
+1. Launch script with `run_in_background: true`
+2. Every 60 seconds: check task output with `TaskOutput(task_id, block: false, timeout: 5000)`
+3. Report progress to user (e.g., "CI checks: 2 pending, 3 completed")
+4. When the task completes, read the final output to determine the exit code and results
+5. Do NOT just set a 15-minute timeout and block — you must actively poll and report progress
+
+**⛔ NEVER use a blocking Bash call with a long timeout for this script.** Always use background execution + polling.
 
 Script behavior:
 - Phase 1: Waits for checks to appear (some repos have a startup delay)
