@@ -359,7 +359,37 @@ Confirm:
 - All checks pass
 - No unresolved comments
 
-#### 8.2 Update Issue (if applicable)
+#### 8.2 Update Task Tracking Docs
+
+**MANDATORY: Mark completed tasks in the relevant spec or project doc.**
+
+If a spec file, project doc, or task list was referenced in the original request (e.g., a `docs/specs/` file or `docs/PROJECT.md`), use it directly. If none was provided, search for the relevant tracking doc:
+
+```bash
+# Look for spec files or project docs that reference the work being done
+grep -rl "keyword from task" docs/specs/ docs/PROJECT.md 2>/dev/null || true
+```
+
+Once identified, update the doc to mark completed tasks:
+- Check off completed items (e.g., `- [ ]` → `- [x]`)
+- Only mark items that are **actually addressed by the changes in this PR**
+- Commit the doc update to the PR branch
+
+```
+Task tool:
+  subagent_type: "fx-dev:coder"
+  prompt: "Update task tracking in [DOC_PATH]:
+           - Read the doc and identify tasks completed by PR #[NUMBER]
+           - Mark those tasks as done (check off checkboxes)
+           - Do NOT mark tasks that were not addressed
+           - Commit the change with: docs: mark completed tasks in [DOC_NAME]
+           - Push to the PR branch"
+  description: "Update task tracking"
+```
+
+If no relevant tracking doc is found, skip this step.
+
+#### 8.3 Update Issue (if applicable)
 
 ```
 Task tool:
@@ -368,7 +398,7 @@ Task tool:
   description: "Update issue"
 ```
 
-#### 8.3 Report to User
+#### 8.4 Report to User
 
 ```
 ✅ PR #[NUMBER] ready: [URL]
@@ -447,4 +477,5 @@ Workflow complete when ALL true:
 - ✅ Self-review done, issues fixed
 - ✅ Automated review feedback resolved (Copilot/CodeRabbit)
 - ✅ All CI/CD checks pass
+- ✅ Task tracking docs updated (completed tasks marked in relevant spec/project doc)
 - ✅ User notified, awaiting merge approval
