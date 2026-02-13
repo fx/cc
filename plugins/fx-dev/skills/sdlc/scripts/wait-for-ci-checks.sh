@@ -10,6 +10,12 @@
 #   1 - One or more checks failed
 #   2 - Timeout waiting for checks to complete
 #   3 - Invalid arguments or gh error
+#
+# gh pr checks --json fields: bucket, completedAt, description, event,
+#   link, name, startedAt, state, workflow
+# state values: SUCCESS, FAILURE, PENDING, SKIPPED, STARTUP_FAILURE,
+#   STALE, ERROR, EXPECTED, REQUESTED, WAITING, QUEUED, IN_PROGRESS
+# bucket values: pass, fail, skipping, pending
 
 set -euo pipefail
 
@@ -32,14 +38,14 @@ echo "Monitoring CI checks for PR #${PR_NUMBER}..."
 
 # Get check statuses as JSON array
 get_checks() {
-    gh pr checks "$PR_NUMBER" --json name,state,conclusion 2>/dev/null || echo "[]"
+    gh pr checks "$PR_NUMBER" --json name,state,bucket 2>/dev/null || echo "[]"
 }
 
-# Count checks by state
-count_by_state() {
+# Count checks by bucket (pass, fail, skipping, pending)
+count_by_bucket() {
     local json="$1"
-    local state="$2"
-    echo "$json" | jq -r "[.[] | select(.state == \"$state\")] | length" 2>/dev/null || echo "0"
+    local bucket="$2"
+    echo "$json" | jq -r "[.[] | select(.bucket == \"$bucket\")] | length" 2>/dev/null || echo "0"
 }
 
 # --- Phase 1: Wait for checks to appear ---
@@ -72,26 +78,24 @@ echo "Phase 2: Waiting for all checks to complete..."
 while [[ $elapsed -lt $TIMEOUT ]]; do
     checks=$(get_checks)
     total=$(echo "$checks" | jq 'length' 2>/dev/null || echo "0")
-    pending=$(count_by_state "$checks" "PENDING")
-    in_progress=$(count_by_state "$checks" "IN_PROGRESS")
-    queued=$(count_by_state "$checks" "QUEUED")
-    incomplete=$((pending + in_progress + queued))
+    pending_count=$(count_by_bucket "$checks" "pending")
 
-    echo "  Status: ${incomplete} pending, $((total - incomplete)) completed (${elapsed}s / ${TIMEOUT}s)"
+    echo "  Status: ${pending_count} pending, $((total - pending_count)) completed (${elapsed}s / ${TIMEOUT}s)"
 
-    if [[ "$incomplete" -eq 0 ]]; then
+    if [[ "$pending_count" -eq 0 ]]; then
         # All checks have completed — analyze results
         echo ""
         echo "=== CI Check Results ==="
 
-        failed_checks=$(echo "$checks" | jq -r '[.[] | select(.conclusion == "FAILURE" or .conclusion == "CANCELLED" or .conclusion == "TIMED_OUT" or .conclusion == "ACTION_REQUIRED")] | length' 2>/dev/null || echo "0")
-        passed_checks=$(echo "$checks" | jq -r '[.[] | select(.conclusion == "SUCCESS" or .conclusion == "SKIPPED" or .conclusion == "NEUTRAL")] | length' 2>/dev/null || echo "0")
+        failed_checks=$(count_by_bucket "$checks" "fail")
+        passed_checks=$(count_by_bucket "$checks" "pass")
+        skipped_checks=$(count_by_bucket "$checks" "skipping")
 
-        echo "Total: $total | Passed: $passed_checks | Failed: $failed_checks"
+        echo "Total: $total | Passed: $passed_checks | Failed: $failed_checks | Skipped: $skipped_checks"
         echo ""
 
         # Show each check result
-        echo "$checks" | jq -r '.[] | "  \(.conclusion // "UNKNOWN"): \(.name)"' 2>/dev/null || true
+        echo "$checks" | jq -r '.[] | "  \(.state): \(.name)"' 2>/dev/null || true
 
         if [[ "$failed_checks" -eq 0 ]]; then
             echo ""
@@ -100,7 +104,7 @@ while [[ $elapsed -lt $TIMEOUT ]]; do
         else
             echo ""
             echo "=== Failed Checks ==="
-            echo "$checks" | jq -r '.[] | select(.conclusion == "FAILURE" or .conclusion == "CANCELLED" or .conclusion == "TIMED_OUT" or .conclusion == "ACTION_REQUIRED") | "  \(.conclusion): \(.name)"' 2>/dev/null || true
+            echo "$checks" | jq -r '.[] | select(.bucket == "fail") | "  \(.state): \(.name)"' 2>/dev/null || true
             echo ""
             echo "$failed_checks check(s) failed."
             exit 1
@@ -115,5 +119,5 @@ echo "Timeout: CI checks did not complete within ${TIMEOUT}s"
 echo ""
 echo "=== Current Status ==="
 checks=$(get_checks)
-echo "$checks" | jq -r '.[] | "  \(.state) (\(.conclusion // "pending")): \(.name)"' 2>/dev/null || true
+echo "$checks" | jq -r '.[] | "  \(.bucket): \(.name) (\(.state))"' 2>/dev/null || true
 exit 2
