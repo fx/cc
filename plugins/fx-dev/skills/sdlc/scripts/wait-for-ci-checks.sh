@@ -19,6 +19,8 @@
 
 set -euo pipefail
 
+MIN_GH_VERSION="2.50.0"
+
 PR_NUMBER="${1:-}"
 TIMEOUT="${2:-900}"
 POLL_INTERVAL=30
@@ -31,6 +33,14 @@ fi
 # Verify gh is available and authenticated
 if ! gh auth status &>/dev/null; then
     echo "Error: gh is not authenticated" >&2
+    exit 3
+fi
+
+# Verify gh version meets minimum requirement (--json flag on pr checks requires 2.50+)
+gh_version=$(gh --version | head -1 | grep -oP '\d+\.\d+\.\d+' || echo "0.0.0")
+if ! printf '%s\n' "$MIN_GH_VERSION" "$gh_version" | sort -V | head -1 | grep -q "^${MIN_GH_VERSION}$"; then
+    echo "Error: gh CLI version $gh_version is too old. Minimum required: $MIN_GH_VERSION" >&2
+    echo "Upgrade with: mise use -g gh@latest" >&2
     exit 3
 fi
 
