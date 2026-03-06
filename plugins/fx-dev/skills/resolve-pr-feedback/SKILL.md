@@ -1,6 +1,6 @@
 ---
 name: resolve-pr-feedback
-description: Check a PR for unresolved automated review feedback (Copilot, CodeRabbit) and invoke the appropriate resolver skills. Use when the user says "resolve PR feedback", "check PR comments", "address review comments", or wants to handle all automated review feedback on a PR.
+description: Check a PR for unresolved automated review feedback (Copilot, CodeRabbit, Codecov) and invoke the appropriate resolver skills. Use when the user says "resolve PR feedback", "check PR comments", "address review comments", "fix coverage", or wants to handle all automated review feedback on a PR.
 ---
 
 # Resolve PR Feedback
@@ -22,6 +22,7 @@ Meta-skill that checks a PR for unresolved automated review feedback and invokes
 |----------|---------------|----------------|
 | GitHub Copilot | `Copilot` | `fx-dev:copilot-feedback-resolver` |
 | CodeRabbit | `coderabbitai[bot]` | `fx-dev:rabbit-feedback-resolver` |
+| Codecov | `codecov[bot]` / `codecov-commenter` | `fx-dev:resolve-codecov-feedback` |
 
 ## Prerequisites
 
@@ -70,6 +71,25 @@ Parse the response and categorize unresolved threads by author:
 - **Copilot threads**: author login is `Copilot`
 - **CodeRabbit threads**: author login contains `coderabbitai`
 
+### 3b. Check for Codecov Coverage Feedback
+
+Codecov uses PR comments and commit statuses, NOT review threads. Query separately:
+
+```bash
+# Check for Codecov commit statuses
+HEAD_SHA=$(gh pr view PR_NUMBER --json headRefOid --jq '.headRefOid')
+gh api "/repos/OWNER/REPO/commits/$HEAD_SHA/statuses" \
+  --jq '[.[] | select(.context | startswith("codecov/"))] | {count: length, statuses: [.[] | {context, state, description}]}'
+
+# Check for Codecov PR comments
+gh api "/repos/OWNER/REPO/issues/PR_NUMBER/comments" \
+  --jq '[.[] | select(.user.login == "codecov[bot]" or .user.login == "codecov-commenter")] | length'
+```
+
+Codecov feedback exists if:
+- Any `codecov/*` commit status has state `failure` or `error`
+- OR Codecov PR comment indicates patch coverage below threshold
+
 ### 4. Invoke Appropriate Resolver Skills
 
 **If Copilot threads exist:**
@@ -82,7 +102,12 @@ Skill tool: skill="fx-dev:copilot-feedback-resolver"
 Skill tool: skill="fx-dev:rabbit-feedback-resolver"
 ```
 
-**If both exist:** Invoke both skills sequentially (Copilot first, then CodeRabbit).
+**If Codecov coverage gaps detected:**
+```
+Skill tool: skill="fx-dev:resolve-codecov-feedback"
+```
+
+**If multiple exist:** Invoke sequentially (Copilot first, then CodeRabbit, then Codecov).
 
 ### 5. Verify All Resolved
 
@@ -119,13 +144,16 @@ If unresolved threads remain, report which reviewers still have open feedback.
 ### Detection
 - Copilot: 2 unresolved threads found
 - CodeRabbit: 3 unresolved threads found
+- Codecov: patch coverage 65% (below threshold)
 
 ### Resolution
 - Invoked fx-dev:copilot-feedback-resolver
 - Invoked fx-dev:rabbit-feedback-resolver
+- Invoked fx-dev:resolve-codecov-feedback
 
 ### Final Status
 - All automated review threads resolved
+- Coverage improved to 85%
 ```
 
 ## Success Criteria
