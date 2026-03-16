@@ -76,14 +76,29 @@ These pinpoint exact uncovered lines in changed files.
 
 ### 3. Assess Coverage Status
 
+**⚠️ CRITICAL: CI status alone is NOT sufficient.** The `codecov/patch` CI check may pass at a lower threshold (e.g., 80%) than the project actually requires. You MUST always read the codecov[bot] PR comment to determine the actual patch coverage percentage and identify missing lines.
+
+**Step 3a: Check the PR comment (MANDATORY — do this FIRST)**
+
+Read the codecov[bot] PR comment from Step 2b. Extract:
+- The **patch coverage percentage** (e.g., "Patch coverage is 86.45%")
+- The **list of files with missing lines** and their per-file coverage
+- The **number of missing lines** (e.g., "13 lines missing coverage")
+
+**Step 3b: Determine the project's coverage requirement**
+
+Check the project's `CLAUDE.md` for coverage requirements. Look for patch coverage targets. If not specified, **default to 100% patch coverage** — all new/changed lines must be covered.
+
+**Step 3c: Decide action**
+
 | Condition | Action |
 |-----------|--------|
-| `codecov/patch` status is `success` | Coverage meets threshold — **skip, report clean** |
-| `codecov/patch` status is `failure` or `error` | Coverage gap — **proceed to Step 4** |
-| No Codecov statuses but PR comment exists | Parse comment for coverage % — proceed if below threshold |
+| PR comment shows **0 missing lines** AND patch coverage meets project requirement | Report clean and exit |
+| PR comment shows **any missing lines** (even if CI passes) | Coverage gap — **proceed to Step 4** |
+| No PR comment but CI status is `failure` | Coverage gap — **proceed to Step 4** |
 | No Codecov data at all | Report: "No Codecov data found" and exit |
 
-**Default patch coverage threshold**: 80% (if not determinable from Codecov config, use this as baseline).
+**IMPORTANT:** A `codecov/patch` CI status of `success` does NOT mean coverage is adequate. Always trust the PR comment data over CI status.
 
 ### 4. Identify Uncovered Lines
 
@@ -96,7 +111,7 @@ Build a list of files and line ranges that need test coverage:
 **From the PR comment table** (when no line-level comments):
 - Parse the file-by-file coverage table from the codecov[bot] comment
 - Extract filenames and their patch coverage percentages
-- For files with <80% patch coverage, read the file diff to identify new/changed lines
+- For files with ANY missing lines (below 100% patch coverage, or below the project's requirement), read the file diff to identify new/changed lines
 
 **From the Codecov report URL** (fallback):
 - Use `WebFetch` on the `target_url` from the commit status to get detailed coverage data
@@ -172,9 +187,11 @@ If no Codecov data is found on the PR:
 
 ### Coverage Report Shows All Green
 
-If `codecov/patch` is `success` and patch coverage meets threshold:
-- Report: "Codecov coverage meets threshold (X%). No action needed."
+If the codecov[bot] PR comment shows **0 missing lines** and patch coverage is 100% (or meets the project's explicit requirement):
+- Report: "Codecov patch coverage is 100%. No action needed."
 - Exit cleanly
+
+**Do NOT rely solely on CI status.** Always verify via the PR comment.
 
 ### Untestable Code
 

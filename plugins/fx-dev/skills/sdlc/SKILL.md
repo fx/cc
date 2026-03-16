@@ -167,6 +167,25 @@ git diff main --stat
 
 ---
 
+### STEP 4.5: Code Cleanup (simplify)
+
+**MANDATORY: Run the simplify skill before creating the PR.**
+
+```
+Skill tool: skill="simplify"
+```
+
+This reviews all changed code for:
+- **Reuse** — duplicated logic that could use existing utilities
+- **Quality** — copy-paste patterns, leaky abstractions, unnecessary nesting
+- **Efficiency** — redundant computations, missed concurrency, hot-path bloat
+
+Fix any issues found, commit the fixes, then proceed to PR creation.
+
+**⛔ DO NOT PROCEED until simplify has run and any findings are addressed**
+
+---
+
 ### STEP 5: Pull Request Creation (as Draft)
 
 **MANDATORY: Launch pr-preparer agent. ALL PRs MUST be created as drafts.**
@@ -459,6 +478,7 @@ Awaiting your approval to merge.
 | 3 | Planner | `fx-dev:planner` |
 | 3,8 | Issue Updater | `fx-dev:issue-updater` |
 | 4,6.2 | Coder | `fx-dev:coder` |
+| 4.5 | Code Cleanup | Skill: `simplify` |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
 | 6.4 | PR Feedback Resolver | Skill: `fx-dev:resolve-pr-feedback` |
@@ -473,6 +493,7 @@ Workflow complete when ALL true:
 - ✅ Requirements documented
 - ✅ Plan created
 - ✅ Code implemented with atomic commits
+- ✅ Code reviewed via /simplify (reuse, quality, efficiency)
 - ✅ PR created with description
 - ✅ Self-review done, issues fixed
 - ✅ Automated review feedback resolved (Copilot/CodeRabbit)

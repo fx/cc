@@ -77,6 +77,21 @@ This skill triggers automatically when:
 
 **Never respond to or interact with human reviewer comments.** Only automated Copilot feedback should be addressed.
 
+## ⛔ Release PR Prohibition (CRITICAL)
+
+**NEVER merge release PRs.** This includes PRs created by:
+
+- ❌ release-please (`chore(main): release X.Y.Z`)
+- ❌ semantic-release
+- ❌ changesets (`Version Packages`)
+- ❌ Any automated versioning/release bot
+
+Release PRs control package versioning. Merging them autonomously can publish unintended major/minor versions, which is irreversible. **The user must always merge release PRs manually.**
+
+If a workflow requires a new version to be published (e.g., updating a dependency after an upstream PR merges), STOP and inform the user:
+
+> A release PR exists. Please merge it manually when ready, then confirm so I can proceed.
+
 ## Core Principles
 
 ### 1. Verify All Operations
