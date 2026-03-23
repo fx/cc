@@ -201,8 +201,7 @@ Task tool:
            - Push branch if needed
            - Create PR with: gh pr create --draft
            - Reference related issues
-           - Return PR number and URL
-           - Tell user to run 'gh pr ready <NUMBER>' when ready"
+           - Return PR number and URL"
   description: "Create draft PR"
 ```
 
@@ -377,6 +376,16 @@ Confirm:
 - PR is open and mergeable
 - All checks pass
 - No unresolved comments
+
+#### 8.1.1 Mark PR Ready for Review
+
+**After confirming all checks pass and all feedback is resolved, mark the PR as ready:**
+
+```bash
+gh pr ready [NUMBER]
+```
+
+This removes the draft status so the PR is visible for merge.
 
 #### 8.2 Update Task Tracking Docs
 
