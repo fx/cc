@@ -3,7 +3,7 @@
 # Polls a PR for Copilot review completion with timeout
 #
 # Usage: ./wait-for-copilot-review.sh <PR_NUMBER> [TIMEOUT_SECONDS]
-# Default timeout: 600 seconds (10 minutes)
+# Default timeout: 900 seconds (15 minutes)
 #
 # Exit codes:
 #   0 - Copilot review received
@@ -16,7 +16,7 @@ set -euo pipefail
 MIN_GH_VERSION="2.50.0"
 
 PR_NUMBER="${1:-}"
-TIMEOUT="${2:-600}"
+TIMEOUT="${2:-900}"
 POLL_INTERVAL=60
 
 if [[ -z "$PR_NUMBER" ]]; then

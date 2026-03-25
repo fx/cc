@@ -77,6 +77,23 @@ This skill triggers automatically when:
 
 **Never respond to or interact with human reviewer comments.** Only automated Copilot feedback should be addressed.
 
+## ⛔ PR Merge Requirements (CRITICAL — BLOCKING)
+
+**NEVER run `gh pr merge` without verifying ALL of the following gates. No exceptions for PR size, urgency, or any other reason.**
+
+| Gate | Verification | Blocking? |
+|------|-------------|-----------|
+| CI checks ALL green | `gh pr checks <NUMBER>` — every check must show `pass` | ⛔ YES |
+| Copilot review RECEIVED | `gh api repos/{owner}/{repo}/pulls/<NUMBER>/reviews --jq '.[] \| select(.user.login == "copilot-pull-request-reviewer[bot]")'` — must return a review | ⛔ YES |
+| Copilot comments RESOLVED | All Copilot review threads resolved (0 unresolved) | ⛔ YES |
+| CodeRabbit review received (if configured) | Check reviews for `coderabbitai[bot]` | ⛔ YES |
+| CodeRabbit comments resolved (if configured) | All threads resolved | ⛔ YES |
+| Codecov passing | `codecov/patch` and `codecov/project` checks pass | ⛔ YES |
+
+**If Copilot review has NOT been received:** WAIT. Poll every 60 seconds for up to 15 minutes. Do NOT merge without it.
+
+**Incident context:** A "small follow-up" PR was merged without waiting for Copilot review. Copilot found 5 real bugs (timing drift, race conditions, missing tests) that shipped to main. PR size is NEVER a reason to skip review gates.
+
 ## ⛔ Release PR Prohibition (CRITICAL)
 
 **NEVER merge release PRs.** This includes PRs created by:

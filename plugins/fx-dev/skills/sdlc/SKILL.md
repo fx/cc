@@ -240,7 +240,7 @@ Task tool:
   description: "Fix review issues"
 ```
 
-#### 6.3 Request and Wait for Copilot Review (10 minute timeout)
+#### 6.3 Request and Wait for Copilot Review (15 minute timeout)
 
 **First, request Copilot review via the GitHub API:**
 
@@ -252,20 +252,20 @@ gh api --method POST /repos/{owner}/{repo}/pulls/[PR_NUMBER]/requested_reviewers
 EOF
 ```
 
-**Then use the bundled script to poll for completion (10 minute timeout):**
+**Then use the bundled script to poll for completion (15 minute timeout):**
 
 ```bash
 # IMPORTANT: Use the FULL path from the skill's base directory
 bash [SKILL_BASE_DIR]/skills/sdlc/scripts/wait-for-copilot-review.sh [PR_NUMBER]
 ```
 
-**⚠️ CRITICAL: You MUST wait the full 10 minutes.** Do NOT fall back to manual polling with shorter waits. If the script exits with code 2 (review not detected as requested), re-request the review using the JSON body format above and run the script again.
+**⚠️ CRITICAL: You MUST wait the full 15 minutes.** Do NOT fall back to manual polling with shorter waits. If the script exits with code 2 (review not detected as requested), re-request the review using the JSON body format above and run the script again.
 
 Script behavior:
 - Checks if Copilot review was requested
-- Polls every 60s until review is received (timeout: 600s / 10 minutes)
+- Polls every 60s until review is received (timeout: 900s / 15 minutes)
 - Exit 0: Review received -> **proceed to Step 6.4 immediately**
-- Exit 1: Timeout after 10 minutes -> proceed to Step 6.4 anyway (will find no threads)
+- Exit 1: Timeout after 15 minutes -> proceed to Step 6.4 anyway (will find no threads)
 - Exit 2: Review request not detected -> re-request using JSON body format above, then re-run script
 
 #### 6.4 Handle Automated Review Feedback (Copilot/CodeRabbit)
@@ -366,16 +366,38 @@ Step 7.3 (wait) → fail → Step 7.4 (fix) → Step 7.3 (wait) → ...
 
 ### STEP 8: Finalization
 
-#### 8.1 Final Verification
+#### 8.1 Final Verification (MANDATORY MERGE GATES)
+
+**⛔ ALL of the following must be verified before ANY PR can be merged or marked ready. No exceptions.**
 
 ```bash
-gh pr view [NUMBER] --json state,mergeable,reviews,statusCheckRollup
+# 1. CI checks — ALL must be green
+gh pr checks [NUMBER]
+
+# 2. Copilot review — MUST be received (wait up to 10 min if pending)
+gh api repos/{owner}/{repo}/pulls/[NUMBER]/reviews \
+  --jq '.[] | select(.user.login == "copilot-pull-request-reviewer[bot]") | {state, submitted_at}'
+
+# 3. Unresolved review threads — MUST be 0
+gh pr view [NUMBER] --json reviewThreads \
+  --jq '[.reviewThreads[] | select(.isResolved == false)] | length'
+
+# 4. Codecov — patch and project checks must pass
+gh pr checks [NUMBER]  # verify codecov/patch and codecov/project
 ```
 
-Confirm:
-- PR is open and mergeable
-- All checks pass
-- No unresolved comments
+**Merge gate checklist (every item must pass):**
+- [ ] PR is open and mergeable
+- [ ] ALL CI checks green
+- [ ] Copilot review RECEIVED (not just requested — actually submitted)
+- [ ] ALL Copilot review comments addressed and threads resolved
+- [ ] CodeRabbit review received and addressed (if configured)
+- [ ] Codecov coverage passing with 0 missing lines
+- [ ] No unresolved review threads from any reviewer
+
+**If Copilot review not yet received:** WAIT. Poll every 60s for up to 15 minutes. NEVER proceed without it.
+
+**PR size is NEVER a reason to skip merge gates.** A 1-line fix gets the same verification as a 1000-line feature.
 
 #### 8.1.1 Mark PR Ready for Review
 
@@ -438,6 +460,8 @@ Awaiting your approval to merge.
 ```
 
 **⚠️ NEVER MERGE WITHOUT USER APPROVAL**
+**⚠️ NEVER MERGE WITHOUT ALL MERGE GATES PASSING (Step 8.1)**
+**⚠️ NEVER MERGE WITHOUT COPILOT REVIEW RECEIVED AND ADDRESSED**
 
 ---
 

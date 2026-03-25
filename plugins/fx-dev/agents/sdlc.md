@@ -331,16 +331,35 @@ Task tool:
 
 **MANDATORY - Complete the workflow.**
 
-#### 8.1 Final Verification
+#### 8.1 Final Verification (MANDATORY MERGE GATES)
+
+**⛔ ALL gates must pass before ANY PR can be merged. No exceptions for PR size.**
 
 ```bash
-gh pr view [PR_NUMBER] --json state,mergeable,reviews,statusCheckRollup
+# 1. CI checks — ALL must be green
+gh pr checks [PR_NUMBER]
+
+# 2. Copilot review — MUST be received (wait up to 15 min if pending)
+gh api repos/{owner}/{repo}/pulls/[PR_NUMBER]/reviews \
+  --jq '.[] | select(.user.login == "copilot-pull-request-reviewer[bot]") | {state, submitted_at}'
+
+# 3. Unresolved threads — MUST be 0
+gh pr view [PR_NUMBER] --json reviewThreads \
+  --jq '[.reviewThreads[] | select(.isResolved == false)] | length'
+
+# 4. Codecov
+gh pr checks [PR_NUMBER]  # verify codecov/patch and codecov/project pass
 ```
 
 Verify:
 - ✅ PR is open and mergeable
-- ✅ All status checks pass
-- ✅ No unresolved review comments
+- ✅ ALL CI/CD checks green
+- ✅ Copilot review RECEIVED and all comments addressed/resolved
+- ✅ CodeRabbit review received and addressed (if configured)
+- ✅ Codecov passing with 0 missing lines
+- ✅ Zero unresolved review threads
+
+**If Copilot review not yet received:** WAIT. Poll every 60s for up to 15 minutes. NEVER skip this.
 
 #### 8.2 Update Project Tasks (CRITICAL)
 
@@ -393,6 +412,8 @@ Awaiting your approval to merge.
 ```
 
 **⚠️ NEVER MERGE WITHOUT EXPLICIT USER APPROVAL ⚠️**
+**⚠️ NEVER MERGE WITHOUT ALL MERGE GATES PASSING (Step 8.1) ⚠️**
+**⚠️ NEVER MERGE WITHOUT COPILOT REVIEW RECEIVED AND ADDRESSED ⚠️**
 
 ---
 
