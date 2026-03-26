@@ -59,10 +59,58 @@ check_review_submitted() {
         '.reviews[] | select(.author.login | startswith("copilot-pull-request-reviewer")) | .state' 2>/dev/null | head -1 || true
 }
 
-# Check for Copilot review comments (alternative detection)
+# Check for Copilot review threads via GraphQL (gh pr view --json doesn't support reviewThreads)
 check_review_comments() {
-    gh pr view "$PR_NUMBER" --json reviewThreads --jq \
-        '.reviewThreads[] | select(.comments[0].author.login | startswith("copilot-pull-request-reviewer")) | .id' 2>/dev/null | head -1 || true
+    local owner repo
+    owner="${REPO_NWO%%/*}"
+    repo="${REPO_NWO##*/}"
+    gh api graphql -f query="
+    query {
+      repository(owner: \"$owner\", name: \"$repo\") {
+        pullRequest(number: $PR_NUMBER) {
+          reviewThreads(first: 100) {
+            nodes {
+              comments(first: 1) {
+                nodes {
+                  author { login }
+                }
+              }
+            }
+          }
+        }
+      }
+    }" --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].author.login == "copilot-pull-request-reviewer") | .comments.nodes[0].author.login' 2>/dev/null | head -1 || true
+}
+
+# Count unresolved Copilot review threads via GraphQL
+count_copilot_threads() {
+    local owner repo
+    owner="${REPO_NWO%%/*}"
+    repo="${REPO_NWO##*/}"
+    local result
+    result=$(gh api graphql -f query="
+    query {
+      repository(owner: \"$owner\", name: \"$repo\") {
+        pullRequest(number: $PR_NUMBER) {
+          reviewThreads(first: 100) {
+            nodes {
+              isResolved
+              comments(first: 1) {
+                nodes {
+                  author { login }
+                }
+              }
+            }
+          }
+        }
+      }
+    }" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .comments.nodes[0].author.login == "copilot-pull-request-reviewer")] | length' 2>&1)
+    if [[ $? -ne 0 ]]; then
+        echo "Error querying review threads: $result" >&2
+        echo "0"
+        return
+    fi
+    echo "$result"
 }
 
 # Initial check - is Copilot review requested?
@@ -70,9 +118,11 @@ requested=$(check_review_requested)
 submitted=$(check_review_submitted)
 comments=$(check_review_comments)
 
-# If already reviewed, exit immediately
+# If already reviewed, report threads and exit
 if [[ -n "$submitted" ]] || [[ -n "$comments" ]]; then
     echo "Copilot review already present (state: ${submitted:-comments})"
+    thread_count=$(count_copilot_threads)
+    echo "Unresolved Copilot threads: $thread_count"
     exit 0
 fi
 
@@ -101,12 +151,11 @@ while [[ $elapsed -lt $TIMEOUT ]]; do
         echo ""
         echo "=== Copilot Review Summary ==="
         gh pr view "$PR_NUMBER" --json reviews --jq \
-            '.reviews[] | select(.author.login | startswith("copilot-pull-request-reviewer")) | "State: \(.state)\nBody: \(.body)"' 2>/dev/null || true
+            '.reviews[] | select(.author.login | startswith("copilot-pull-request-reviewer")) | "State: \(.state)\nBody: \(.body)"' || echo "(failed to fetch review summary)"
 
-        # Count review threads from Copilot
-        thread_count=$(gh pr view "$PR_NUMBER" --json reviewThreads --jq \
-            '[.reviewThreads[] | select(.comments[0].author.login | startswith("copilot-pull-request-reviewer"))] | length' 2>/dev/null || echo "0")
-        echo "Review threads: $thread_count"
+        # Count unresolved review threads from Copilot via GraphQL
+        thread_count=$(count_copilot_threads)
+        echo "Unresolved Copilot threads: $thread_count"
 
         exit 0
     fi
