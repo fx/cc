@@ -1,168 +1,309 @@
 ---
 name: spec-writer
-description: "Write feature specification documents for planned work. This skill should be used when the user asks to 'write a spec', 'create a spec', 'spec out', 'design a feature', 'write a feature spec', 'spec this', or needs a detailed feature specification before implementation. Produces numbered spec files in docs/specs/."
+description: "Write, update, and maintain living specification documents and propose change documents. Use when user says 'write a spec', 'create a spec', 'spec out', 'update spec', 'spec this', 'design a feature', 'write a feature spec', or needs to create/modify specs in docs/specs/ or propose changes in docs/changes/. Handles the complete spec lifecycle: creation, updates, gap analysis, and change proposals."
 ---
 
 # Spec Writer
 
-This skill produces feature specification documents by deeply researching the codebase, discovering prior art and patterns via the web, analyzing scope, and writing structured specs to `docs/specs/`.
+This skill manages the complete specification lifecycle: creating living spec documents in `docs/specs/<name>/`, updating them to reflect current implementation, identifying gaps between spec and code, and proposing change documents in `docs/changes/` to close those gaps.
 
 ## Core Principles
 
-1. **Research First** - Thoroughly understand the codebase and prior art before writing anything
-2. **Right-Size Specs** - Each spec should be large enough to be useful but small enough to express in a single document
-3. **Clarify Before Writing** - Use AskUserQuestion for scope splits and design choices
-4. **Verify After Writing** - Cross-check every spec against the actual codebase
+1. **Specs are living knowledge** — They describe the CURRENT state of the system, not a future plan. They MUST be kept in sync with implementation.
+2. **Changes are plans** — Planning, task tracking, and implementation details go in `docs/changes/NNNN-name.md`, never in specs.
+3. **RFC 2119 everywhere** — All specs and changes MUST use RFC 2119 keywords (MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY, OPTIONAL) for requirement precision.
+4. **Behavioral scenarios** — Every requirement SHOULD have GIVEN/WHEN/THEN scenarios that map directly to test cases.
+5. **Exhaustive exploration** — Research the codebase deeply before writing anything. Every claim in a spec must be verified against actual code.
+6. **Clarify before writing** — Use AskUserQuestion for scope decisions and design choices.
+
+## RFC 2119 Reference
+
+Per RFC 2119, these keywords indicate requirement levels:
+- **MUST / SHALL / REQUIRED** — Absolute requirement
+- **MUST NOT / SHALL NOT** — Absolute prohibition
+- **SHOULD / RECOMMENDED** — Strong recommendation; exceptions need justification
+- **SHOULD NOT / NOT RECOMMENDED** — Strong discouragement; exceptions need justification
+- **MAY / OPTIONAL** — Truly optional; interoperability must work with or without
+
+---
 
 ## Workflow
 
-Execute these phases in order.
+### Phase 0: Setup
 
-### Phase 1: Research
+**Every time this skill is invoked**, run the setup skill first to ensure docs structure and instruction files are in place:
+
+```
+Skill tool: skill="fx-dev:setup"
+```
+
+This is fast and idempotent — it checks what exists and only creates/modifies what's missing. It handles:
+- `docs/` folder structure (specs/, changes/, tasks.md, index.yml, index.md)
+- `CLAUDE.md` task-tracking instructions
+- `.github/copilot-instructions.md` PR review instructions
+
+Wait for setup to complete before proceeding.
+
+---
+
+### Phase 1: Deep Research
+
+This phase MUST be thorough. Insufficient research leads to inaccurate specs.
 
 #### 1.1 Local Codebase Exploration
 
-Use the `Explore` agent (subagent_type: `Explore`) to understand the relevant parts of the codebase:
+Launch `Explore` agents (subagent_type: `Explore`) to deeply understand the relevant parts of the codebase:
 
+- Map all files, modules, and data models the feature touches
 - Identify existing patterns, abstractions, and conventions
 - Find related features or systems already implemented
-- Map out the files, modules, and data models that the feature would touch or extend
-- Note any constraints (auth patterns, API conventions, DB schema patterns, component libraries)
+- Note constraints (auth patterns, API conventions, DB schema patterns, component libraries)
+- Read test files to understand expected behaviors
+- Check git history for recent changes in relevant areas
 
-Launch multiple Explore agents in parallel if the feature spans distinct areas (e.g., frontend + backend + database).
+Launch **multiple Explore agents in parallel** if the feature spans distinct areas (e.g., frontend + backend + database + tests).
 
 #### 1.2 Technology and Pattern Research
 
-When the feature involves technologies, libraries, or patterns that may benefit from external research, use the `fx-research:tech-scout` agent (subagent_type: `fx-research:tech-scout`) to:
+Use the `fx-research:tech-scout` agent (subagent_type: `fx-research:tech-scout`) to:
 
-- Discover how similar features are commonly implemented in the ecosystem
+- Discover how similar features are commonly implemented
 - Identify relevant libraries, APIs, or standards
 - Find best practices and anti-patterns
 
-Skip this step only when the feature is purely internal (e.g., a UI layout change with no new technology).
+Skip only when the feature is purely internal with no new technology.
 
 #### 1.3 Web Discovery
 
 Use `WebSearch` to find:
 
-- How other products implement similar features (UX patterns, data models, API designs)
+- How other products implement similar features
 - Relevant RFCs, standards, or specifications
-- Community discussions about tradeoffs for this type of feature
+- Community discussions about tradeoffs
 
-Focus searches on understanding the problem space, not on finding code to copy.
+#### 1.4 Existing Specs and Changes
 
-#### 1.4 Synthesize Research
+Read all existing specs and changes to understand the current documentation landscape:
+
+```bash
+ls docs/specs/ docs/changes/ 2>/dev/null
+cat docs/index.yml 2>/dev/null
+```
+
+Check if a spec already exists for this area. If so, this is an **update**, not a creation.
+
+#### 1.5 Synthesize Research
 
 Before proceeding, compile a mental model of:
-
-- What exists in the codebase today
+- What exists in the codebase today (actual behavior, not aspirational)
 - What patterns and conventions must be followed
 - What external patterns and best practices apply
 - What the key design decisions and tradeoffs are
+- What existing specs cover and what gaps remain
 
 ---
 
-### Phase 2: Scope Analysis
+### Phase 2: Mode Selection
 
-Analyze whether the feature fits in a single spec or needs to be split.
+Determine what work is needed:
 
-**A single spec should:**
-- Describe one cohesive feature or system
-- Be implementable as 1-3 PRs (not necessarily one, but a tightly related set)
-- Be readable in one sitting (~500-2000 lines of markdown)
+**A) New Spec** — No spec exists for this system/feature area. Go to Phase 3.
 
-**Split into multiple specs when:**
-- The feature has clearly independent subsystems (e.g., "real-time chat" = transport layer spec + UI spec + persistence spec)
-- Different parts have different dependencies or could be built in parallel
-- A single document would exceed ~2000 lines
+**B) Update Existing Spec** — A spec exists but is outdated or incomplete. Go to Phase 4.
 
-**When scope is ambiguous, use `AskUserQuestion`** to present:
-- The proposed split (or unified approach)
-- The reasoning for each option
-- Any other design choices that affect scope
+**C) Spec + Changes** — User wants to define desired behavior (spec) AND plan implementation work (changes) to get there. Go to Phase 3 or 4, then Phase 5.
 
-Example:
+When the mode is ambiguous, use `AskUserQuestion`:
+
 ```
 AskUserQuestion:
-  question: "This feature has two distinct parts: the data pipeline and the UI dashboard. Should I write them as one spec or two?"
+  question: "A spec already exists at docs/specs/<name>/. What would you like to do?"
   options:
-    - label: "Single spec"
-      description: "One document covering both pipeline and dashboard. Simpler but longer."
-    - label: "Two specs (Recommended)"
-      description: "Separate specs for pipeline and dashboard. Allows parallel implementation."
+    - label: "Update the spec to match current implementation"
+      description: "Audit the code and update the spec to reflect reality"
+    - label: "Update the spec AND propose changes"
+      description: "Update the spec to the desired state, then create change documents for unimplemented parts"
+    - label: "Only propose changes"
+      description: "Keep the spec as-is and create change documents for new work"
 ```
 
 ---
 
-### Phase 3: Write Specs
+### Phase 3: Create New Spec
 
-#### 3.1 Determine File Numbering
-
-Check existing specs to determine the next number:
+#### 3.1 Create Spec Directory
 
 ```bash
-ls docs/specs/ 2>/dev/null | sort -n | tail -1
+mkdir -p docs/specs/<spec-name>
 ```
 
-If no specs exist, start at `0001`. Otherwise increment from the highest existing number. Numbers are zero-padded to at least 4 digits (0001, 0002, ..., 0010, ..., 0100).
+Where `<spec-name>` is a brief, descriptive kebab-case name (e.g., `user-authentication`, `payment-processing`, `notification-system`).
 
-#### 3.2 Create the Spec File(s)
+#### 3.2 Write the Spec
 
-Ensure the directory exists:
+Read the template at `references/spec-index-template.md` and write `docs/specs/<spec-name>/index.md`.
+
+**Critical rules:**
+- Describe the system **as it currently exists in the codebase**. If the feature doesn't exist yet, describe the desired behavior and note it as unimplemented.
+- Use RFC 2119 language for all requirements.
+- Include GIVEN/WHEN/THEN scenarios for every requirement.
+- Include actual code snippets from the codebase where they clarify the design.
+- Verify every claim against the actual code — do not guess or assume.
+- NO task lists in specs. Tasks belong in change documents.
+- Initialize the Changelog with a creation entry.
+
+#### 3.3 Scope Analysis
+
+A single spec SHOULD:
+- Cover one cohesive system, feature, or domain
+- Be readable in one sitting
+- Have clear boundaries
+
+If the area is too large for one spec, split into multiple specs and link them. Use `AskUserQuestion` when scope is ambiguous.
+
+#### 3.4 Supplementary Documents
+
+For complex specs, create additional files in the spec folder:
+- `api-reference.md` — Detailed API documentation
+- `data-models.md` — Schema definitions and type hierarchies
+- `architecture.md` — Detailed architecture diagrams and explanations
+
+The `index.md` MUST link to all supplementary documents.
+
+---
+
+### Phase 4: Update Existing Spec
+
+#### 4.1 Deep Implementation Audit
+
+This is the most critical step. Explore the codebase **exhaustively** to find every divergence between the spec and the actual implementation:
+
+Launch multiple `Explore` agents in parallel targeting:
+- Every file referenced in the current spec
+- Every module, API endpoint, data model mentioned
+- Test files that verify the behaviors described
+- Recent git commits that may have changed behavior
+
+#### 4.2 Gap Analysis
+
+Categorize findings:
+
+1. **Spec is accurate** — Implementation matches spec. No action needed.
+2. **Spec is outdated** — Implementation changed but spec wasn't updated. Update the spec.
+3. **Spec is aspirational** — Spec describes behavior that doesn't exist yet. Either:
+   - Remove from spec (if no longer desired)
+   - Keep in spec and create a change document to implement it
+4. **Undocumented behavior** — Implementation has behavior not in the spec. Add to spec.
+
+#### 4.3 Update the Spec
+
+Edit `docs/specs/<spec-name>/index.md` to reflect the current truth:
+- Add missing requirements discovered during audit
+- Update requirements that have changed
+- Remove requirements for deprecated behavior
+- Update code snippets to match current implementation
+- Add new GIVEN/WHEN/THEN scenarios for undocumented behavior
+
+#### 4.4 Update Changelog
+
+Add an entry to the spec's Changelog for every update:
+
+```markdown
+| YYYY-MM-DD | <Description of what changed> | [NNNN-change-name](../../changes/NNNN-change-name.md) |
+```
+
+If updating to match existing implementation (no change document), use `—` for the document link.
+
+---
+
+### Phase 5: Propose Change Documents
+
+For every gap between the spec (desired state) and the implementation (current state), create change documents in `docs/changes/`.
+
+#### 5.1 Determine Change Numbering
 
 ```bash
-mkdir -p docs/specs
+ls docs/changes/ 2>/dev/null | sort -n | tail -1
 ```
 
-Write each spec to `docs/specs/<number>-<name>.md` where `<name>` is a brief descriptive name using only lowercase alphanumerics and dashes.
+Start at `0001` if none exist. Increment from the highest existing number. Zero-pad to 4 digits.
 
-Examples:
-- `docs/specs/0001-real-time-notifications.md`
-- `docs/specs/0002-creator-analytics-pipeline.md`
-- `docs/specs/0003-creator-analytics-dashboard.md`
+#### 5.2 Scope Each Change Document
 
-#### 3.3 Spec Document Structure
+Each change document SHOULD be:
+- **Focused** — One coherent set of related modifications
+- **Small** — Implementable in 1-3 PRs (aim for smaller, more focused PRs)
+- **Independent** — Minimally dependent on other changes (note dependencies when they exist)
 
-Read the template at `references/spec-template.md` and use it as the base structure for each spec.
+Split large efforts into multiple change documents. It is BETTER to have many small, focused changes than few large ones.
 
-Adapt the template as needed - not every section is required for every spec. A small feature may omit "Background" or "Non-Goals". A spec that is purely a data model change may have a minimal "UI" section.
+#### 5.3 Write Change Documents
 
-**Important:** Write the full spec body first (Overview through References) but leave the `## Tasks` section empty. Tasks are populated in Phase 4.
+Read the template at `references/change-template.md` and write each change to `docs/changes/NNNN-<name>.md`.
+
+**Critical rules:**
+- Every change MUST reference the spec it relates to
+- Use RFC 2119 language for requirements
+- Include GIVEN/WHEN/THEN scenarios
+- Include a detailed `## Tasks` section with checkbox items
+- Each top-level task SHOULD map to one PR
+- Include design decisions with rationale
+- Be specific about files to modify, APIs to change, tests to write
+- **NEVER duplicate change document tasks into `docs/tasks.md`** — tasks belong in the change document that defines them. `docs/tasks.md` is ONLY for work not tied to any change document.
+
+#### 5.4 Exhaustive Coverage
+
+**This is where thoroughness matters most.** For each change document:
+
+1. **Explore deeply** — Launch Explore agents to understand every file that will be touched
+2. **Detail every task** — Include specific file paths, function names, test scenarios
+3. **Consider edge cases** — What happens on error? Under load? With invalid input?
+4. **Include test tasks** — Every behavioral change MUST have corresponding test tasks
+5. **Note dependencies** — If this change depends on another, note it explicitly
 
 ---
 
-### Phase 4: Task Breakdown
+### Phase 6: Update Indexes
 
-After the spec body is written, invoke the `/project-management` skill to populate the `## Tasks` section:
+After creating or modifying specs and changes, update both index files. **Index files MUST strictly follow their templates — no ad-hoc columns, renamed fields, or alternative status values.**
 
-```
-Skill tool: skill="fx-dev:project-management"
-```
+#### 6.1 Update `docs/index.yml`
 
-Provide the skill with:
-- The spec file path
-- A summary of the feature and its design decisions
-- Instructions to add a nested markdown task list (`- [ ]`) to the `## Tasks` section of the spec
+Read the template at `references/docs-index-yml-template.md`. The template defines the **exact field names, types, and allowed values**. Add/update entries for every new or modified spec and change.
 
-The project-management skill handles breaking the spec down into properly scoped, actionable tasks. Do not attempt to write the task list directly — delegate this to the skill so tasks are consistent with project tracking conventions.
+**Strict rules:**
+- Use field names EXACTLY as defined: `name`, `path`, `description`, `status` for specs; `id`, `name`, `path`, `description`, `spec`, `status`, `depends_on` for changes
+- ALL fields are REQUIRED — never omit `description`, `name`, or `depends_on`
+- Status values MUST be lowercase: `active`/`deprecated` for specs, `draft`/`in-progress`/`complete` for changes
+- NEVER use alternative status values like `proposed`, `current`, `Proposed`, `Current`
+
+#### 6.2 Update `docs/index.md`
+
+Read the template at `references/docs-index-md-template.md`. The template defines the **exact table columns and order**. Add/update the tables to include every new or modified spec and change.
+
+**Strict rules:**
+- Specs table columns MUST be: `Spec | Description | Status` — no renaming to "ID", "Name", etc.
+- Changes table columns MUST be: `# | Change | Spec | Status | Depends On` — no renaming, no extra columns
+- Status values MUST be lowercase: `active`/`deprecated` for specs, `draft`/`in-progress`/`complete` for changes
+- The `Spec` column in both tables MUST be a markdown link, not plain text
+- The `Description` column MUST be filled — never leave it empty or omit it
 
 ---
 
-### Phase 5: Verification
+### Phase 7: Verification
 
-After writing each spec, verify it against the codebase:
+After writing each spec and change document, verify against the codebase:
 
-1. **Schema references** - Confirm that any database tables, columns, or types mentioned actually exist (or are clearly marked as new)
-2. **API patterns** - Verify that proposed API endpoints or tRPC routers follow existing conventions (naming, auth patterns, input validation)
-3. **Component patterns** - Confirm that referenced UI components exist and that proposed new components follow project conventions (shadcn/ui, Tabler icons, Tailwind design tokens)
-4. **File paths** - Verify that any referenced file paths are accurate
-5. **Import patterns** - Confirm that any libraries or modules referenced are actually available in the project
+1. **Code references** — Confirm that any files, functions, types, or modules mentioned actually exist
+2. **API patterns** — Verify that proposed or documented APIs follow existing conventions
+3. **Schema accuracy** — Confirm database tables, columns, and types match reality
+4. **Component patterns** — Verify UI components exist and follow project conventions
+5. **Import accuracy** — Confirm libraries and modules referenced are available
+6. **Scenario testability** — Every GIVEN/WHEN/THEN scenario should be directly implementable as a test
 
-For each discrepancy found:
-- Fix the spec directly if the correction is clear
-- Add an "Open Question" if the right approach is ambiguous
-
-Report a summary of any corrections made or questions added during verification.
+For each discrepancy:
+- Fix the spec/change directly if the correction is clear
+- Add an Open Question if the right approach is ambiguous
 
 ---
 
@@ -170,7 +311,11 @@ Report a summary of any corrections made or questions added during verification.
 
 After completing all phases, report:
 
-1. The spec file(s) created (with paths)
-2. A one-line summary of each spec
-3. Any open questions that need user input
-4. Suggested next steps (e.g., "Ready for implementation via /sdlc" or "Needs design decisions on open questions first")
+1. **Specs created or updated** (with paths)
+2. **Change documents created** (with paths and one-line summaries)
+3. **Key findings** from the implementation audit (if updating)
+4. **Open questions** that need user input
+5. **Suggested next steps**:
+   - "Changes ready for implementation via `/dev` or `/team`"
+   - "Spec has open questions that need resolution first"
+   - "Spec updated to match current implementation — no changes needed"

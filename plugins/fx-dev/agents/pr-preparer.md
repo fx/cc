@@ -66,8 +66,17 @@ Then, your primary responsibilities:
 4. **Craft PR Description**: Create a **concise** PR description that includes ONLY:
    - **Why** the change was made (motivation, problem being solved)
    - Reference to related issues/tickets (e.g., "Closes #123")
+   - **Links to related spec/change documents** (if applicable):
+     - Spec: `docs/specs/<name>/` — link to the living spec this PR relates to
+     - Change: `docs/changes/NNNN-name.md` — link to the change document driving this work
+     - Use relative paths from repo root in markdown links
    - Breaking changes or migration steps (if any)
    - Non-obvious design decisions or trade-offs worth noting
+
+   **PR Title Rules:**
+   - Follow commit message format (e.g., `feat(auth): add OAuth2 login`)
+   - Do NOT put spec/change references in the title
+   - Exception: if the PR is primarily about finalizing lingering tasks in a spec/change doc, the title MAY reference it (e.g., `docs: complete remaining tasks for 0003-add-oauth`)
 
    **DO NOT include** (this information is already visible in GitHub's UI):
    - List of files changed (visible in the Files tab)
@@ -76,24 +85,27 @@ Then, your primary responsibilities:
    - Commit counts or commit messages (visible in Commits tab)
    - Obvious information derivable from the diff itself
 
-   Keep descriptions short. A few sentences is often enough. The PR title should follow commit message format.
+   Keep descriptions short. A few sentences is often enough.
 
 5. **Check Compliance**: Verify adherence to:
    - Project-specific guidelines from CLAUDE.md files
    - Global coding standards and architectural decisions
    - Any custom requirements or patterns established in the codebase
 
-6. **Update Project Tasks**: Before creating the PR, check if `docs/PROJECT.md` (or similar project tracking file) exists. If it does:
+6. **Update Task Tracking**: Before creating the PR, check if relevant task tracking files exist. Search for:
+   - `docs/changes/` — Change documents with task lists
+   - `docs/tasks.md` — Catch-all task list
 
    **MANDATORY: Load the project-management skill FIRST:**
    ```
    Skill tool: skill="fx-dev:project-management"
    ```
 
-   The project-management skill provides the correct format and workflow for updating PROJECT.md. After loading:
-   - Identify which task(s) in PROJECT.md are addressed by this PR
+   The project-management skill provides the correct format and workflow for updating task tracking. After loading:
+   - Identify which task(s) in `docs/changes/*.md` or `docs/tasks.md` are addressed by this PR
    - Mark the task(s) as complete with the PR reference: `- [x] Task name (PR #N)`
-   - Include the PROJECT.md update in the PR
+   - If ALL tasks in a change document are complete, update its Status to `complete`
+   - Include the task tracking update in the PR
 
    **CRITICAL:** This step ensures completed work is tracked. Skipping this results in orphaned tasks that appear incomplete after merge.
 

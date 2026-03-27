@@ -1,70 +1,78 @@
 ---
 name: project-management
-description: MUST BE LOADED BEFORE modifying docs/PROJECT.md or task lists in docs/specs/. Also load when user mentions PROJECT.md in ANY form (docs/PROJECT.md, @docs/PROJECT.md, "the project file", etc.), mentions specs (docs/specs/, "spec tasks", "break down this spec"), or discusses tasks/tracking. Triggers include: "add a task", "add this task", "update PROJECT.md", "mark as done", "mark complete", "track this", "next task", "what's next", "work on next", create tickets/issues, write feature docs, create PRD, manage TODO.md/STATUS.md, "add a feature", "improve X to allow Y", plan features, break down tasks, "break down this spec", or ANY project/task management discussion. This skill handles all project planning, documentation, and work tracking through docs/PROJECT.md, docs/specs/ task lists, or external tools (GitHub Projects, Jira).
+description: "MUST BE LOADED BEFORE modifying docs/tasks.md, docs/changes/, or task lists. Also load when user mentions tasks.md, changes/, 'the task file', specs, or discusses tasks/tracking. Triggers include: 'add a task', 'update tasks', 'mark as done', 'mark complete', 'track this', 'next task', 'what's next', 'work on next', create tickets/issues, 'add a feature', 'improve X to allow Y', plan features, break down tasks, or ANY project/task management discussion. This skill handles all task tracking through docs/tasks.md, docs/changes/ task lists, or external tools (GitHub Issues, Jira)."
 ---
 
 # Project Management
 
-This skill manages project tasks and documentation for AI-driven development. Work is tracked in `docs/PROJECT.md` for project-level tasks, and in `docs/specs/*.md` for spec-level task lists. Both are valid task sources.
+This skill manages project tasks and documentation for AI-driven development. Work is tracked in:
+- **`docs/changes/NNNN-name.md`** — Feature-level task lists tied to specific change documents
+- **`docs/tasks.md`** — Catch-all task list for work not tied to a specific change
+- **External tools** — GitHub Issues or Jira when configured in the project's CLAUDE.md
 
 ## Core Principles
 
-1. **Multiple Task Sources** - `docs/PROJECT.md` is the central project tracker; `docs/specs/*.md` files contain feature-level task lists. Check both when looking for work or marking completion.
-2. **One Task = One PR** - Every task represents work that results in a single pull request
-3. **Clarify Before Acting** - Use AskUserQuestion to resolve ambiguity
-4. **Research First** - Use available agents to understand requirements before planning
+1. **Changes are primary** — Most feature work SHOULD be tracked in `docs/changes/` documents, not in `docs/tasks.md`. Change documents are what `/team` and `/dev` consume.
+2. **NEVER duplicate tasks** — Tasks that exist in a `docs/changes/` document MUST NOT be copied, summarized, or mirrored into `docs/tasks.md`. Each task lives in exactly one place. `docs/tasks.md` is ONLY for orphan work not tied to any change document.
+3. **One task = one PR** — Every top-level task represents work that results in a single pull request.
+4. **Smaller PRs are better** — Prefer many focused PRs over few large ones.
+5. **Clarify before acting** — Use AskUserQuestion to resolve ambiguity.
+6. **Research first** — Understand requirements before planning.
 
 ## When This Skill Triggers
 
-**CRITICAL:** Load this skill BEFORE reading, modifying, or editing `docs/PROJECT.md` or task lists in `docs/specs/`. Do not use Read/Edit tools on these files without loading this skill first.
+**CRITICAL:** Load this skill BEFORE reading, modifying, or editing `docs/tasks.md` or task lists in `docs/changes/`. Do not use Read/Edit tools on these files without loading this skill first.
 
 **Load this skill IMMEDIATELY when:**
-- **About to modify PROJECT.md or spec task lists** - Before ANY edit to docs/PROJECT.md or `## Tasks` sections in docs/specs/, load this skill first
-- Mentions PROJECT.md in ANY form: `docs/PROJECT.md`, `@docs/PROJECT.md`, "project file", "project tasks"
-- Mentions specs: `docs/specs/`, "spec tasks", "break down this spec", "add tasks to spec"
-- Says: "add a task", "add this task", "new task", "track this"
+- About to modify `docs/tasks.md` or `## Tasks` in `docs/changes/` files
+- Mentions tasks.md, changes/, "the task file", "task list"
+- Says: "add a task", "new task", "track this"
 - Says: "mark as done", "mark complete", "check off", "finished this"
-- Says: "next task", "what's next", "work on next", "next issue", "next feature"
-- Discusses tasks, features, or project tracking in general
+- Says: "next task", "what's next", "work on next"
+- Discusses tasks, features, or project tracking
 - Asks to create tickets, issues, or feature documentation
-- Requests PRD, product requirements, or feature specs
-- Mentions TODO.md, STATUS.md, or project tracking
 - Says "add a feature that does X" or "improve X to allow Y"
 - Asks to plan, break down, or organize work
 
+## Task Source Priority
+
+When looking for tasks, adding tasks, or marking completion, follow this strict priority:
+
+1. **Check `docs/changes/`** FIRST — Scan change documents for uncompleted `- [ ]` tasks. These are the primary work items. If work relates to an existing spec or change document, tasks MUST go here.
+2. **Check `docs/tasks.md`** ONLY for orphan work — Tasks that do not relate to any spec or change document. Before adding a task here, verify no relevant change document exists. If a relevant spec exists, create a change document for the work instead.
+3. **Check external tools** — If CLAUDE.md specifies GitHub Issues or Jira preference.
+
+**Strong default to change documents:** When the user asks to add or track work that relates to any existing spec in `docs/specs/`, ALWAYS create or find a change document for it. NEVER put spec-related work in `docs/tasks.md`. If no change document exists yet, propose creating one.
+
+## External Task Tracking
+
+Projects MAY define a preference for external task tracking in their CLAUDE.md. Look for patterns like:
+- `task-tracking: github-issues`
+- `task-tracking: jira`
+- "Use GitHub Issues for task tracking"
+- "Track tasks in Jira project X"
+
+**When external tracking is configured:**
+1. Load the GitHub skill (`Skill tool: skill="fx-dev:github"`) if using GitHub
+2. Create issues/tickets in the external tool
+3. Keep `docs/tasks.md` as a lightweight reference linking to external items
+4. Mark completion in BOTH the external tool and `docs/tasks.md` or change documents
+
+**When no external tracking is configured:**
+Default to `docs/tasks.md` and `docs/changes/` task lists.
+
 ## Available Agents
 
-### Research Agents (Use Liberally)
-
-- **`agent-fx-research:tech-scout`** - Research libraries, technologies, solutions
-- **`agent-Explore`** - Explore codebase structure, patterns, implementations
-- **`agent-Plan`** - Design implementation plans
+### Research Agents
+- **`agent-fx-research:tech-scout`** — Research libraries, technologies, solutions
+- **`agent-Explore`** — Explore codebase structure, patterns, implementations
+- **`agent-Plan`** — Design implementation plans
 
 ### Development Agents
-
-- **`agent-fx-dev:coder`** - Implement features, fix bugs
-- **`agent-fx-dev:planner`** - Create detailed implementation plans
-- **`agent-fx-dev:pr-preparer`** - Prepare and create pull requests
-- **`agent-fx-dev:sdlc`** - Orchestrate complete development lifecycle
-
-### GitHub Integration
-
-When working with GitHub issues or projects:
-1. **Load the GitHub skill first**: `Skill` tool with `skill="fx-dev:github"`
-2. Use `gh` CLI for all GitHub operations
-
-## docs/PROJECT.md
-
-To create or understand the PROJECT.md format, read the template at:
-`references/project-md-template.md`
-
-### Task Format Rules
-
-1. **Flat list** - No categories or groupings. Just tasks in priority order.
-2. **Up to 3 levels** - Feature → Task → Subtask (2-space indent per level)
-3. **One top-level item = One PR** - Each feature/task results in a single PR
-4. **Mark completion**: `- [x] Task name (PR #N)`
-5. **Link issues**: `- [ ] Task (#123)` when linked to GitHub issue
+- **`agent-fx-dev:coder`** — Implement features, fix bugs
+- **`agent-fx-dev:planner`** — Create detailed implementation plans
+- **`agent-fx-dev:pr-preparer`** — Prepare and create pull requests
+- **`agent-fx-dev:sdlc`** — Orchestrate complete development lifecycle
 
 ## Workflows
 
@@ -72,145 +80,96 @@ To create or understand the PROJECT.md format, read the template at:
 
 When user says "add a feature that does X" or "improve X to allow Y":
 
-1. **Analyze deeply**
-   - Use `agent-Explore` to understand current codebase
-   - Use `agent-fx-research:tech-scout` if technology decisions needed
-
-2. **Determine scope**
-   - Single PR scope? → Proceed to implementation
-   - Multi-PR scope? → Propose task breakdown
-
-3. **Clarify ambiguity** via AskUserQuestion:
-   - "This could be implemented as [A] or [B]. Which approach?"
-   - "I've identified these tasks: [list]. Add to PROJECT.md?"
-
-4. **Update PROJECT.md** with tasks (if breakdown needed)
-
-5. **Get approval** then begin work on first task
+1. **Analyze deeply** using `agent-Explore` and `agent-fx-research:tech-scout`
+2. **Check if a relevant spec exists** in `docs/specs/`
+3. **Determine scope** — Single PR? Multiple PRs? Needs a change document?
+4. **If multi-PR**: Invoke `/spec-writer` to create or update the spec and propose change documents
+5. **If single PR**: Add to `docs/tasks.md` and proceed to implementation
+6. **Get approval** then begin work
 
 ### Workflow 2: "Work on Next"
 
-When user says "work on next issue", "next feature", or "what's next":
+When user says "work on next", "next task", "what's next":
 
-1. **Read docs/PROJECT.md AND scan docs/specs/ for uncompleted tasks**
+1. **Scan `docs/changes/`** for change documents with status `in-progress` or `draft` that have uncompleted tasks
+2. **Scan `docs/tasks.md`** for uncompleted items (top = highest priority)
+3. **Check external tools** if configured
+4. **Select next uncompleted task** — prioritize in-progress changes over new work
+5. **Announce the task** to user
+6. **Execute using development agents**
+7. **Mark task complete** with PR number in the file where it lives
+8. **Ensure PR includes the task-list update**
 
-2. **Select next uncompleted task** (top of PROJECT.md list = highest priority; also check `## Tasks` sections in spec files)
+### Workflow 3: Break Down Tasks for a Change Document
 
-3. **Announce the task** to user
+When instructed to break down tasks for a change document or spec:
 
-4. **Execute using development agents**
-
-5. **Mark task complete** in the file where it lives (PROJECT.md or the relevant spec file) with PR number
-
-6. **Ensure PR includes the task-list update**
-
-### Workflow 3: Creating PRDs
-
-When user requests PRD or feature documentation:
-
-1. **Gather requirements** via AskUserQuestion
-
-2. **Research context** using `agent-Explore` and `agent-fx-research:tech-scout`
-
-3. **Create PRD** in `docs/` folder
-
-4. **Update PROJECT.md** with reference and tasks
-
-5. **Create PR** with documentation
-
-### Workflow 4: External Tool Integration
-
-When GitHub Projects, Jira, or other tools are available:
-
-1. **Load GitHub skill** if using GitHub
-
-2. **Create issues/tickets** in external tool
-
-3. **Update PROJECT.md** to reference external tracking
-
-4. **Link tasks** between PROJECT.md and external tool
-
-### Workflow 5: Initial Setup
-
-When docs/PROJECT.md doesn't exist:
-
-1. **Explore the project** using `agent-Explore`
-
-2. **Ask about tracking preferences** via AskUserQuestion:
-   - "Use docs/PROJECT.md only"
-   - "Use GitHub Issues + PROJECT.md"
-   - "Other (Jira, Linear, etc.)"
-
-3. **Read the template** at `references/project-md-template.md`
-
-4. **Create PROJECT.md** with initial backlog
-
-5. **Migrate existing tracking** (TODO.md, STATUS.md) if present
-
-### Workflow 6: Break Down Tasks for a Spec or File
-
-When instructed to break down tasks for a spec or other file:
-
-1. **Read the file** to understand the feature scope and design
-
-2. **Locate the task section** - Look for an existing `## Tasks` heading (or similar prepared section)
-
-3. **If no task section exists**, add a `## Tasks` section at the end of the document (before `## References` if present)
-
-4. **Write tasks directly into the file** as nested markdown checkboxes:
+1. **Read the document** to understand scope and design
+2. **Explore the codebase** to understand what needs to change
+3. **Write tasks** as nested markdown checkboxes in the `## Tasks` section:
    ```markdown
    ## Tasks
 
-   - [ ] Top-level task description
-     - [ ] Subtask one
-     - [ ] Subtask two
-   - [ ] Another top-level task
+   - [ ] Task one — brief description
+     - [ ] Subtask if needed
+   - [ ] Task two — brief description
    ```
+4. **Scope each top-level task to one PR**
+5. **Be specific** — include file paths, function names, test requirements
+6. **Do not duplicate** — if another change document already tracks related work, reference it
 
-5. **Scope each top-level task to one PR** where possible
+### Workflow 4: Initial Setup
 
-6. **Do not duplicate tasks** - If PROJECT.md already tracks this spec's work, reference the spec file from PROJECT.md rather than duplicating task lists
+When `docs/tasks.md` doesn't exist:
+
+1. **Invoke the setup skill:**
+   ```
+   Skill tool: skill="fx-dev:setup"
+   ```
+2. **Ask about tracking preferences** via AskUserQuestion:
+   - "Use docs/tasks.md + docs/changes/ (default)"
+   - "Use GitHub Issues + docs/changes/"
+   - "Other (Jira, Linear, etc.)"
+3. **Migrate existing tracking** (PROJECT.md, TODO.md, STATUS.md) if present
+
+### Workflow 5: Update Indexes
+
+After any task modification (creation, completion, status change), update the documentation indexes:
+
+1. **Update `docs/index.yml`** — Update the status field for any affected change documents
+2. **Update `docs/index.md`** — Update the status in the table
 
 ---
 
-## Pre-Flight: Task Completion Language Verification
+## Pre-Flight: Run Setup
 
-**IMPORTANT:** Every time this skill is invoked, briefly verify that the project's instruction files include mandatory language about resolving completed tasks.
+**Every time this skill is invoked**, run the setup skill first to ensure docs structure and instruction files are in place:
 
-Check these two files:
-1. `CLAUDE.md` (project root)
-2. `.github/copilot-instructions.md`
-
-**For each file:**
-- **If task-completion language already exists** (in any form) → leave it unmodified, even if wording differs from the default below
-- **If NO task-completion language exists** → append the following default
-
-**Default language for CLAUDE.md** (add to an appropriate section):
-```markdown
-**Task Completion:** Every PR must mark completed task(s) as done (`- [x]`) in the relevant tracking file (`docs/PROJECT.md` or the spec file in `docs/specs/`). Include the task-list update in the PR.
+```
+Skill tool: skill="fx-dev:setup"
 ```
 
-**Default language for `.github/copilot-instructions.md`** (add as a new rule):
-```markdown
-- **Task completion**: EVERY PR MUST mark completed task(s) as done (`- [x]`) in the relevant tracking file (`docs/PROJECT.md` or the spec file in `docs/specs/`). REQUEST CHANGES if missing.
-```
-
-This check should be fast — scan for keywords like `task`, `- [x]`, `mark.*done`, `PROJECT.md`, or `completed` and move on if any match. Only add language when nothing related exists.
+This is fast and idempotent — it checks what exists and only creates/modifies what's missing. It handles:
+- `docs/` folder structure (specs/, changes/, tasks.md, index.yml, index.md)
+- `CLAUDE.md` task-tracking instructions
+- `.github/copilot-instructions.md` PR review instructions
 
 ---
 
 ## Critical Requirements
 
-### Every Task Completion Must:
+### Every Task Completion MUST:
 
 1. Mark task complete in the file where the task lives: `- [x] Task (PR #N)`
-2. Task lists may be in `docs/PROJECT.md` OR in `docs/specs/*.md` files
+2. Task lists may be in `docs/tasks.md` OR in `docs/changes/*.md` files
 3. Include the task-list update in the PR
 
 ### Before Creating Tasks:
 
 1. Verify task is atomic (single PR scope)
 2. Ensure description is clear and actionable
+3. Prefer placing tasks in change documents over `docs/tasks.md`
+4. **Check if a change document already tracks this work** — if so, add the task there, NEVER in `docs/tasks.md`
 
 ### When Ambiguity Exists:
 

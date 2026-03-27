@@ -190,6 +190,18 @@ Fix any issues found, commit the fixes, then proceed to PR creation.
 
 **MANDATORY: Launch pr-preparer agent. ALL PRs MUST be created as drafts.**
 
+**Before creating the PR, identify related spec and change documents:**
+
+```bash
+# Find related change documents (check if task was sourced from a change doc)
+ls docs/changes/ 2>/dev/null
+# Find related specs
+ls docs/specs/ 2>/dev/null
+cat docs/index.yml 2>/dev/null
+```
+
+If the work was driven by a specific change document or spec, note the paths for inclusion in the PR description.
+
 ```
 Task tool:
   subagent_type: "fx-dev:pr-preparer"
@@ -197,9 +209,17 @@ Task tool:
            Task: [ORIGINAL TASK]
            Summary: [WHAT WAS IMPLEMENTED]
 
+           Spec/Change context (include in PR body if applicable):
+           - Spec: [SPEC_PATH or 'none']
+           - Change: [CHANGE_DOC_PATH or 'none']
+
            CRITICAL: Use --draft flag. Never create non-draft PRs.
            - Push branch if needed
            - Create PR with: gh pr create --draft
+           - Include links to related spec/change docs in the PR body
+             (use relative paths from repo root, e.g. docs/specs/auth/ or docs/changes/0003-add-oauth.md)
+           - Do NOT put spec/change references in the PR title unless the PR is
+             primarily about finalizing lingering tasks in a spec/change doc
            - Reference related issues
            - Return PR number and URL"
   description: "Create draft PR"
@@ -403,18 +423,20 @@ This removes the draft status so the PR is visible for merge.
 
 #### 8.2 Update Task Tracking Docs
 
-**MANDATORY: Mark completed tasks in the relevant spec or project doc.**
+**MANDATORY: Mark completed tasks in the relevant change document or tasks file.**
 
-If a spec file, project doc, or task list was referenced in the original request (e.g., a `docs/specs/` file or `docs/PROJECT.md`), use it directly. If none was provided, search for the relevant tracking doc:
+If a change document or task list was referenced in the original request (e.g., a `docs/changes/NNNN-name.md` or `docs/tasks.md`), use it directly. If none was provided, search for the relevant tracking doc:
 
 ```bash
-# Look for spec files or project docs that reference the work being done
-grep -rl "keyword from task" docs/specs/ docs/PROJECT.md 2>/dev/null || true
+# Look for change documents or tasks that reference the work being done
+grep -rl "keyword from task" docs/changes/ docs/tasks.md 2>/dev/null || true
 ```
 
 Once identified, update the doc to mark completed tasks:
 - Check off completed items (e.g., `- [ ]` → `- [x]`)
+- Add the PR number: `- [x] Task name (PR #N)`
 - Only mark items that are **actually addressed by the changes in this PR**
+- If ALL tasks in a change document are now complete, update its Status to `complete`
 - Commit the doc update to the PR branch
 
 ```
@@ -422,8 +444,9 @@ Task tool:
   subagent_type: "fx-dev:coder"
   prompt: "Update task tracking in [DOC_PATH]:
            - Read the doc and identify tasks completed by PR #[NUMBER]
-           - Mark those tasks as done (check off checkboxes)
+           - Mark those tasks as done: - [x] Task name (PR #N)
            - Do NOT mark tasks that were not addressed
+           - If all tasks in a change doc are done, update Status: complete
            - Commit the change with: docs: mark completed tasks in [DOC_NAME]
            - Push to the PR branch"
   description: "Update task tracking"
@@ -519,9 +542,9 @@ Workflow complete when ALL true:
 - ✅ Plan created
 - ✅ Code implemented with atomic commits
 - ✅ Code reviewed via /simplify (reuse, quality, efficiency)
-- ✅ PR created with description
+- ✅ PR created with description (including links to related specs/changes)
 - ✅ Self-review done, issues fixed
 - ✅ Automated review feedback resolved (Copilot/CodeRabbit)
 - ✅ All CI/CD checks pass
-- ✅ Task tracking docs updated (completed tasks marked in relevant spec/project doc)
+- ✅ Task tracking docs updated (completed tasks marked in relevant change doc or tasks.md)
 - ✅ User notified, awaiting merge approval
