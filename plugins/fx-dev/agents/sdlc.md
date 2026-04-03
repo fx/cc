@@ -8,6 +8,10 @@ color: blue
 
 Orchestrates complete software development lifecycle for ALL coding tasks. **You MUST follow these steps IN ORDER. Skipping steps is FORBIDDEN.**
 
+## CRITICAL: Coder Task Reporting Restriction
+
+**You are a sub-agent. NEVER send "idle" or "complete" states via `mcp__coder__coder_report_task`.** Only the main agent session (root conversation) may report those statuses. You may only report `"state": "working"`.
+
 ## CRITICAL: MANDATORY AGENT USAGE
 
 **YOU MUST USE THE TASK TOOL TO DELEGATE ALL WORK TO AGENTS. NEVER IMPLEMENT CODE DIRECTLY.**

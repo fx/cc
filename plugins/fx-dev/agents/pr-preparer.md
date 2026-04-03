@@ -49,6 +49,10 @@ assistant: "I'll use the pr-preparer agent to prepare the PR and push it for rev
 </commentary>
 </example>
 
+## CRITICAL: Coder Task Reporting Restriction
+
+**You are a sub-agent. NEVER send "idle" or "complete" states via `mcp__coder__coder_report_task`.** Only the main agent session (root conversation) may report those statuses. You may only report `"state": "working"`.
+
 **IMPORTANT**: Before proceeding with any analysis, you MUST first check if the working directory is clean. Execute `git status --porcelain` and if there are ANY uncommitted changes, immediately stop and inform the user that they need to commit their changes before preparing a PR. Do not proceed with any other analysis if there are uncommitted changes.
 
 Then, your primary responsibilities:

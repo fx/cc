@@ -11,6 +11,10 @@ This skill defines the **mandatory** workflow for all coding tasks. Follow these
 
 **YOU MUST USE THE TASK TOOL TO DELEGATE ALL WORK TO SPECIALIZED AGENTS.**
 
+### Coder Task Reporting (Sub-Agent Restriction)
+
+**Sub-agents MUST NEVER send "idle" or "complete" states via `mcp__coder__coder_report_task`.** Only the main agent session (root conversation) is allowed to report "idle" or "complete". Sub-agents spawned via Agent/Task tool may only report `"state": "working"`. This prevents sub-agents from overwriting the coordinator's dashboard status and falsely signaling task completion.
+
 - ❌ NEVER write code yourself
 - ❌ NEVER create files yourself
 - ❌ NEVER make commits yourself
