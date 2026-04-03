@@ -22,11 +22,12 @@ If the user asks to "write a spec AND implement it", write the spec/changes firs
 ## Core Principles
 
 1. **Specs are living knowledge** — They describe the CURRENT state of the system, not a future plan. They MUST be kept in sync with implementation.
-2. **Changes are plans** — Planning, task tracking, and implementation details go in `docs/changes/NNNN-name.md`, never in specs.
-3. **RFC 2119 everywhere** — All specs and changes MUST use RFC 2119 keywords (MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY, OPTIONAL) for requirement precision.
-4. **Behavioral scenarios** — Every requirement SHOULD have GIVEN/WHEN/THEN scenarios that map directly to test cases.
-5. **Exhaustive exploration** — Research the codebase deeply before writing anything. Every claim in a spec must be verified against actual code.
-6. **Clarify before writing** — Use AskUserQuestion for scope decisions and design choices.
+2. **One spec per major feature** — Never create a single monolithic spec for an entire application. Each major feature area (e.g., authentication, file storage, upload system, password protection) gets its own spec. A general "architecture" or "setup" spec is appropriate for project-level concerns (tech stack, directory structure, deployment topology), but feature behavior belongs in feature-specific specs. This keeps specs focused, readable in one sitting, and independently maintainable.
+3. **Changes are plans** — Planning, task tracking, and implementation details go in `docs/changes/NNNN-name.md`, never in specs.
+4. **RFC 2119 everywhere** — All specs and changes MUST use RFC 2119 keywords (MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY, OPTIONAL) for requirement precision.
+5. **Behavioral scenarios** — Every requirement SHOULD have GIVEN/WHEN/THEN scenarios that map directly to test cases.
+6. **Exhaustive exploration** — Research the codebase deeply before writing anything. Every claim in a spec must be verified against actual code.
+7. **Clarify before writing** — Use AskUserQuestion for scope decisions and design choices.
 
 ## RFC 2119 Reference
 
@@ -166,12 +167,31 @@ Read the template at `references/spec-index-template.md` and write `docs/specs/<
 
 #### 3.3 Scope Analysis
 
-A single spec SHOULD:
-- Cover one cohesive system, feature, or domain
-- Be readable in one sitting
-- Have clear boundaries
+**CRITICAL: Do NOT create a single spec for an entire application.** Break the work into multiple specs by major feature area.
 
-If the area is too large for one spec, split into multiple specs and link them. Use `AskUserQuestion` when scope is ambiguous.
+A single spec MUST:
+- Cover **one** cohesive feature or domain (e.g., "authentication", "file-upload", "password-protection")
+- Be readable in one sitting
+- Have clear boundaries that don't overlap with other specs
+
+**Spec organization for a new project:**
+
+1. **Architecture/setup spec** (optional) — Covers project-level concerns: tech stack, directory structure, deployment topology, dev workflow. Does NOT contain feature requirements.
+2. **Feature specs** (one per major feature) — Each covers a distinct capability of the system. Change documents reference the feature spec they implement.
+
+**Example:** For a file hosting app, create separate specs:
+- `architecture` — Tech stack, project structure, deployment
+- `file-serving` — HTTP serving, Content-Type, directory indexes
+- `authentication` — IAP verification, user identity
+- `file-upload` — Upload API, zip extraction, ownership
+- `password-protection` — Password middleware, cookie auth, prompt page
+- `management-ui` — React SPA, file browser, upload UX
+
+NOT one giant spec covering the entire application.
+
+When the user asks to "write a spec for X" where X is a whole application, decompose it into feature specs. Use `AskUserQuestion` to confirm the breakdown if unsure.
+
+Bootstrapping change documents (project scaffolding, initial setup) are appropriate and SHOULD reference the architecture spec.
 
 #### 3.4 Supplementary Documents
 
