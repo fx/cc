@@ -7,6 +7,18 @@ description: "Write, update, and maintain living specification documents and pro
 
 This skill manages the complete specification lifecycle: creating living spec documents in `docs/specs/<name>/`, updating them to reflect current implementation, identifying gaps between spec and code, and proposing change documents in `docs/changes/` to close those gaps.
 
+## Scope — Documentation Only
+
+**CRITICAL: This skill writes ONLY specs and change documents. It MUST NOT write, modify, or generate any implementation code.**
+
+- Do NOT edit source files (`.ts`, `.tsx`, `.js`, `.py`, etc.)
+- Do NOT create or run database migrations
+- Do NOT modify tests, configs, or any non-documentation file
+- Do NOT install packages or run build commands
+- The ONLY files this skill creates or modifies are in `docs/` (specs, changes, indexes)
+
+If the user asks to "write a spec AND implement it", write the spec/changes first, then stop and tell the user to use `/dev` or `/sdlc` for implementation.
+
 ## Core Principles
 
 1. **Specs are living knowledge** — They describe the CURRENT state of the system, not a future plan. They MUST be kept in sync with implementation.
