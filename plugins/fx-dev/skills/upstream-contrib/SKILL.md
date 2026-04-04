@@ -108,8 +108,9 @@ Launch a sub-agent with the coder skill:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "In the fx/ui repo at [UI_DIR], implement [DESCRIPTION].
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           In the fx/ui repo at [UI_DIR], implement [DESCRIPTION].
 
            CRITICAL: fx/ui is a PUBLIC repo. NEVER reference the source/consumer
            project name, URL, author, or org in any commit message, comment,
@@ -179,8 +180,9 @@ Launch a sub-agent with the coder skill:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "In [CONSUMER_ROOT], update the local component to use the
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           In [CONSUMER_ROOT], update the local component to use the
            new exports from @fx/ui (currently linked locally).
 
            - Replace the local implementation with a re-export from @fx/ui

@@ -8,7 +8,7 @@ The fx-research plugin provides specialized research capabilities for technical 
 
 ## Components
 
-### Agents
+### Skills
 
 - **tech-scout** - Researches and recommends libraries, technologies, or software solutions for specific use cases
 
@@ -16,38 +16,32 @@ The fx-research plugin provides specialized research capabilities for technical 
 
 ### Finding a Library or Technology
 
-```python
-# Research technology options
-Task(
-    description="Research collaboration tools",
-    prompt="I need to add real-time collaborative editing to my web application",
-    subagent_type="tech-scout"
-)
+```
+Agent tool:
+  prompt: "Load the tech-scout skill (Skill tool: skill='fx-research:tech-scout'), then:
+           I need to add real-time collaborative editing to my web application"
+  description: "Research collaboration tools"
 ```
 
 ### Finding Self-Hosted Alternatives
 
-```python
-# Find self-hosted solutions
-Task(
-    description="Find self-hosted alternative",
-    prompt="What's a good self-hosted alternative to Slack for team communication?",
-    subagent_type="tech-scout"
-)
+```
+Agent tool:
+  prompt: "Load the tech-scout skill (Skill tool: skill='fx-research:tech-scout'), then:
+           What's a good self-hosted alternative to Slack for team communication?"
+  description: "Find self-hosted alternative"
 ```
 
 ### Evaluating Technology Stacks
 
-```python
-# Evaluate options for a feature
-Task(
-    description="Evaluate auth libraries",
-    prompt="What's the best authentication library for a Next.js application?",
-    subagent_type="tech-scout"
-)
+```
+Agent tool:
+  prompt: "Load the tech-scout skill (Skill tool: skill='fx-research:tech-scout'), then:
+           What's the best authentication library for a Next.js application?"
+  description: "Evaluate auth libraries"
 ```
 
-## Agent Description
+## Skill Description
 
 ### tech-scout
 
@@ -78,12 +72,11 @@ A technology research specialist with deep expertise in evaluating open source s
 
 ### Example 1: Real-Time Collaboration
 
-```python
-Task(
-    description="Find collaboration library",
-    prompt="I need to add real-time collaborative editing to my web application. What library should I use?",
-    subagent_type="tech-scout"
-)
+```
+Agent tool:
+  prompt: "Load the tech-scout skill (Skill tool: skill='fx-research:tech-scout'), then:
+           I need to add real-time collaborative editing to my web application. What library should I use?"
+  description: "Find collaboration library"
 ```
 
 Expected output style:
@@ -102,12 +95,11 @@ Key Factors:
 
 ### Example 2: Self-Hosted Solutions
 
-```python
-Task(
-    description="Find self-hosted chat",
-    prompt="What's a good self-hosted alternative to Slack?",
-    subagent_type="tech-scout"
-)
+```
+Agent tool:
+  prompt: "Load the tech-scout skill (Skill tool: skill='fx-research:tech-scout'), then:
+           What's a good self-hosted alternative to Slack?"
+  description: "Find self-hosted chat"
 ```
 
 Expected output style:
@@ -126,12 +118,11 @@ Key Factors:
 
 ### Example 3: Technology Stack Choice
 
-```python
-Task(
-    description="Choose database",
-    prompt="What database should I use for a high-write event logging system?",
-    subagent_type="tech-scout"
-)
+```
+Agent tool:
+  prompt: "Load the tech-scout skill (Skill tool: skill='fx-research:tech-scout'), then:
+           What database should I use for a high-write event logging system?"
+  description: "Choose database"
 ```
 
 ## Integration with Other Plugins
@@ -173,11 +164,11 @@ If recommendations don't match your needs:
 3. Mention technologies you've already tried
 4. Clarify deployment constraints
 
-## Future Research Agents
+## Future Research Skills
 
-The fx-research plugin is designed to accommodate various research agents:
+The fx-research plugin is designed to accommodate various research skills:
 - **tech-scout** (current) - Technology and library research
-- Future agents could include:
+- Future skills could include:
   - Architecture pattern research
   - Best practices research
   - Security vulnerability research
@@ -187,7 +178,7 @@ The fx-research plugin is designed to accommodate various research agents:
 
 To enhance this plugin:
 
-1. Add new research skills to `skills/`
+1. Add new skills to `skills/`
 2. Update README with new skill descriptions
 3. Ensure consistent research methodology
 4. Test with various use cases

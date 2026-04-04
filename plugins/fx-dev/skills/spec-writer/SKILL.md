@@ -78,7 +78,7 @@ Launch **multiple Explore sub-agents in parallel** if the feature spans distinct
 
 #### 1.2 Technology and Pattern Research
 
-Use the tech-scout skill (subagent_type: `fx-research:tech-scout`) to:
+Launch a sub-agent that loads the tech-scout skill (Skill tool: skill='fx-research:tech-scout') to:
 
 - Discover how similar features are commonly implemented
 - Identify relevant libraries, APIs, or standards

@@ -42,10 +42,11 @@ Spawn sub-agents using the Agent tool. Each sub-agent gets a clear name and assi
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:dev"
   team_name: "<team-name>"
   name: "<descriptive-name>"  # e.g., "schema-worker", "ui-worker"
-  prompt: "You are a teammate on the <team-name> team.
+  prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev'), then:
+
+           You are a teammate on the <team-name> team.
 
            YOUR TASK: <task description from TaskCreate>
 

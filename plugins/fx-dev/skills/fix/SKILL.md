@@ -49,8 +49,9 @@ Before ANY implementation:
 2. **Write the most concise failing test** that reproduces the bug:
    ```
    Agent tool:
-     subagent_type: "fx-dev:coder"
-     prompt: "Write a FAILING test that reproduces this bug:
+     prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+              Write a FAILING test that reproduces this bug:
 
               [BUG DESCRIPTION]
 
@@ -73,8 +74,9 @@ When implementing the fix:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "Fix this bug. The failing test is at [TEST PATH].
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           Fix this bug. The failing test is at [TEST PATH].
 
            [PLAN FROM STEP 3]
 

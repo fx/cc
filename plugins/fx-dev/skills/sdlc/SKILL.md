@@ -9,7 +9,20 @@ This skill defines the **mandatory** workflow for all coding tasks. Follow these
 
 ## CRITICAL RULES
 
-**YOU MUST USE THE AGENT TOOL TO LAUNCH SUB-AGENTS WITH SPECIALIZED SKILLS FOR ALL WORK.**
+**YOU MUST USE THE AGENT TOOL TO LAUNCH SUB-AGENTS FOR ALL WORK. Each sub-agent loads the appropriate skill via the Skill tool.**
+
+### How to Launch Sub-Agents with Skills
+
+Skills are NOT agent types. Launch a general-purpose sub-agent and instruct it to load the skill:
+
+```
+Agent tool:
+  prompt: "Load the [skill-name] skill (Skill tool: skill='[skill-name]'), then:
+           [task details]"
+  description: "[3-5 word summary]"
+```
+
+**Do NOT use `subagent_type` for skills.** The `subagent_type` parameter is reserved for built-in agent types (Explore, Plan, etc.). Skills are loaded inside the sub-agent via the Skill tool.
 
 ### Coder Task Reporting (Sub-Agent Restriction)
 
@@ -20,7 +33,9 @@ This skill defines the **mandatory** workflow for all coding tasks. Follow these
 - ❌ NEVER make commits yourself
 - ❌ NEVER skip steps
 - ❌ NEVER skip tests (`test.skip`, `it.skip`, `describe.skip` are FORBIDDEN)
-- ✅ ALWAYS use the Agent tool with the specified `subagent_type`
+- ❌ NEVER use `subagent_type` for skills — use `Skill tool` inside the sub-agent
+- ✅ ALWAYS launch sub-agents via the Agent tool
+- ✅ ALWAYS instruct sub-agents to load skills via the Skill tool
 - ✅ ALWAYS verify each step before proceeding
 - ✅ ALWAYS fix, replace, refactor, or remove tests - never skip them
 
@@ -84,12 +99,13 @@ Branch types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
 
 ### STEP 2: Requirements Analysis
 
-**MANDATORY: Launch sub-agent with requirements-analyzer skill.**
+**MANDATORY: Launch a sub-agent that loads the requirements-analyzer skill.**
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:requirements-analyzer"
-  prompt: "Analyze requirements for: [TASK DESCRIPTION]
+  prompt: "Load the requirements-analyzer skill (Skill tool: skill='fx-dev:requirements-analyzer'), then:
+
+           Analyze requirements for: [TASK DESCRIPTION]
 
            - Analyze task/issue/error to understand requirements
            - Use WebSearch to research technologies
@@ -112,12 +128,13 @@ gh issue view [NUMBER] --json title,body,labels,comments
 
 ### STEP 3: Planning
 
-**MANDATORY: Launch sub-agent with planner skill.**
+**MANDATORY: Launch a sub-agent that loads the planner skill.**
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:planner"
-  prompt: "Create implementation plan for:
+  prompt: "Load the planner skill (Skill tool: skill='fx-dev:planner'), then:
+
+           Create implementation plan for:
 
            [REQUIREMENTS FROM STEP 2]
 
@@ -133,8 +150,9 @@ Agent tool:
 For GitHub issues, also update issue:
 ```
 Agent tool:
-  subagent_type: "fx-dev:issue-updater"
-  prompt: "Update issue #[NUMBER] with plan. Add label: in-progress"
+  prompt: "Load the issue-updater skill (Skill tool: skill='fx-dev:issue-updater'), then:
+
+           Update issue #[NUMBER] with plan. Add label: in-progress"
   description: "Update issue"
 ```
 
@@ -144,12 +162,13 @@ Agent tool:
 
 ### STEP 4: Implementation
 
-**MANDATORY: Launch sub-agent with coder skill.**
+**MANDATORY: Launch a sub-agent that loads the coder skill.**
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "Implement this plan:
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           Implement this plan:
 
            [PLAN FROM STEP 3]
 
@@ -192,7 +211,7 @@ Fix any issues found, commit the fixes, then proceed to PR creation.
 
 ### STEP 5: Pull Request Creation (as Draft)
 
-**MANDATORY: Launch sub-agent with pr-preparer skill. ALL PRs MUST be created as drafts.**
+**MANDATORY: Launch a sub-agent that loads the pr-preparer skill. ALL PRs MUST be created as drafts.**
 
 **Before creating the PR, identify related spec and change documents:**
 
@@ -208,8 +227,9 @@ If the work was driven by a specific change document or spec, note the paths for
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:pr-preparer"
-  prompt: "Create DRAFT PR for current branch.
+  prompt: "Load the pr-preparer skill (Skill tool: skill='fx-dev:pr-preparer'), then:
+
+           Create DRAFT PR for current branch.
            Task: [ORIGINAL TASK]
            Summary: [WHAT WAS IMPLEMENTED]
 
@@ -286,24 +306,32 @@ EOF
 )"
 ```
 
-#### 5.5.3 Run verify-web-change
+#### 5.5.3 Run verify-web-change via Sub-Agent
 
-Invoke the verify-web-change skill to launch the app stack and verify each Test Plan item in a real browser:
+**MANDATORY: Launch a sub-agent that loads the verify-web-change skill.** The sub-agent handles the full browser verification lifecycle (Docker, dev server, Playwright MCP).
 
 ```
-Skill tool: skill="fx-dev:verify-web-change"
-```
+Agent tool:
+  prompt: "Load the verify-web-change skill (Skill tool: skill='fx-dev:verify-web-change'), then:
 
-The skill will:
-1. Ensure Docker is running and compose services are up (if needed)
-2. Detect the package manager and dev server port
-3. Start the dev server and wait for readiness
-4. Use Playwright MCP to navigate, snapshot, click, and verify each Test Plan item
-5. Report pass/fail per item with evidence
+           Verify the following Test Plan items for PR #[PR_NUMBER] using browser automation:
+
+           [TEST PLAN ITEMS FROM 5.5.2]
+
+           For each item:
+           1. Navigate to the relevant page/route
+           2. Use Playwright MCP snapshots to verify the element/behavior exists
+           3. Test any interactions described in the test plan item
+           4. Check for console errors
+           5. Report PASS/FAIL per item with evidence (what you observed)
+
+           Output: A list of each test plan item with its result (PASS/FAIL/SKIPPED) and evidence."
+  description: "Verify web changes in browser"
+```
 
 #### 5.5.4 Update the Test Plan in the PR Description
 
-After verification, update the PR description to check off verified items and annotate failures:
+After the sub-agent reports results, update the PR description to check off verified items and annotate failures:
 
 ```bash
 # Fetch current PR body
@@ -324,11 +352,12 @@ gh pr edit [PR_NUMBER] --body "$UPDATED_BODY"
 #### 5.5.5 Handle Failures
 
 If any Test Plan items failed verification:
-1. Delegate fixes to the coder sub-agent:
+1. Launch a sub-agent with the coder skill to fix:
    ```
    Agent tool:
-     subagent_type: "fx-dev:coder"
-     prompt: "Fix these verification failures from browser testing:
+     prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+              Fix these verification failures from browser testing:
               [FAILURE DETAILS FROM verify-web-change]
               Push fixes to the PR branch."
      description: "Fix web verification failures"
@@ -348,8 +377,9 @@ If any Test Plan items failed verification:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:pr-reviewer"
-  prompt: "Review PR #[NUMBER] for:
+  prompt: "Load the pr-reviewer skill (Skill tool: skill='fx-dev:pr-reviewer'), then:
+
+           Review PR #[NUMBER] for:
            - Code quality
            - Test coverage
            - Security issues
@@ -363,8 +393,9 @@ Agent tool:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "Fix these issues in PR #[NUMBER]:
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           Fix these issues in PR #[NUMBER]:
            [ISSUES FROM REVIEW]"
   description: "Fix review issues"
 ```
@@ -470,7 +501,7 @@ Skill tool: skill="fx-dev:resolve-ci-failures"
 
 Pass the failure details from the script output to the skill. The skill will:
 1. Analyze failure logs and identify root causes
-2. Delegate fixes to the coder sub-agent
+2. Delegate fixes to a sub-agent with the coder skill
 3. Push the fixes
 
 **After the skill completes and fixes are pushed, GO BACK TO Step 7.3** — re-run the wait script to monitor the new check run. This creates a loop:
@@ -550,8 +581,9 @@ Once identified, update the doc to mark completed tasks:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "Update task tracking in [DOC_PATH]:
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           Update task tracking in [DOC_PATH]:
            - Read the doc and identify tasks completed by PR #[NUMBER]
            - Mark those tasks as done: - [x] Task name (PR #N)
            - Do NOT mark tasks that were not addressed
@@ -567,8 +599,9 @@ If no relevant tracking doc is found, skip this step.
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:issue-updater"
-  prompt: "Update issue #[NUMBER]: Link PR, set label ready-for-review"
+  prompt: "Load the issue-updater skill (Skill tool: skill='fx-dev:issue-updater'), then:
+
+           Update issue #[NUMBER]: Link PR, set label ready-for-review"
   description: "Update issue"
 ```
 
@@ -629,18 +662,27 @@ Awaiting your approval to merge.
 
 ## Sub-Agent Quick Reference
 
-| Step | Skill | subagent_type |
-|------|-------|---------------|
+All sub-agents are launched via the Agent tool. Each loads its skill via the Skill tool inside the sub-agent.
+
+| Step | Skill to Load | Skill Name |
+|------|---------------|------------|
 | 2 | Requirements Analyzer | `fx-dev:requirements-analyzer` |
 | 3 | Planner | `fx-dev:planner` |
 | 3,8 | Issue Updater | `fx-dev:issue-updater` |
-| 4,6.2 | Coder | `fx-dev:coder` |
-| 4.5 | Code Cleanup | Skill: `simplify` |
+| 4,6.2,8.2 | Coder | `fx-dev:coder` |
+| 4.5 | Code Cleanup | `simplify` |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
-| 5.5 | Web Verification | Skill: `fx-dev:verify-web-change` |
+| 5.5 | Web Verification | `fx-dev:verify-web-change` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
-| 6.4 | PR Feedback Resolver | Skill: `fx-dev:resolve-pr-feedback` |
-| 7.4 | CI Failure Resolver | Skill: `fx-dev:resolve-ci-failures` |
+| 6.4 | PR Feedback Resolver | `fx-dev:resolve-pr-feedback` |
+| 7.4 | CI Failure Resolver | `fx-dev:resolve-ci-failures` |
+
+**Pattern for every sub-agent call:**
+```
+Agent tool:
+  prompt: "Load the [skill-name] skill (Skill tool: skill='[full-skill-name]'), then: [task]"
+  description: "[summary]"
+```
 
 ---
 
