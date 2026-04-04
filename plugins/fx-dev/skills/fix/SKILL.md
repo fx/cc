@@ -36,7 +36,7 @@ If you cannot reproduce the bug via automated test:
 **MANDATORY: Load the SDLC skill, then follow the Fix Workflow variation.**
 
 ```
-Skill tool: skill="fx-dev:sdlc"
+Skill tool: skill="fx-dev:dev"
 ```
 
 After the skill loads, execute with this modified Step 2 (Requirements Analysis):
@@ -49,8 +49,9 @@ Before ANY implementation:
 2. **Write the most concise failing test** that reproduces the bug:
    ```
    Agent tool:
-     subagent_type: "fx-dev:coder"
-     prompt: "Write a FAILING test that reproduces this bug:
+     prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+              Write a FAILING test that reproduces this bug:
 
               [BUG DESCRIPTION]
 
@@ -73,8 +74,9 @@ When implementing the fix:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "Fix this bug. The failing test is at [TEST PATH].
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           Fix this bug. The failing test is at [TEST PATH].
 
            [PLAN FROM STEP 3]
 

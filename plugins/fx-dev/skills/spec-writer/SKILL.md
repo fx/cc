@@ -17,7 +17,7 @@ This skill manages the complete specification lifecycle: creating living spec do
 - Do NOT install packages or run build commands
 - The ONLY files this skill creates or modifies are in `docs/` (specs, changes, indexes)
 
-If the user asks to "write a spec AND implement it", write the spec/changes first, then stop and tell the user to use `/dev` or `/sdlc` for implementation.
+If the user asks to "write a spec AND implement it", write the spec/changes first, then stop and tell the user to use `/dev` for implementation.
 
 ## Core Principles
 
@@ -78,7 +78,7 @@ Launch **multiple Explore sub-agents in parallel** if the feature spans distinct
 
 #### 1.2 Technology and Pattern Research
 
-Use the tech-scout skill (subagent_type: `fx-research:tech-scout`) to:
+Launch a sub-agent that loads the tech-scout skill (Skill tool: skill='fx-research:tech-scout') to:
 
 - Discover how similar features are commonly implemented
 - Identify relevant libraries, APIs, or standards

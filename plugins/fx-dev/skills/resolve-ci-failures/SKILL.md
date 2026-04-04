@@ -113,8 +113,9 @@ For each fixable failure, launch a sub-agent with the coder skill:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "Fix the following CI failure on PR #[NUMBER]:
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           Fix the following CI failure on PR #[NUMBER]:
 
            Check name: [CHECK_NAME]
            Conclusion: [CONCLUSION]

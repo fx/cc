@@ -123,8 +123,9 @@ For each file with uncovered lines, launch a sub-agent with the coder skill:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "Add tests to improve coverage for PR #[PR_NUMBER].
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           Add tests to improve coverage for PR #[PR_NUMBER].
 
            The following files have uncovered lines that need test coverage:
 

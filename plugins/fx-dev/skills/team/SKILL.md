@@ -34,7 +34,7 @@ Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `
 - Exactly what to implement (files, components, endpoints)
 - Acceptance criteria
 - Which spec task(s) it maps to (if from a spec)
-- Explicit instruction: "Use `fx-dev:sdlc` skill and follow ALL steps in order"
+- Explicit instruction: "Use `fx-dev:dev` skill and follow ALL steps in order"
 
 ## STEP 3: Spawn Teammate Sub-Agents
 
@@ -42,22 +42,22 @@ Spawn sub-agents using the Agent tool. Each sub-agent gets a clear name and assi
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:dev"
   team_name: "<team-name>"
   name: "<descriptive-name>"  # e.g., "schema-worker", "ui-worker"
-  prompt: "You are a teammate on the <team-name> team.
+  prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev'), then:
+
+           You are a teammate on the <team-name> team.
 
            YOUR TASK: <task description from TaskCreate>
 
            MANDATORY WORKFLOW:
-           1. Load the SDLC skill: Skill tool: skill='fx-dev:sdlc'
-           2. Follow EVERY step of the SDLC workflow in order — no skipping
-           3. Use /fx-dev:project-management skill to mark your spec task(s) as done
-           4. Include the task completion change in your PR
-           5. Create your PR as a DRAFT
-           6. Wait for and resolve Copilot/CodeRabbit review feedback
-           7. Wait for and resolve CI check failures
-           8. Send a message to the coordinator when your PR is ready
+           1. The dev skill is already loaded — follow EVERY step of its SDLC workflow in order, no skipping
+           2. Use /fx-dev:project-management skill to mark your spec task(s) as done
+           3. Include the task completion change in your PR
+           4. Create your PR as a DRAFT
+           5. Wait for and resolve Copilot/CodeRabbit review feedback
+           6. Wait for and resolve CI check failures
+           7. Send a message to the coordinator when your PR is ready
 
            CRITICAL RULES:
            - You MUST follow full SDLC progression (requirements → plan → implement → PR → review → CI)

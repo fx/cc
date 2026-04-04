@@ -108,8 +108,9 @@ Launch a sub-agent with the coder skill:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "In the fx/ui repo at [UI_DIR], implement [DESCRIPTION].
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           In the fx/ui repo at [UI_DIR], implement [DESCRIPTION].
 
            CRITICAL: fx/ui is a PUBLIC repo. NEVER reference the source/consumer
            project name, URL, author, or org in any commit message, comment,
@@ -179,8 +180,9 @@ Launch a sub-agent with the coder skill:
 
 ```
 Agent tool:
-  subagent_type: "fx-dev:coder"
-  prompt: "In [CONSUMER_ROOT], update the local component to use the
+  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+
+           In [CONSUMER_ROOT], update the local component to use the
            new exports from @fx/ui (currently linked locally).
 
            - Replace the local implementation with a re-export from @fx/ui
@@ -205,14 +207,14 @@ The consumer repo now has commits that use the new fx/ui exports, but still depe
 
 ---
 
-### Phase 4: Submit fx/ui PR via SDLC
+### Phase 4: Submit fx/ui PR via Dev Workflow
 
-#### 4.1 Run the full SDLC workflow on fx/ui
+#### 4.1 Run the full dev (SDLC) workflow on fx/ui
 
-Switch working directory to fx/ui and run the SDLC skill:
+Switch working directory to fx/ui and run the dev skill:
 
 ```
-Skill tool: skill="fx-dev:sdlc"
+Skill tool: skill="fx-dev:dev"
 ```
 
 Execute Steps 5-7 of the SDLC workflow (PR creation, review, CI) within the fx/ui repo. Steps 0-4 are already done (auth, branch, requirements, plan, implementation).

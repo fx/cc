@@ -79,26 +79,118 @@ Create a mental checklist of what must be verified:
 - [ ] No console errors
 - [ ] Expected visual appearance
 
-### Step 3: Launch Application Stack
+### Step 3: Ensure Docker is Running (if needed)
 
-#### 3.1 Detect and Start Services
+Before launching any services, check if the project needs Docker and ensure the daemon is running.
 
-Check for docker-compose/compose files:
+#### 3.1 Check for Compose Files
 
 ```bash
-ls -la docker-compose.yml docker-compose.yaml compose.yml compose.yaml 2>/dev/null || echo "No compose file found"
+COMPOSE_FILE=""
+for f in docker-compose.yml docker-compose.yaml compose.yml compose.yaml; do
+    if [[ -f "$f" ]]; then
+        COMPOSE_FILE="$f"
+        break
+    fi
+done
+echo "Compose file: ${COMPOSE_FILE:-none}"
 ```
 
-If compose file exists:
+If no compose file is found, skip to Step 4.
+
+#### 3.2 Verify Docker Daemon is Running
+
 ```bash
-docker compose up -d
-sleep 5  # Wait for services to initialize
+docker info > /dev/null 2>&1
 ```
 
-#### 3.2 Detect Package Manager
+If this fails, the Docker daemon is not running. Try to start it:
 
 ```bash
-# Check for lockfiles in order of preference
+# Check current status
+service docker status 2>/dev/null || systemctl status docker 2>/dev/null || true
+```
+
+If the daemon is stopped, start it:
+
+```bash
+# Try without sudo first
+service docker start 2>/dev/null \
+  || systemctl start docker 2>/dev/null \
+  || sudo service docker start 2>/dev/null \
+  || sudo systemctl start docker 2>/dev/null
+```
+
+**Wait for Docker to be ready after starting:**
+
+```bash
+for i in $(seq 1 10); do
+    docker info > /dev/null 2>&1 && break
+    echo "Waiting for Docker daemon... ($i/10)"
+    sleep 2
+done
+
+# Final check
+if ! docker info > /dev/null 2>&1; then
+    echo "❌ Docker daemon failed to start. Start it manually and retry."
+    echo "   Try: sudo systemctl start docker"
+    echo "   Or:  sudo service docker start"
+    # Continue without Docker — the app may still work without services
+fi
+```
+
+#### 3.3 Start Compose Services
+
+```bash
+# Prefer `docker compose` (v2 plugin) over `docker-compose` (standalone)
+if docker compose version > /dev/null 2>&1; then
+    docker compose up -d
+else
+    docker-compose up -d
+fi
+```
+
+**Wait for services to be healthy** — don't just sleep:
+
+```bash
+# If compose services define healthchecks, wait for them
+if docker compose version > /dev/null 2>&1; then
+    # Check if any services have healthchecks
+    if docker compose ps --format json 2>/dev/null | grep -q '"Health"'; then
+        echo "Waiting for healthy services..."
+        for i in $(seq 1 30); do
+            UNHEALTHY=$(docker compose ps --format json 2>/dev/null | grep -c '"starting"\|"unhealthy"' || true)
+            if [[ "$UNHEALTHY" -eq 0 ]]; then
+                echo "All services healthy."
+                break
+            fi
+            echo "  Waiting for $UNHEALTHY service(s)... ($i/30)"
+            sleep 2
+        done
+    else
+        # No healthchecks — fall back to a brief wait
+        echo "No healthchecks defined. Waiting 5s for services..."
+        sleep 5
+    fi
+fi
+```
+
+#### 3.4 Verify Key Services
+
+After compose services start, check that critical ports are actually listening:
+
+```bash
+# Common service ports — check whatever the compose file exposes
+docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || docker-compose ps
+```
+
+If a database or API service failed to start, report it and decide whether to continue.
+
+### Step 4: Launch Application Stack
+
+#### 4.1 Detect Package Manager
+
+```bash
 if [[ -f "bun.lockb" ]] || [[ -f "bun.lock" ]]; then
     PM="bun"
 elif [[ -f "pnpm-lock.yaml" ]]; then
@@ -111,49 +203,171 @@ fi
 echo "Package manager: $PM"
 ```
 
-#### 3.3 Install Dependencies (if needed)
+#### 4.2 Check for Environment Files
+
+Many apps won't start without environment configuration:
 
 ```bash
-# Only if node_modules doesn't exist
+# Check for env templates that need to be copied
+for tmpl in .env.example .env.template .env.sample; do
+    if [[ -f "$tmpl" ]] && [[ ! -f ".env" ]] && [[ ! -f ".env.local" ]]; then
+        echo "⚠️  Found $tmpl but no .env or .env.local — copying $tmpl to .env"
+        cp "$tmpl" .env
+        break
+    fi
+done
+
+# Check if required env files exist
+if [[ -f ".env.local" ]] || [[ -f ".env" ]] || [[ -f ".env.development" ]]; then
+    echo "Environment file found."
+else
+    echo "⚠️  No .env file detected. App may fail if it requires environment variables."
+fi
+```
+
+#### 4.3 Install Dependencies (if needed)
+
+```bash
 [[ -d "node_modules" ]] || $PM install
 ```
 
-#### 3.4 Start Development Server
+#### 4.4 Detect Dev Server Port
 
-Start the dev server in background:
+Detect the port BEFORE starting the server so we know where to navigate:
 
 ```bash
-# Common dev commands - check package.json scripts
-$PM run dev &
+PORT=""
+
+# 1. Check vite.config.ts / vite.config.js (most common for bun/vite stacks)
+for cfg in vite.config.ts vite.config.js vite.config.mts; do
+    if [[ -f "$cfg" ]]; then
+        # Look for server.port or preview.port
+        VITE_PORT=$(grep -oP 'port\s*:\s*\K\d+' "$cfg" | head -1)
+        if [[ -n "$VITE_PORT" ]]; then
+            PORT="$VITE_PORT"
+            echo "Port $PORT detected from $cfg"
+        fi
+        break
+    fi
+done
+
+# 2. Check package.json scripts for --port flags
+if [[ -z "$PORT" ]] && [[ -f "package.json" ]]; then
+    SCRIPT_PORT=$(grep -oP '"dev"\s*:\s*"[^"]*--port\s+\K\d+' package.json || true)
+    if [[ -n "$SCRIPT_PORT" ]]; then
+        PORT="$SCRIPT_PORT"
+        echo "Port $PORT detected from package.json dev script"
+    fi
+fi
+
+# 3. Check next.config.js/ts for custom port (rare)
+if [[ -z "$PORT" ]]; then
+    for cfg in next.config.js next.config.ts next.config.mjs; do
+        if [[ -f "$cfg" ]]; then
+            PORT="3000"  # Next.js default
+            echo "Next.js detected, using default port $PORT"
+            break
+        fi
+    done
+fi
+
+# 4. Check nuxt.config.ts
+if [[ -z "$PORT" ]] && [[ -f "nuxt.config.ts" ]]; then
+    NUXT_PORT=$(grep -oP 'port\s*:\s*\K\d+' nuxt.config.ts | head -1)
+    PORT="${NUXT_PORT:-3000}"
+    echo "Nuxt detected, using port $PORT"
+fi
+
+# 5. Fall back to framework defaults
+if [[ -z "$PORT" ]]; then
+    if [[ -f "vite.config.ts" ]] || [[ -f "vite.config.js" ]] || [[ -f "vite.config.mts" ]]; then
+        PORT="5173"
+    elif [[ -f "svelte.config.js" ]]; then
+        PORT="5173"
+    else
+        PORT="3000"
+    fi
+    echo "Using default port $PORT"
+fi
+
+echo "Will verify at: http://localhost:$PORT"
 ```
 
-Wait for server to be ready:
+#### 4.5 Detect Dev Command
+
 ```bash
-sleep 10  # Adjust based on typical startup time
+DEV_CMD="dev"  # default
+if [[ -f "package.json" ]]; then
+    if grep -q '"dev"' package.json; then
+        DEV_CMD="dev"
+    elif grep -q '"start"' package.json; then
+        DEV_CMD="start"
+    elif grep -q '"serve"' package.json; then
+        DEV_CMD="serve"
+    fi
+fi
 ```
 
-Or use Playwright to wait:
+#### 4.6 Start Dev Server with PID Tracking
+
+Start the server in background and capture its PID for reliable cleanup:
+
+```bash
+$PM run $DEV_CMD > /tmp/dev-server.log 2>&1 &
+DEV_PID=$!
+echo "Dev server started (PID: $DEV_PID)"
+echo "$DEV_PID" > /tmp/dev-server.pid
+```
+
+#### 4.7 Wait for Server to be Ready
+
+**Do NOT use a fixed sleep.** Poll until the server responds:
+
+```bash
+echo "Waiting for server at http://localhost:$PORT..."
+for i in $(seq 1 30); do
+    if curl -s -o /dev/null -w '%{http_code}' "http://localhost:$PORT" 2>/dev/null | grep -qE '^[23]'; then
+        echo "Server is ready! (attempt $i)"
+        break
+    fi
+
+    # Check if the process died
+    if ! kill -0 "$DEV_PID" 2>/dev/null; then
+        echo "❌ Dev server exited unexpectedly. Last output:"
+        tail -20 /tmp/dev-server.log
+        exit 1
+    fi
+
+    echo "  Not ready yet... ($i/30)"
+    sleep 2
+done
+
+# Final readiness check
+if ! curl -s -o /dev/null "http://localhost:$PORT" 2>/dev/null; then
+    echo "⚠️  Server may not be ready. Last output:"
+    tail -10 /tmp/dev-server.log
+    echo "Proceeding anyway — Playwright navigate may trigger lazy startup."
+fi
+```
+
+### Step 5: Verify Application Loads
+
+#### 5.1 Navigate to Application
+
 ```
 mcp__playwright__browser_navigate
-  url: "http://localhost:3000"  # Adjust port as needed
+  url: "http://localhost:$PORT"
 ```
 
-### Step 4: Verify Application Loads
+Use the PORT detected in Step 4.4.
 
-#### 4.1 Navigate to Application
-
-```
-mcp__playwright__browser_navigate
-  url: "http://localhost:3000"
-```
-
-#### 4.2 Take Initial Snapshot
+#### 5.2 Take Initial Snapshot
 
 ```
 mcp__playwright__browser_snapshot
 ```
 
-#### 4.3 Check for Errors
+#### 5.3 Check for Errors
 
 ```
 mcp__playwright__browser_console_messages
@@ -162,26 +376,27 @@ mcp__playwright__browser_console_messages
 
 If critical errors exist, report them and investigate.
 
-#### 4.4 Verify Basic Functionality
+#### 5.4 Verify Basic Functionality
 
 Confirm the application loads and shows expected content. If it doesn't load:
-- Check if server is running
+- Check dev server logs: `tail -30 /tmp/dev-server.log`
+- Check if server process is still running: `kill -0 $(cat /tmp/dev-server.pid) 2>/dev/null && echo "running" || echo "dead"`
 - Check console for errors
 - Check network requests for failures
 
-### Step 5: Verify Specific Changes
+### Step 6: Verify Specific Changes
 
 This is the core verification step. Based on the PR changes identified in Step 2:
 
-#### 5.1 Navigate to Affected Area
+#### 6.1 Navigate to Affected Area
 
 If the change affects a specific route/page:
 ```
 mcp__playwright__browser_navigate
-  url: "http://localhost:3000/affected-route"
+  url: "http://localhost:$PORT/affected-route"
 ```
 
-#### 5.2 Snapshot and Verify Elements
+#### 6.2 Snapshot and Verify Elements
 
 ```
 mcp__playwright__browser_snapshot
@@ -192,7 +407,7 @@ Check the snapshot for:
 - Modified text/labels
 - New columns, buttons, or interactive elements
 
-#### 5.3 Test Interactions (if applicable)
+#### 6.3 Test Interactions (if applicable)
 
 For interactive changes, test the interaction:
 ```
@@ -206,14 +421,22 @@ Then snapshot again to verify the result:
 mcp__playwright__browser_snapshot
 ```
 
-#### 5.4 Verify Against Existing Tests
+#### 6.4 Run Existing Playwright Tests (if available)
 
-If the codebase has Playwright tests for the changed area:
-1. Read the test file
-2. Manually replicate key assertions
-3. Verify the same conditions pass
+If the codebase has Playwright tests covering the changed area, run them against the already-running dev server:
 
-### Step 6: Report Results
+```bash
+# Check if Playwright test config exists
+if [[ -f "playwright.config.ts" ]] || [[ -f "playwright.config.js" ]]; then
+    echo "Running existing Playwright tests..."
+    # Point tests at the running dev server
+    BASE_URL="http://localhost:$PORT" npx playwright test --reporter=line 2>&1 | tail -30
+fi
+```
+
+If tests fail, note the failures in the report. If no test suite exists, rely on the manual verification from 6.1-6.3.
+
+### Step 7: Report Results
 
 #### Success Criteria
 
@@ -246,17 +469,35 @@ Details:
 - [specific issue 2]
 
 Console Errors: [if any]
+Dev Server Logs: [relevant lines from /tmp/dev-server.log]
 ```
 
-### Step 7: Cleanup
+### Step 8: Cleanup
 
-Stop background processes:
+Stop processes using tracked PIDs — do NOT use greedy pkill patterns:
+
 ```bash
-# Kill dev server if started
-pkill -f "bun run dev" || pkill -f "npm run dev" || true
+# Kill dev server by PID
+if [[ -f /tmp/dev-server.pid ]]; then
+    DEV_PID=$(cat /tmp/dev-server.pid)
+    if kill -0 "$DEV_PID" 2>/dev/null; then
+        kill "$DEV_PID" 2>/dev/null || true
+        # Wait briefly, then force-kill if still running
+        sleep 1
+        kill -0 "$DEV_PID" 2>/dev/null && kill -9 "$DEV_PID" 2>/dev/null || true
+    fi
+    rm -f /tmp/dev-server.pid
+fi
+rm -f /tmp/dev-server.log
 
-# Stop docker services if started
-docker compose down 2>/dev/null || true
+# Stop docker services if we started them
+if [[ -n "${COMPOSE_FILE:-}" ]]; then
+    if docker compose version > /dev/null 2>&1; then
+        docker compose down 2>/dev/null || true
+    else
+        docker-compose down 2>/dev/null || true
+    fi
+fi
 ```
 
 ## Reference
@@ -265,31 +506,61 @@ For detailed Playwright MCP tool documentation, see: `references/playwright-mcp.
 
 ## Bundled Scripts
 
-- `scripts/launch-app-stack.sh` - Detect and launch application stack
+- `scripts/launch-app-stack.sh` - Detect and launch application stack (standalone usage)
 - `scripts/check-playwright-mcp.sh` - Verify Playwright MCP availability
 
 ## Common Application Ports
 
-| Framework | Default Port |
-|-----------|-------------|
-| Vite | 5173 |
-| Next.js | 3000 |
-| Create React App | 3000 |
-| TanStack Start | 3000 |
-| Remix | 3000 |
-| Nuxt | 3000 |
-| SvelteKit | 5173 |
+| Framework | Default Port | Config File |
+|-----------|-------------|-------------|
+| Vite | 5173 | `vite.config.ts` |
+| Next.js | 3000 | `next.config.js` |
+| Create React App | 3000 | — |
+| TanStack Start | 3000 | `app.config.ts` |
+| Remix | 5173 | `vite.config.ts` |
+| Nuxt | 3000 | `nuxt.config.ts` |
+| SvelteKit | 5173 | `vite.config.ts` |
+| Angular | 4200 | `angular.json` |
+| Astro | 4321 | `astro.config.mjs` |
 
 ## Troubleshooting
+
+### Docker Daemon Not Running
+
+```bash
+# Check status
+service docker status 2>/dev/null || systemctl status docker 2>/dev/null
+
+# Start (try without sudo first)
+service docker start 2>/dev/null || sudo service docker start
+systemctl start docker 2>/dev/null || sudo systemctl start docker
+
+# Verify
+docker info > /dev/null 2>&1 && echo "Docker is running"
+```
+
+### Docker Compose Services Won't Start
+
+- Check logs: `docker compose logs` or `docker-compose logs`
+- Check if ports are in use: `ss -tlnp | grep <port>`
+- Check if images need pulling: `docker compose pull`
+- Ensure Docker daemon is running first (see above)
 
 ### Playwright MCP Not Found
 Install the MCP server and configure it in Claude Code settings.
 
 ### Application Won't Start
-- Check if ports are already in use
-- Verify docker services are running
-- Check for missing environment variables
+- Check dev server logs: `tail -30 /tmp/dev-server.log`
+- Check if ports are already in use: `ss -tlnp | grep $PORT`
+- Verify docker services are running: `docker compose ps`
+- Check for missing environment variables — look for `.env.example`
 - Review startup logs for errors
+
+### Wrong Port Detected
+- Check `vite.config.ts` for `server.port`
+- Check `package.json` `dev` script for `--port` flag
+- Check for `PORT` env var in `.env` files
+- Override manually: navigate to the correct URL in Step 5.1
 
 ### Element Not Found in Snapshot
 - The page may not have fully loaded; use `browser_wait_for`

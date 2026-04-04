@@ -16,6 +16,13 @@ This file contains project-specific instructions for GitHub Copilot to improve c
 - HTML files ending with proper closing tags followed by a newline are valid and follow standard formatting conventions.
 - Verify actual file content before suggesting structural issues with closing tags.
 
+### Versioning Requirements
+
+- If a PR modifies files inside `plugins/<name>/`, that plugin's `plugins/<name>/.claude-plugin/plugin.json` must have its `version` field bumped compared to main.
+- If any plugin version is bumped OR top-level repo files change, `.claude-plugin/marketplace.json` `metadata.version` must also be bumped.
+- Semver rules: patch for fixes/typos, minor for new features/skills, major for breaking changes (e.g., renamed or removed skills).
+- Flag PRs that change plugin content without corresponding version bumps.
+
 ### GitHub CLI (gh) Capabilities
 
 - The `gh` CLI does NOT have built-in commands like `gh pr review-thread resolve` or `gh pr review-thread list`.
