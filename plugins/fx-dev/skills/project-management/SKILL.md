@@ -72,7 +72,7 @@ Default to `docs/tasks.md` and `docs/changes/` task lists.
 - **`fx-dev:coder`** — Implement features, fix bugs
 - **`fx-dev:planner`** — Create detailed implementation plans
 - **`fx-dev:pr-preparer`** — Prepare and create pull requests
-- **`fx-dev:sdlc`** — Orchestrate complete development lifecycle
+- **`fx-dev:dev`** — Orchestrate complete SDLC workflow
 
 ## Workflows
 

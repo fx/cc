@@ -34,7 +34,7 @@ Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `
 - Exactly what to implement (files, components, endpoints)
 - Acceptance criteria
 - Which spec task(s) it maps to (if from a spec)
-- Explicit instruction: "Use `fx-dev:sdlc` skill and follow ALL steps in order"
+- Explicit instruction: "Use `fx-dev:dev` skill and follow ALL steps in order"
 
 ## STEP 3: Spawn Teammate Sub-Agents
 
@@ -51,8 +51,7 @@ Agent tool:
            YOUR TASK: <task description from TaskCreate>
 
            MANDATORY WORKFLOW:
-           1. Load the SDLC skill: Skill tool: skill='fx-dev:sdlc'
-           2. Follow EVERY step of the SDLC workflow in order — no skipping
+           1. The dev skill is already loaded — follow EVERY step of its SDLC workflow in order, no skipping
            3. Use /fx-dev:project-management skill to mark your spec task(s) as done
            4. Include the task completion change in your PR
            5. Create your PR as a DRAFT

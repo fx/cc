@@ -17,7 +17,7 @@ This skill manages the complete specification lifecycle: creating living spec do
 - Do NOT install packages or run build commands
 - The ONLY files this skill creates or modifies are in `docs/` (specs, changes, indexes)
 
-If the user asks to "write a spec AND implement it", write the spec/changes first, then stop and tell the user to use `/dev` or `/sdlc` for implementation.
+If the user asks to "write a spec AND implement it", write the spec/changes first, then stop and tell the user to use `/dev` for implementation.
 
 ## Core Principles
 

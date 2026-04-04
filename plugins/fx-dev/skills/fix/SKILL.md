@@ -36,7 +36,7 @@ If you cannot reproduce the bug via automated test:
 **MANDATORY: Load the SDLC skill, then follow the Fix Workflow variation.**
 
 ```
-Skill tool: skill="fx-dev:sdlc"
+Skill tool: skill="fx-dev:dev"
 ```
 
 After the skill loads, execute with this modified Step 2 (Requirements Analysis):

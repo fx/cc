@@ -214,7 +214,7 @@ The consumer repo now has commits that use the new fx/ui exports, but still depe
 Switch working directory to fx/ui and run the SDLC skill:
 
 ```
-Skill tool: skill="fx-dev:sdlc"
+Skill tool: skill="fx-dev:dev"
 ```
 
 Execute Steps 5-7 of the SDLC workflow (PR creation, review, CI) within the fx/ui repo. Steps 0-4 are already done (auth, branch, requirements, plan, implementation).
