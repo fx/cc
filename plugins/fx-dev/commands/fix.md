@@ -51,7 +51,7 @@ Before ANY implementation:
 1. **Analyze the bug report** to understand expected vs actual behavior
 2. **Write the most concise failing test** that reproduces the bug:
    ```
-   Task tool:
+   Agent tool:
      subagent_type: "fx-dev:coder"
      prompt: "Write a FAILING test that reproduces this bug:
 
@@ -75,7 +75,7 @@ Before ANY implementation:
 When implementing the fix:
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:coder"
   prompt: "Fix this bug. The failing test is at [TEST PATH].
 

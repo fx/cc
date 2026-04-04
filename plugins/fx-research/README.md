@@ -187,8 +187,8 @@ The fx-research plugin is designed to accommodate various research agents:
 
 To enhance this plugin:
 
-1. Add new research agents to `agents/`
-2. Update README with new agent descriptions
+1. Add new research skills to `skills/`
+2. Update README with new skill descriptions
 3. Ensure consistent research methodology
 4. Test with various use cases
 

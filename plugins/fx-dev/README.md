@@ -8,25 +8,37 @@ The fx-dev plugin provides a comprehensive suite of tools for the entire softwar
 
 ## Components
 
-### Skills (1)
+### Skills (22)
 
-- **copilot-feedback-resolver** - Processes and resolves GitHub Copilot automated PR review comments
-
-### SDLC Agents (5)
-
+#### SDLC Skills
 - **sdlc** - Orchestrates complete workflows including planning, implementation, review, and finalization
+- **dev** - Unified entry point that loads the SDLC skill and follows its workflow
 - **coder** - Implements features, bug fixes, and refactorings with PR creation
 - **requirements-analyzer** - Fetches and analyzes GitHub issues, extracts requirements, gathers context
 - **planner** - Creates comprehensive implementation plans based on requirements
 - **issue-updater** - Updates GitHub issues with planning information and status changes
 
-### PR Management Agents (5)
-
+#### PR Management Skills
 - **pr-reviewer** - Reviews pull requests, identifies issues, provides actionable feedback
 - **pr-preparer** - Prepares PRs for submission, ensures compliance with project standards
 - **pr-check-monitor** - Monitors GitHub PR checks and coordinates fixes for failures
 - **pr-changeset-minimalist** - Reviews changesets to ensure only minimal necessary changes
 - **workflow-runner** - Executes complete workflows from start to finish, ensuring all phases complete
+
+#### Review & CI Skills
+- **copilot-feedback-resolver** - Processes and resolves GitHub Copilot automated PR review comments
+- **rabbit-feedback-resolver** - Processes and resolves CodeRabbit automated PR review comments
+- **resolve-pr-feedback** - Meta-skill that checks for all unresolved automated review feedback
+- **resolve-ci-failures** - Analyzes and fixes CI check failures on PRs
+- **resolve-codecov-feedback** - Processes Codecov coverage reports and adds missing tests
+
+#### Other Skills
+- **github** - Comprehensive guidance for GitHub CLI operations, PRs, and API usage
+- **project-management** - Manages project tasks through docs/tasks.md and docs/changes/
+- **spec-writer** - Creates and maintains living specification documents
+- **setup** - Initializes docs/ folder structure for spec-driven development
+- **upstream-contrib** - Contributes local UI component changes upstream to @fx/ui
+- **verify-web-change** - Verifies web application changes work in a real browser
 
 ### Commands (2)
 
@@ -70,170 +82,90 @@ Or find the next logical issue:
 The fx-dev plugin manages the entire development workflow:
 
 ```
-Requirements Analysis (requirements-analyzer)
+Requirements Analysis (requirements-analyzer skill)
     ↓
-Planning (planner)
+Planning (planner skill)
     ↓
-Issue Update (issue-updater)
+Issue Update (issue-updater skill)
     ↓
-Implementation (coder)
+Implementation (coder skill)
     ↓
-PR Preparation (pr-preparer)
+PR Preparation (pr-preparer skill)
     ↓
-Changeset Review (pr-changeset-minimalist)
+Changeset Review (pr-changeset-minimalist skill)
     ↓
-Code Review (pr-reviewer)
+Code Review (pr-reviewer skill)
     ↓
-Copilot Feedback (copilot-feedback-resolver skill)
+Automated Feedback (copilot-feedback-resolver, rabbit-feedback-resolver skills)
     ↓
-Check Monitoring (pr-check-monitor)
+Check Monitoring (pr-check-monitor skill)
     ↓
-Workflow Completion (workflow-runner)
-    ↓
-Issue Done (issue-updater)
+Issue Done (issue-updater skill)
 ```
 
-## Agent Descriptions
+## Skill Descriptions
 
-### SDLC Agents
+### SDLC Skills
 
 #### sdlc
-
-Orchestrates the complete software development lifecycle by coordinating specialized agents through planning, implementation, review, and finalization phases.
+Orchestrates the complete software development lifecycle by coordinating sub-agents through planning, implementation, review, and finalization phases.
 
 **Use when:** You need end-to-end orchestration of a fresh implementation
 
-**Key Features:**
-- Coordinates multiple specialized agents
-- Manages sequential PR workflows
-- Ensures quality through review cycles
-- Handles error recovery
-
 #### coder
-
 Implements new features, fixes bugs, refactors code, or makes any code changes to the project. Works with GitHub issues or standalone tasks.
 
 **Use when:** You need to implement any code changes
 
-**Key Features:**
-- GitHub issue integration
-- Automatic issue selection
-- PR creation and management
-- Test coverage
-
 #### requirements-analyzer
-
 Fetches and analyzes GitHub issues, extracts requirements, gathers context from referenced URLs, and compiles comprehensive requirements documentation.
 
 **Use when:** Starting work on a GitHub issue
 
-**Key Features:**
-- GitHub issue fetching
-- URL context gathering
-- Requirement extraction
-- Project pattern analysis
-
 #### planner
-
 Creates comprehensive implementation plans based on requirements analysis. Breaks down complex features into actionable steps and identifies dependencies.
 
 **Use when:** You need a detailed implementation plan
 
-**Key Features:**
-- Task breakdown
-- Dependency identification
-- Architecture design
-- Testing strategy
-
 #### issue-updater
-
 Updates GitHub issues with planning information, status changes, and implementation progress. Ensures proper tagging and project board synchronization.
 
 **Use when:** You need to update issue status or add plans
 
-**Key Features:**
-- Plan documentation
-- Status tracking
-- Label management
-- Project board integration
-
-### PR Management Agents
+### PR Management Skills
 
 #### pr-reviewer
-
 Reviews pull requests with a pragmatic approach, approving PRs with minor issues rather than blocking on nitpicks. Focuses on bugs, security, and performance.
 
 **Use when:** After code changes are complete
 
-**Key Features:**
-- Pragmatic review standards
-- Copilot comment detection
-- Clear decision output (APPROVE/REQUEST CHANGES)
-- Actionable feedback
-
 #### pr-preparer
-
 Analyzes branch changes, reviews commit history, and ensures PRs adhere to all project standards before submission.
 
 **Use when:** Before creating a PR
 
-**Key Features:**
-- Commit message validation
-- Branch naming verification
-- Compliance checking
-- PR description crafting
-
 #### pr-check-monitor
-
-Monitors GitHub pull request checks and automatically coordinates fixes for failing checks by delegating to appropriate specialized agents.
+Monitors GitHub pull request checks and automatically coordinates fixes for failing checks by delegating to appropriate sub-agents.
 
 **Use when:** After PR creation to monitor checks
 
-**Key Features:**
-- Continuous check monitoring
-- Failure categorization
-- Intelligent delegation
-- Fix verification
-
 #### pr-changeset-minimalist
-
 Reviews pull requests to ensure they contain only the minimal necessary changes without extraneous modifications or artifacts from commit progression.
 
 **Use when:** Before submitting PR to validate change scope
 
-**Key Features:**
-- Scope validation
-- Commit progression analysis
-- Hidden artifact detection
-- Change necessity assessment
-
 #### workflow-runner
-
 Executes complete workflows from start to finish without stopping, ensuring all phases complete and looping until success criteria are met.
 
 **Use when:** You need multi-step workflow execution
 
-**Key Features:**
-- Multi-step workflow execution
-- PR iteration loops
-- Multi-PR coordination
-- Continuous momentum
+### Review & CI Skills
 
-## Skill Descriptions
-
-### copilot-feedback-resolver
-
+#### copilot-feedback-resolver
 Processes and resolves GitHub Copilot's automated PR review comments. Distinguishes between outdated, incorrect, and valid concerns.
 
 **Use when:** After Copilot reviews your PR
-
 **Invocation:** Use the Skill tool with `skill="fx-dev:copilot-feedback-resolver"`
-
-**Key Features:**
-- Automated Copilot comment processing
-- Intelligent categorization (nitpicks, outdated, valid)
-- Professional explanations for outdated/incorrect feedback
-- Updates `.github/copilot-instructions.md` to prevent recurring false positives
 
 ## Command Details
 
@@ -307,38 +239,38 @@ This automatically:
 /dev Add custom hook for handling form validation
 ```
 
-### Example 4: Manual PR Workflow
+### Example 4: Manual Workflow with Sub-Agents
 
 ```python
 # Prepare PR
-Task(
+Agent(
     description="Prepare PR",
     prompt="Prepare PR for authentication feature",
-    subagent_type="pr-preparer"
+    subagent_type="fx-dev:pr-preparer"
 )
 
 # Review for minimal changes
-Task(
+Agent(
     description="Check minimal changes",
     prompt="Ensure only necessary changes are included",
-    subagent_type="pr-changeset-minimalist"
+    subagent_type="fx-dev:pr-changeset-minimalist"
 )
 
 # Review code quality
-Task(
+Agent(
     description="Review PR",
     prompt="Review the authentication implementation",
-    subagent_type="pr-reviewer"
+    subagent_type="fx-dev:pr-reviewer"
 )
 
-# Handle Copilot feedback (this is a skill, not an agent)
+# Handle Copilot feedback
 Skill(skill="fx-dev:copilot-feedback-resolver")
 
 # Monitor checks
-Task(
+Agent(
     description="Monitor checks",
     prompt="Monitor PR #42 and fix any failures",
-    subagent_type="pr-check-monitor"
+    subagent_type="fx-dev:pr-check-monitor"
 )
 ```
 
@@ -350,7 +282,7 @@ Task(
 2. **GitHub issues** - Use issue URLs for tracked work
 3. **Quick fixes** - Use `fix:` prefix for rapid error resolution
 4. **Ad-hoc tasks** - Just describe what you want to build
-5. **Let agents coordinate** - The SDLC agent handles orchestration
+5. **Let the SDLC skill coordinate** - It handles orchestration via sub-agents
 
 ### Pull Request Management
 
@@ -368,7 +300,7 @@ Task(
 
 ## Configuration
 
-The agents respect project conventions from:
+The skills respect project conventions from:
 - `CLAUDE.md` - Project-specific guidelines
 - `.github/copilot-instructions.md` - AI coding guidelines (updated by copilot-feedback-resolver skill)
 - Git commit and branch conventions
@@ -386,13 +318,13 @@ gh auth status
 gh auth login
 ```
 
-### Agent Failures
+### Sub-Agent Failures
 
-If an agent fails:
+If a sub-agent fails:
 1. Check the error message
 2. Verify GitHub CLI authentication
 3. Ensure proper permissions on the repository
-4. Try running the agent again with adjusted parameters
+4. Try running the sub-agent again with adjusted parameters
 
 ### PR Check Failures
 
@@ -405,7 +337,7 @@ If pr-check-monitor can't fix checks:
 
 If pr-reviewer reports issues:
 1. Review the specific feedback
-2. Use coder agent to fix issues
+2. Launch a sub-agent with the coder skill to fix issues
 3. Re-run pr-reviewer after fixes
 
 ## Installation
@@ -421,11 +353,11 @@ This plugin is part of the fx/cc marketplace. To install:
 
 ## Contributing
 
-To add or modify agents/commands in this plugin:
+To add or modify skills/commands in this plugin:
 
-1. Place agent markdown files in `agents/`
+1. Place skill directories in `skills/`
 2. Place command markdown files in `commands/`
-3. Ensure proper frontmatter with name, description, color
+3. Ensure proper frontmatter with name and description
 4. Update this README
 5. Test locally before submitting
 

@@ -105,7 +105,7 @@ Example structure:
 - User mentions "copilot" and "PR" or "comments" in the same context
 - After PR creation when you notice Copilot has reviewed the PR
 - User says "address copilot suggestions" / "deal with copilot"
-- As part of the PR workflow after `pr-reviewer` agent completes
+- As part of the PR workflow after `pr-reviewer` skill completes
 - When PR checks show Copilot has left review comments
 
 **Invocation:** Use the Skill tool with `skill="fx-dev:copilot-feedback-resolver"`
@@ -156,7 +156,7 @@ For each unresolved Copilot comment:
 | **Nitpick** | Contains `[nitpick]` prefix | Auto-resolve immediately |
 | **Outdated** | Refers to code that no longer exists | Reply with explanation, resolve |
 | **Incorrect** | Misunderstands project conventions | Reply with explanation, resolve, update copilot-instructions.md |
-| **Valid** | Current, actionable concern | Delegate to coder agent to fix |
+| **Valid** | Current, actionable concern | Delegate to coder sub-agent to fix |
 | **Deferred** | Valid but out of scope for this PR | Track in PROJECT.md, reply, resolve |
 
 ### 3. Resolve Threads
@@ -217,7 +217,7 @@ mutation {
    - **If symlink:** Follow it and edit target file
 
 #### Valid Concerns
-1. Delegate to coder agent with:
+1. Delegate to coder sub-agent with:
    - PR number and title
    - File and line number
    - Copilot comment text

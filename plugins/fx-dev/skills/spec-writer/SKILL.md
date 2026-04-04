@@ -65,7 +65,7 @@ This phase MUST be thorough. Insufficient research leads to inaccurate specs.
 
 #### 1.1 Local Codebase Exploration
 
-Launch `Explore` agents (subagent_type: `Explore`) to deeply understand the relevant parts of the codebase:
+Launch `Explore` sub-agents (subagent_type: `Explore`) to deeply understand the relevant parts of the codebase:
 
 - Map all files, modules, and data models the feature touches
 - Identify existing patterns, abstractions, and conventions
@@ -74,11 +74,11 @@ Launch `Explore` agents (subagent_type: `Explore`) to deeply understand the rele
 - Read test files to understand expected behaviors
 - Check git history for recent changes in relevant areas
 
-Launch **multiple Explore agents in parallel** if the feature spans distinct areas (e.g., frontend + backend + database + tests).
+Launch **multiple Explore sub-agents in parallel** if the feature spans distinct areas (e.g., frontend + backend + database + tests).
 
 #### 1.2 Technology and Pattern Research
 
-Use the `fx-research:tech-scout` agent (subagent_type: `fx-research:tech-scout`) to:
+Use the tech-scout skill (subagent_type: `fx-research:tech-scout`) to:
 
 - Discover how similar features are commonly implemented
 - Identify relevant libraries, APIs, or standards
@@ -210,7 +210,7 @@ The `index.md` MUST link to all supplementary documents.
 
 This is the most critical step. Explore the codebase **exhaustively** to find every divergence between the spec and the actual implementation:
 
-Launch multiple `Explore` agents in parallel targeting:
+Launch multiple `Explore` sub-agents in parallel targeting:
 - Every file referenced in the current spec
 - Every module, API endpoint, data model mentioned
 - Test files that verify the behaviors described
@@ -287,7 +287,7 @@ Read the template at `references/change-template.md` and write each change to `d
 
 **This is where thoroughness matters most.** For each change document:
 
-1. **Explore deeply** — Launch Explore agents to understand every file that will be touched
+1. **Explore deeply** — Launch Explore sub-agents to understand every file that will be touched
 2. **Detail every task** — Include specific file paths, function names, test scenarios
 3. **Consider edge cases** — What happens on error? Under load? With invalid input?
 4. **Include test tasks** — Every behavioral change MUST have corresponding test tasks

@@ -320,7 +320,7 @@ ALL pull requests MUST be created as drafts initially. Never create a PR that is
 
 **Workflow:**
 1. Create PR as draft with `--draft` flag
-2. Wait for `fx-dev:pr-reviewer` agent to review the changes
+2. Wait for `fx-dev:pr-reviewer` sub-agent to review the changes
 3. Leave it to the USER to mark ready for review (do NOT do this automatically)
 
 **Correct approach:**

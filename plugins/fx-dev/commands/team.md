@@ -1,6 +1,6 @@
 # Team Command
 
-Spawn a coordinated agent team to implement a spec or multi-task feature. The main agent (you) acts strictly as coordinator — no code, no commits, only delegation and quality control.
+Spawn a coordinated sub-agent team to implement a spec or multi-task feature. The main session (you) acts strictly as coordinator — no code, no commits, only delegation and quality control.
 
 ## Usage
 
@@ -21,7 +21,7 @@ Spawn a coordinated agent team to implement a spec or multi-task feature. The ma
 Identify:
 - Total tasks and their dependencies
 - Which tasks can run in parallel vs. which must be sequential
-- A sensible agent-to-task mapping (1 agent can own 1-3 related tasks)
+- A sensible sub-agent-to-task mapping (1 sub-agent can own 1-3 related tasks)
 
 ### STEP 1: Create the Team
 
@@ -41,15 +41,15 @@ Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `
 - Which spec task(s) it maps to (if from a spec)
 - Explicit instruction: "Use `/fx-dev:sdlc` skill and follow ALL steps in order"
 
-### STEP 3: Spawn Teammate Agents
+### STEP 3: Spawn Teammate Sub-Agents
 
-Spawn agents using the Task tool. Each agent gets a clear name and assignment.
+Spawn sub-agents using the Agent tool. Each sub-agent gets a clear name and assignment.
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:dev"
   team_name: "<team-name>"
-  name: "<descriptive-agent-name>"  # e.g., "schema-agent", "ui-agent"
+  name: "<descriptive-name>"  # e.g., "schema-worker", "ui-worker"
   prompt: "You are a teammate on the <team-name> team.
 
            YOUR TASK: <task description from TaskCreate>
@@ -74,9 +74,9 @@ Task tool:
 ```
 
 **Parallelization rules:**
-- Spawn agents for independent tasks simultaneously (multiple Task calls in one message)
-- For dependent tasks, wait until the blocking agent completes before spawning the next
-- Assign blocked tasks to agents only after their dependencies merge
+- Spawn sub-agents for independent tasks simultaneously (multiple Agent calls in one message)
+- For dependent tasks, wait until the blocking sub-agent completes before spawning the next
+- Assign blocked tasks to sub-agents only after their dependencies merge
 
 ### STEP 4: Coordinate (Your Main Loop)
 
@@ -97,7 +97,7 @@ Task tool:
    ```bash
    gh pr merge <NUMBER> --squash --delete-branch
    ```
-6. **Unblock** — After merging, notify waiting agents or spawn agents for newly-unblocked tasks
+6. **Unblock** — After merging, notify waiting sub-agents or spawn sub-agents for newly-unblocked tasks
 7. **Repeat** — Continue until all tasks are complete
 
 ### ⛔ MANDATORY MERGE GATE CHECKLIST (BLOCKING)
@@ -135,20 +135,20 @@ When all tasks are complete and all PRs merged:
 
 ## Coordinator Rules (NON-NEGOTIABLE)
 
-- **NEVER write code yourself** — all implementation goes through `fx-dev:dev` agents
-- **NEVER create branches or commits** — agents handle this via SDLC
+- **NEVER write code yourself** — all implementation goes through `fx-dev:dev` sub-agents
+- **NEVER create branches or commits** — sub-agents handle this via SDLC
 - **NEVER skip PR inspection** — every PR gets reviewed before marking ready
 - **NEVER merge without completing the MERGE GATE CHECKLIST** — every gate must pass, every time, for every PR
 - **NEVER merge without Copilot review** — if not received, WAIT for it. No exceptions for PR size.
 - **NEVER mark a teammate's PR as ready** until you've inspected it
 - **ALWAYS use `/fx-dev:project-management`** to verify task tracking
-- **ALWAYS ensure agents follow full SDLC** — if an agent skips steps, send them back
+- **ALWAYS ensure sub-agents follow full SDLC** — if a sub-agent skips steps, send them back
 - **ALWAYS run the full merge gate checklist** even for "trivial" or "follow-up" PRs
 
-## Handling Agent Issues
+## Handling Sub-Agent Issues
 
-If an agent reports problems or skips SDLC steps:
+If a sub-agent reports problems or skips SDLC steps:
 
 1. **Send a message** telling them exactly what step they missed
 2. **Do NOT do the work for them** — they must follow the workflow
-3. If an agent is stuck after 2 retries, report to user and ask for guidance
+3. If a sub-agent is stuck after 2 retries, report to user and ask for guidance
