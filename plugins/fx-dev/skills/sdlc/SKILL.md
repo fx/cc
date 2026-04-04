@@ -1,6 +1,6 @@
 ---
 name: sdlc
-description: "MUST BE LOADED for any coding task: implementing features, fixing bugs, writing code, refactoring, or making changes. This skill provides the mandatory step-by-step workflow for orchestrating the complete software development lifecycle using specialized agents. Load this skill when the user asks to 'add', 'create', 'build', 'fix', 'update', 'change', 'implement', or 'refactor' anything."
+description: "MUST BE LOADED for any coding task: implementing features, fixing bugs, writing code, refactoring, or making changes. This skill provides the mandatory step-by-step workflow for orchestrating the complete software development lifecycle using specialized skills and sub-agents. Load this skill when the user asks to 'add', 'create', 'build', 'fix', 'update', 'change', 'implement', or 'refactor' anything."
 ---
 
 # SDLC Workflow Skill
@@ -9,22 +9,22 @@ This skill defines the **mandatory** workflow for all coding tasks. Follow these
 
 ## CRITICAL RULES
 
-**YOU MUST USE THE TASK TOOL TO DELEGATE ALL WORK TO SPECIALIZED AGENTS.**
+**YOU MUST USE THE AGENT TOOL TO LAUNCH SUB-AGENTS WITH SPECIALIZED SKILLS FOR ALL WORK.**
 
 ### Coder Task Reporting (Sub-Agent Restriction)
 
-**Sub-agents MUST NEVER send "idle" or "complete" states via `mcp__coder__coder_report_task`.** Only the main agent session (root conversation) is allowed to report "idle" or "complete". Sub-agents spawned via Agent/Task tool may only report `"state": "working"`. This prevents sub-agents from overwriting the coordinator's dashboard status and falsely signaling task completion.
+**Sub-agents MUST NEVER send "idle" or "complete" states via `mcp__coder__coder_report_task`.** Only the main agent session (root conversation) is allowed to report "idle" or "complete". Sub-agents spawned via the Agent tool may only report `"state": "working"`. This prevents sub-agents from overwriting the coordinator's dashboard status and falsely signaling task completion.
 
 - ❌ NEVER write code yourself
 - ❌ NEVER create files yourself
 - ❌ NEVER make commits yourself
 - ❌ NEVER skip steps
 - ❌ NEVER skip tests (`test.skip`, `it.skip`, `describe.skip` are FORBIDDEN)
-- ✅ ALWAYS use Task tool with the specified `subagent_type`
+- ✅ ALWAYS use the Agent tool with the specified `subagent_type`
 - ✅ ALWAYS verify each step before proceeding
 - ✅ ALWAYS fix, replace, refactor, or remove tests - never skip them
 
-**FAILURE TO USE AGENTS = WORKFLOW FAILURE**
+**FAILURE TO USE SUB-AGENTS = WORKFLOW FAILURE**
 
 ### Test Policy
 
@@ -84,10 +84,10 @@ Branch types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
 
 ### STEP 2: Requirements Analysis
 
-**MANDATORY: Launch requirements-analyzer agent.**
+**MANDATORY: Launch sub-agent with requirements-analyzer skill.**
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:requirements-analyzer"
   prompt: "Analyze requirements for: [TASK DESCRIPTION]
 
@@ -112,10 +112,10 @@ gh issue view [NUMBER] --json title,body,labels,comments
 
 ### STEP 3: Planning
 
-**MANDATORY: Launch planner agent.**
+**MANDATORY: Launch sub-agent with planner skill.**
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:planner"
   prompt: "Create implementation plan for:
 
@@ -132,7 +132,7 @@ Task tool:
 
 For GitHub issues, also update issue:
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:issue-updater"
   prompt: "Update issue #[NUMBER] with plan. Add label: in-progress"
   description: "Update issue"
@@ -144,10 +144,10 @@ Task tool:
 
 ### STEP 4: Implementation
 
-**MANDATORY: Launch coder agent.**
+**MANDATORY: Launch sub-agent with coder skill.**
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:coder"
   prompt: "Implement this plan:
 
@@ -192,7 +192,7 @@ Fix any issues found, commit the fixes, then proceed to PR creation.
 
 ### STEP 5: Pull Request Creation (as Draft)
 
-**MANDATORY: Launch pr-preparer agent. ALL PRs MUST be created as drafts.**
+**MANDATORY: Launch sub-agent with pr-preparer skill. ALL PRs MUST be created as drafts.**
 
 **Before creating the PR, identify related spec and change documents:**
 
@@ -207,7 +207,7 @@ cat docs/index.yml 2>/dev/null
 If the work was driven by a specific change document or spec, note the paths for inclusion in the PR description.
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:pr-preparer"
   prompt: "Create DRAFT PR for current branch.
            Task: [ORIGINAL TASK]
@@ -242,7 +242,7 @@ Task tool:
 #### 6.1 Self-Review
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:pr-reviewer"
   prompt: "Review PR #[NUMBER] for:
            - Code quality
@@ -257,7 +257,7 @@ Task tool:
 #### 6.2 Fix Issues (if any found)
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:coder"
   prompt: "Fix these issues in PR #[NUMBER]:
            [ISSUES FROM REVIEW]"
@@ -365,7 +365,7 @@ Skill tool: skill="fx-dev:resolve-ci-failures"
 
 Pass the failure details from the script output to the skill. The skill will:
 1. Analyze failure logs and identify root causes
-2. Delegate fixes to the coder agent
+2. Delegate fixes to the coder sub-agent
 3. Push the fixes
 
 **After the skill completes and fixes are pushed, GO BACK TO Step 7.3** — re-run the wait script to monitor the new check run. This creates a loop:
@@ -444,7 +444,7 @@ Once identified, update the doc to mark completed tasks:
 - Commit the doc update to the PR branch
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:coder"
   prompt: "Update task tracking in [DOC_PATH]:
            - Read the doc and identify tasks completed by PR #[NUMBER]
@@ -461,7 +461,7 @@ If no relevant tracking doc is found, skip this step.
 #### 8.3 Update Issue (if applicable)
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:issue-updater"
   prompt: "Update issue #[NUMBER]: Link PR, set label ready-for-review"
   description: "Update issue"
@@ -515,16 +515,16 @@ Awaiting your approval to merge.
 
 | Error | Action |
 |-------|--------|
-| Agent fails | Retry once with adjusted params, then STOP and report |
+| Sub-agent fails | Retry once with adjusted params, then STOP and report |
 | Git conflict | STOP, report to user, wait for resolution |
-| Tests fail | coder agent fixes, rerun until pass |
+| Tests fail | coder sub-agent fixes, rerun until pass |
 | Auth fails | STOP, request `gh auth login` |
 
 ---
 
-## Agent Quick Reference
+## Sub-Agent Quick Reference
 
-| Step | Agent | subagent_type |
+| Step | Skill | subagent_type |
 |------|-------|---------------|
 | 2 | Requirements Analyzer | `fx-dev:requirements-analyzer` |
 | 3 | Planner | `fx-dev:planner` |

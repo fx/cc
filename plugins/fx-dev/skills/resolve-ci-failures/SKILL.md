@@ -5,7 +5,7 @@ description: "Analyze and fix CI check failures on a PR. Use when CI checks fail
 
 # Resolve CI Failures
 
-Meta-skill that analyzes failing CI checks on a PR, fetches failure logs, categorizes failures, and delegates fixes to the coder agent.
+Meta-skill that analyzes failing CI checks on a PR, fetches failure logs, categorizes failures, and delegates fixes via the coder skill.
 
 ## WHEN TO USE THIS SKILL
 
@@ -109,10 +109,10 @@ gh api repos/OWNER/REPO/actions/jobs/JOB_ID/logs
 
 ### 5. Delegate Fixes
 
-For each fixable failure, delegate to the coder agent:
+For each fixable failure, launch a sub-agent with the coder skill:
 
 ```
-Task tool:
+Agent tool:
   subagent_type: "fx-dev:coder"
   prompt: "Fix the following CI failure on PR #[NUMBER]:
 
@@ -139,7 +139,7 @@ git status
 git push
 ```
 
-If the coder agent already pushed, verify with:
+If the coder sub-agent already pushed, verify with:
 
 ```bash
 git log --oneline -3
@@ -187,7 +187,7 @@ git push
 ## Success Criteria
 
 1. ✅ All fixable CI failures analyzed and root causes identified
-2. ✅ Fixes delegated to coder agent and committed
+2. ✅ Fixes delegated via coder skill and committed
 3. ✅ Changes pushed to PR branch
 4. ✅ Summary table output with categories and actions
 5. ✅ Non-fixable failures (infrastructure/flaky) clearly reported to user
@@ -195,7 +195,7 @@ git push
 ## Error Handling
 
 - If no PR found: Ask user for PR number
-- If coder agent fails to fix: Report the failure with full context including logs
+- If coder sub-agent fails to fix: Report the failure with full context including logs
 - If failure is infrastructure-related: Report to user, do not attempt fix
 - If check logs cannot be fetched: Use check name and conclusion to infer the issue, delegate to coder with available context
 - If `gh run view --log-failed` is too large: Fetch individual job logs instead

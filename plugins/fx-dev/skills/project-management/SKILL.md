@@ -61,18 +61,18 @@ Projects MAY define a preference for external task tracking in their CLAUDE.md. 
 **When no external tracking is configured:**
 Default to `docs/tasks.md` and `docs/changes/` task lists.
 
-## Available Agents
+## Available Skills (for Sub-Agents)
 
-### Research Agents
-- **`agent-fx-research:tech-scout`** — Research libraries, technologies, solutions
-- **`agent-Explore`** — Explore codebase structure, patterns, implementations
-- **`agent-Plan`** — Design implementation plans
+### Research Skills
+- **`fx-research:tech-scout`** — Research libraries, technologies, solutions
+- **`Explore`** — Explore codebase structure, patterns, implementations (built-in subagent type)
+- **`Plan`** — Design implementation plans (built-in subagent type)
 
-### Development Agents
-- **`agent-fx-dev:coder`** — Implement features, fix bugs
-- **`agent-fx-dev:planner`** — Create detailed implementation plans
-- **`agent-fx-dev:pr-preparer`** — Prepare and create pull requests
-- **`agent-fx-dev:sdlc`** — Orchestrate complete development lifecycle
+### Development Skills
+- **`fx-dev:coder`** — Implement features, fix bugs
+- **`fx-dev:planner`** — Create detailed implementation plans
+- **`fx-dev:pr-preparer`** — Prepare and create pull requests
+- **`fx-dev:sdlc`** — Orchestrate complete development lifecycle
 
 ## Workflows
 
@@ -80,7 +80,7 @@ Default to `docs/tasks.md` and `docs/changes/` task lists.
 
 When user says "add a feature that does X" or "improve X to allow Y":
 
-1. **Analyze deeply** using `agent-Explore` and `agent-fx-research:tech-scout`
+1. **Analyze deeply** using Explore and tech-scout sub-agents
 2. **Check if a relevant spec exists** in `docs/specs/`
 3. **Determine scope** — Single PR? Multiple PRs? Needs a change document?
 4. **If multi-PR**: Invoke `/spec-writer` to create or update the spec and propose change documents
@@ -96,7 +96,7 @@ When user says "work on next", "next task", "what's next":
 3. **Check external tools** if configured
 4. **Select next uncompleted task** — prioritize in-progress changes over new work
 5. **Announce the task** to user
-6. **Execute using development agents**
+6. **Execute using development sub-agents**
 7. **Mark task complete** with PR number in the file where it lives
 8. **Ensure PR includes the task-list update**
 

@@ -50,19 +50,19 @@ Plugin names should be:
 - `fx-docs` (documentation generators)
 
 **Avoid**:
-- `test-agent` (missing namespace prefix)
+- `test-utils` (missing namespace prefix)
 - `fx_test_utilities` (underscores, too verbose)
 - `fxTest` (camelCase not kebab-case)
 
 ### Component Naming Within Plugins
 
-Agent references follow the pattern: `@agent-{plugin-name}:{agent-name}`
+Skills are automatically namespaced by their plugin: `{plugin-name}:{skill-name}`.
 
 **Avoid redundancy**:
-- ❌ Plugin: `test-agent` → Agent: `@agent-test-agent:test-agent`
-- ✅ Plugin: `fx-test` → Agent: `@agent-fx-test:test-agent`
+- ❌ Plugin: `test-skill` → Skill: `test-skill:test-skill`
+- ✅ Plugin: `fx-test` → Skill: `fx-test:test-helper`
 
-Skills are automatically namespaced by their plugin but should still have clear, non-redundant names.
+Skill names should be clear, non-redundant, and descriptive of their purpose.
 
 ## Grouping Components in Plugins
 
@@ -74,19 +74,19 @@ Skills are automatically namespaced by their plugin but should still have clear,
 ```
 fx-test/
 ├── skills/hello/SKILL.md
-└── agents/test-agent.md
+└── skills/test-helper/SKILL.md
 ```
-Result: `@agent-fx-test:test-agent`, skill auto-scoped
+Result: `fx-test:hello`, `fx-test:test-helper` — all scoped under one plugin
 
 ❌ **Poor - Separate Plugins**:
 ```
 test-skill/
 └── skills/hello/SKILL.md
 
-test-agent/
-└── agents/test-agent.md
+test-helper/
+└── skills/test-helper/SKILL.md
 ```
-Result: `@agent-test-agent:test-agent` (redundant)
+Result: Fragmented across multiple plugins for related functionality
 
 ### When to Combine
 
@@ -98,13 +98,11 @@ Combine components in one plugin when they:
 **Examples**:
 
 **`fx-git` plugin** might include:
-- Skills: `commit-message`, `pr-review`
-- Agents: `git-helper`, `merge-conflict-resolver`
+- Skills: `commit-message`, `pr-review`, `merge-conflict-resolver`
 - Commands: `/git-flow`, `/git-status`
 
 **`fx-docs` plugin** might include:
-- Skills: `api-documentation`, `readme-generator`
-- Agents: `doc-writer`
+- Skills: `api-documentation`, `readme-generator`, `doc-writer`
 - Commands: `/generate-docs`
 
 ### When to Separate
@@ -124,14 +122,11 @@ Create separate plugins when components:
 fx-plugin-name/
 ├── .claude-plugin/
 │   └── plugin.json          # Required manifest
-├── skills/                   # Optional: Agent Skills
+├── skills/                   # Optional: Skills
 │   ├── skill-1/
 │   │   └── SKILL.md
 │   └── skill-2/
 │       └── SKILL.md
-├── agents/                   # Optional: Subagents
-│   ├── agent-1.md
-│   └── agent-2.md
 ├── commands/                 # Optional: Slash commands
 │   ├── command-1.md
 │   └── command-2.sh

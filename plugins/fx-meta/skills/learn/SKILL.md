@@ -1,11 +1,11 @@
 ---
 name: learn
-description: Update fx-cc plugin agents, skills, or commands based on conversation learnings. Use when the user says "use /learn to...", "learn to...", "remember to...", "don't do X again", or when an agent/skill misbehaved and needs correction. This skill modifies plugin source files but does NOT commit changes - they require manual review before committing.
+description: Update fx-cc plugin skills based on conversation learnings. Use when the user says "use /learn to...", "learn to...", "remember to...", "don't do X again", or when a skill misbehaved and needs correction. This skill modifies plugin source files but does NOT commit changes - they require manual review before committing.
 ---
 
 # Learn
 
-This skill updates fx-cc marketplace plugins based on learnings from the current conversation. It modifies agent, skill, or command definitions to prevent future mistakes or improve behavior.
+This skill updates fx-cc marketplace plugins based on learnings from the current conversation. It modifies skill definitions to prevent future mistakes or improve behavior.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ Before making any changes, verify the fx-cc marketplace is accessible:
 cd ~/.claude/plugins/marketplaces/fx-cc && git remote -v && git status
 ```
 
-The remote must be `git@github.com:fx/cc.git`. If not accessible, inform the user and abort.
+Verify the remote is accessible and the working directory is clean. If not accessible, inform the user and abort.
 
 ## Workflow
 
@@ -24,14 +24,14 @@ The remote must be `git@github.com:fx/cc.git`. If not accessible, inform the use
 Examine the current conversation to understand:
 
 1. **What went wrong** - Identify the specific behavior that needs correction
-2. **Root cause** - Determine which agent, skill, or command caused the issue
+2. **Root cause** - Determine which skill caused the issue
 3. **Desired behavior** - Understand what should happen instead
 
 Common scenarios:
 
 - **Skill not loaded when it should have been** → Update skill description to be clearer about trigger conditions
-- **Agent did something it shouldn't** → Add explicit prohibition to agent instructions
-- **Agent missed a step** → Add the step to the agent's workflow
+- **Skill produced incorrect behavior** → Add explicit prohibition to skill instructions
+- **Skill missed a step** → Add the step to the skill's workflow
 - **Instruction was ambiguous** → Clarify the wording
 
 ### Step 2: Locate Relevant Files
@@ -47,9 +47,7 @@ grep -r "keyword" ~/.claude/plugins/marketplaces/fx-cc/plugins/
 ```
 
 Key locations:
-- **Agents**: `plugins/<plugin>/agents/<agent>.md`
 - **Skills**: `plugins/<plugin>/skills/<skill>/SKILL.md`
-- **Commands**: `plugins/<plugin>/commands/<command>.md`
 
 ### Step 3: Make Targeted Modifications
 
@@ -114,11 +112,11 @@ cd ~/.claude/plugins/marketplaces/fx-cc && git diff
 
 ## Examples
 
-### Example 1: Agent Skipped a Step
+### Example 1: Skill Skipped a Step
 
-User says: "use /learn to update our sdlc agents - they should update PROJECT.md when creating PRs"
+User says: "use /learn to update our sdlc skills - they should update PROJECT.md when creating PRs"
 
-1. Locate `plugins/fx-dev/agents/pr-preparer.md`
+1. Locate `plugins/fx-dev/skills/pr-preparer/SKILL.md`
 2. Add instruction to check PROJECT.md and update completed tasks
 3. Sync fx-dev plugin to cache
 4. Show diff, leave uncommitted
@@ -136,7 +134,7 @@ User says: "the github skill didn't load when I ran gh commands"
 
 User says: "/learn to never leave comments on PRs"
 
-1. Locate relevant agents (pr-preparer, pr-reviewer, etc.)
+1. Locate relevant skills (pr-preparer, pr-reviewer, etc.)
 2. Add explicit prohibition with rationale
 3. Sync all modified plugins to cache
 4. Show diff, leave uncommitted

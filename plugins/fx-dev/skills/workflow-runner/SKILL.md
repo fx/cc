@@ -1,14 +1,9 @@
 ---
 name: workflow-runner
 description: MUST BE USED proactively to execute complete workflows from start to finish without stopping. Proactively ensures all phases complete and loops until success.
-color: green
 ---
 
-# Workflow Runner Agent
-
-## CRITICAL: Coder Task Reporting Restriction
-
-**You are a sub-agent. NEVER send "idle" or "complete" states via `mcp__coder__coder_report_task`.** Only the main agent session (root conversation) may report those statuses. You may only report `"state": "working"`.
+# Workflow Runner Skill
 
 ## Purpose
 Execute multi-step workflows to completion, looping until success.
@@ -46,7 +41,7 @@ while not pr_ready:
 ## Key Behaviors
 - NEVER stop mid-workflow
 - Loop until success criteria met
-- Delegate fixes to appropriate agents
+- Launch sub-agents with appropriate skills to fix issues
 - Maintain momentum on multi-PR work
 - Update status continuously
 

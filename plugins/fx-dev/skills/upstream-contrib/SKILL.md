@@ -104,7 +104,7 @@ Follow all conventions documented there. Key rules:
 
 #### 2.3 Implement the changes
 
-Delegate to the coder agent:
+Launch a sub-agent with the coder skill:
 
 ```
 Agent tool:
@@ -175,7 +175,7 @@ Now that fx/ui has the upstreamed changes, update the consumer repo to:
 - Remove any CSS variables that are now provided by fx/ui's globals.css (if applicable)
 - Run tests and build again to confirm
 
-Delegate to the coder agent:
+Launch a sub-agent with the coder skill:
 
 ```
 Agent tool:

@@ -1,6 +1,6 @@
 ---
 name: plugin-creator
-description: Guide for creating effective fx/cc marketplace plugins. This skill should be used when users want to create a new Claude Code plugin (or update an existing plugin) for the fx/cc marketplace that extends Claude's capabilities with specialized agents, skills, commands, or hooks.
+description: Guide for creating effective fx/cc marketplace plugins. This skill should be used when users want to create a new Claude Code plugin (or update an existing plugin) for the fx/cc marketplace that extends Claude's capabilities with skills, commands, or hooks.
 ---
 
 # Plugin Creator
@@ -10,8 +10,7 @@ This skill provides guidance for creating high-quality plugins for the fx/cc Cla
 ## About fx/cc Plugins
 
 Plugins are structured packages that extend Claude Code's capabilities by bundling related components:
-- **Skills** - Auto-invoked specialized knowledge and workflows
-- **Agents** - Autonomous task handlers for complex multi-step operations
+- **Skills** - Auto-invoked specialized knowledge and workflows (can also be used as sub-agent types for autonomous multi-step operations)
 - **Commands** - Slash commands for specific operations
 - **Hooks** - Event-driven workflow automation
 
@@ -30,7 +29,7 @@ To create an effective plugin, gather concrete examples of how it will be used:
 **Example questions to ask:**
 - "What functionality should this plugin provide?"
 - "Can you give examples of tasks users would perform with this plugin?"
-- "What would trigger each component (skills, agents, commands)?"
+- "What would trigger each component (skills, commands)?"
 - "Are these components typically used together or separately?"
 
 **Example for `fx-git` plugin:**
@@ -40,7 +39,7 @@ To create an effective plugin, gather concrete examples of how it will be used:
 
 Conclude when there's a clear understanding of:
 1. Plugin's domain and purpose
-2. Required components (skills, agents, commands)
+2. Required components (skills, commands)
 3. Typical usage patterns
 
 ### Step 2: Planning Plugin Structure
@@ -65,11 +64,7 @@ Decide whether to:
 - Auto-invoked specialized knowledge needed
 - Procedural workflows for specific tasks
 - Domain expertise that should trigger automatically
-
-**Agents** - When to include:
-- Complex multi-step autonomous operations
-- Tasks requiring coordination of multiple tools
-- Long-running workflows with decision-making
+- Complex multi-step autonomous operations (skills can serve as sub-agent types)
 
 **Commands** - When to include:
 - Explicit user-triggered operations
@@ -102,7 +97,7 @@ EOF
 
 # Create component directories as needed
 cd fx-plugin-name
-mkdir -p skills agents commands hooks
+mkdir -p skills commands hooks
 ```
 
 **Directory structure:**
@@ -111,7 +106,6 @@ mkdir -p skills agents commands hooks
 ├── .claude-plugin/
 │   └── plugin.json
 ├── skills/          (if needed)
-├── agents/          (if needed)
 ├── commands/        (if needed)
 ├── hooks/           (if needed)
 └── README.md
@@ -141,25 +135,6 @@ EOF
 ```
 
 See skill-creator skill for detailed skill development guidance.
-
-#### Agents
-Create agent markdown files:
-
-```bash
-cat > agents/agent-name.md <<'EOF'
----
-name: agent-name
-description: What this agent does and when to use it
-model: sonnet  # Optional: sonnet (default), opus, haiku
----
-
-Agent instructions and behavior.
-
-Usage examples showing when to invoke this agent.
-EOF
-```
-
-Agent reference pattern: `@agent-fx-plugin-name:agent-name`
 
 #### Commands
 Create command files (markdown or shell):
@@ -215,9 +190,6 @@ Brief description of plugin purpose.
 ### Skills (if applicable)
 - **skill-name** - Auto-invoked when [trigger condition]
 
-### Agents (if applicable)
-- **agent-name** - Use via \`@agent-fx-plugin-name:agent-name\` for [purpose]
-
 ### Commands (if applicable)
 - \`/command-name\` - [What it does]
 
@@ -266,15 +238,14 @@ cd ~/.claude/plugins/marketplaces/fx-cc/plugins/fx-plugin-name
 jq empty .claude-plugin/plugin.json
 
 # Check frontmatter in components
-grep -r "^---$" skills/ agents/ commands/ || echo "No frontmatter found"
+grep -r "^---$" skills/ commands/ || echo "No frontmatter found"
 ```
 
 **Test functionality:**
 1. Reload Claude Code to pick up changes
 2. **Skills**: Ask questions that should trigger auto-invocation
-3. **Agents**: Check `/agents` list and invoke via Task tool
-4. **Commands**: Execute slash commands
-5. **Integration**: Verify components work together
+3. **Commands**: Execute slash commands
+4. **Integration**: Verify components work together
 
 **Git workflow:**
 ```bash
@@ -319,7 +290,6 @@ After testing:
 ### Testing Requirements
 - Manual test all components
 - Verify auto-invocation triggers for skills
-- Test agent invocation patterns
 - Confirm command execution
 - Validate JSON with jq
 
@@ -330,12 +300,6 @@ After testing:
 - Write using imperative/infinitive form
 - Keep SKILL.md under 5k words
 - Use progressive disclosure (references/ for details)
-
-### Agents
-- Provide clear invocation patterns
-- Document available tools and capabilities
-- Include usage examples in frontmatter
-- Specify model if not default sonnet
 
 ### Commands
 - Clear, action-oriented naming

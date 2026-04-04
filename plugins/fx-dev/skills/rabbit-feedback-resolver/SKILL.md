@@ -26,7 +26,7 @@ Process and resolve CodeRabbit's automated PR review comments systematically.
 - User says "check rabbit review" / "handle coderabbit comments" / "resolve rabbit feedback"
 - User mentions "coderabbit" or "rabbit" and "PR" or "comments" in the same context
 - After PR creation when CodeRabbit has reviewed the PR
-- As part of the PR workflow after `pr-reviewer` agent completes
+- As part of the PR workflow after `pr-reviewer` skill completes
 - When PR checks show CodeRabbit has left review comments
 
 ## CodeRabbit Comment Structure
@@ -179,7 +179,7 @@ For each unresolved CodeRabbit comment:
 **When a comment contains `🤖 Prompt for AI Agents`, extract and use it directly:**
 
 1. Parse the comment body to extract content between `<summary>🤖 Prompt for AI Agents</summary>` and the closing `</details>`
-2. The extracted text contains explicit instructions - pass these to the coder agent verbatim
+2. The extracted text contains explicit instructions - pass these to the coder sub-agent verbatim
 3. After fix is implemented, resolve the thread
 
 Example extraction:
@@ -200,7 +200,7 @@ values...
 
 1. Read the feedback carefully
 2. Determine if it's valid or conflicts with project conventions
-3. If valid: Delegate to coder agent with context
+3. If valid: Delegate to coder sub-agent with context
 4. If conflicts with project conventions (INCORRECT):
    - Reply with explanation and resolve
    - **Update `.github/copilot-instructions.md`** to document the correct pattern
