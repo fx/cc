@@ -15,7 +15,7 @@ Before making any changes, verify the fx-cc marketplace is accessible:
 cd ~/.claude/plugins/marketplaces/fx-cc && git remote -v && git status
 ```
 
-The remote must be `git@github.com:fx/cc.git`. If not accessible, inform the user and abort.
+Verify the remote is accessible and the working directory is clean. If not accessible, inform the user and abort.
 
 ## Workflow
 

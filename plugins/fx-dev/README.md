@@ -15,7 +15,7 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 - **dev** - Unified entry point that loads the SDLC skill and follows its workflow
 - **fix** - Test-first bug fix workflow (write failing test, then fix, then verify)
 - **team** - Coordinated multi-sub-agent implementation for specs and multi-task features
-- **coder** - Implements features, bug fixes, and refactorings with PR creation
+- **coder** - Implements features, bug fixes, and refactorings; when used within the SDLC workflow, PR creation is handled by **pr-preparer**
 - **requirements-analyzer** - Fetches and analyzes GitHub issues, extracts requirements, gathers context
 - **planner** - Creates comprehensive implementation plans based on requirements
 - **issue-updater** - Updates GitHub issues with planning information and status changes

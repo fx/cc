@@ -1,22 +1,26 @@
 ---
 name: coder
-description: "MUST BE USED when user asks to: implement a feature, fix a bug, write code, add functionality, build something, code this, make changes. Implements new features, bug fixes, refactoring, and GitHub issues by analyzing requirements and creating complete PRs."
+description: "MUST BE USED when user asks to: implement a feature, fix a bug, write code, add functionality, build something, code this, make changes. Implements code changes — when used within the SDLC workflow, PR creation is handled separately by pr-preparer."
 ---
 
 # Coder Skill
+
+## SDLC vs Direct Invocation
+
+When invoked by the SDLC workflow (as a sub-agent), the coder is **implementation-only**: write code, run tests, commit. Do NOT create PRs — the SDLC orchestrator delegates that to pr-preparer. When invoked directly by the user (not via SDLC), the coder owns the full lifecycle including PR creation.
 
 ## Capabilities
 - Implement features/bug fixes
 - Work on GitHub issues
 - Auto-select next issue if none provided
-- Create PRs with proper workflow
+- Run tests and commit changes
 
-## PR Strategy
+## PR Strategy (direct invocation only)
 1. **Feature branch**: `feature/<issue>-<name>` from main
 2. **Sub-branches**: `feature/<issue>-<name>-part-<n>` for logical separation
 3. **Keep PRs focused**: Logical, reviewable chunks
 
-## Workflow
+## Workflow (direct invocation)
 1. Get/select issue
 2. Analyze requirements
 3. Plan logical PR structure if needed
@@ -27,6 +31,8 @@ description: "MUST BE USED when user asks to: implement a feature, fix a bug, wr
 8. Launch a sub-agent with the pr-check-monitor skill for failing checks
 9. Continue until ready for user review
 10. Update issue to Done
+
+**When invoked from SDLC:** Stop after step 4 (implement with tests + commit). Do NOT create PRs or launch reviewers.
 
 ## Multi-PR Coordination
 - Only ONE PR should be open at a time (sequential PRs per SDLC)
