@@ -167,19 +167,19 @@ start_compose_services() {
 
     echo "[Compose] Starting services from $compose_file..."
 
-    # Prefer docker compose v2 plugin
+    # Prefer docker compose v2 plugin; pass -f to use the detected file explicitly
     if docker compose version > /dev/null 2>&1; then
-        docker compose up -d
+        docker compose -f "$compose_file" up -d
     else
-        docker-compose up -d
+        docker-compose -f "$compose_file" up -d
     fi
 
     # Wait for healthchecks if defined
     if docker compose version > /dev/null 2>&1; then
-        if docker compose ps --format json 2>/dev/null | grep -q '"Health"'; then
+        if docker compose -f "$compose_file" ps --format json 2>/dev/null | grep -q '"Health"'; then
             echo "[Compose] Waiting for services to be healthy..."
             for i in $(seq 1 30); do
-                UNHEALTHY=$(docker compose ps --format json 2>/dev/null | grep -c '"starting"\|"unhealthy"' || true)
+                UNHEALTHY=$(docker compose -f "$compose_file" ps --format json 2>/dev/null | grep -c '"starting"\|"unhealthy"' || true)
                 if [[ "$UNHEALTHY" -eq 0 ]]; then
                     echo "[Compose] All services healthy."
                     break
@@ -198,9 +198,9 @@ start_compose_services() {
 
     echo "[Compose] Service status:"
     if docker compose version > /dev/null 2>&1; then
-        docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || docker compose ps
+        docker compose -f "$compose_file" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || docker compose -f "$compose_file" ps
     else
-        docker-compose ps
+        docker-compose -f "$compose_file" ps
     fi
 }
 

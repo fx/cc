@@ -207,11 +207,11 @@ The consumer repo now has commits that use the new fx/ui exports, but still depe
 
 ---
 
-### Phase 4: Submit fx/ui PR via SDLC
+### Phase 4: Submit fx/ui PR via Dev Workflow
 
-#### 4.1 Run the full SDLC workflow on fx/ui
+#### 4.1 Run the full dev (SDLC) workflow on fx/ui
 
-Switch working directory to fx/ui and run the SDLC skill:
+Switch working directory to fx/ui and run the dev skill:
 
 ```
 Skill tool: skill="fx-dev:dev"

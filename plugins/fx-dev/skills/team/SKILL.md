@@ -52,12 +52,12 @@ Agent tool:
 
            MANDATORY WORKFLOW:
            1. The dev skill is already loaded — follow EVERY step of its SDLC workflow in order, no skipping
-           3. Use /fx-dev:project-management skill to mark your spec task(s) as done
-           4. Include the task completion change in your PR
-           5. Create your PR as a DRAFT
-           6. Wait for and resolve Copilot/CodeRabbit review feedback
-           7. Wait for and resolve CI check failures
-           8. Send a message to the coordinator when your PR is ready
+           2. Use /fx-dev:project-management skill to mark your spec task(s) as done
+           3. Include the task completion change in your PR
+           4. Create your PR as a DRAFT
+           5. Wait for and resolve Copilot/CodeRabbit review feedback
+           6. Wait for and resolve CI check failures
+           7. Send a message to the coordinator when your PR is ready
 
            CRITICAL RULES:
            - You MUST follow full SDLC progression (requirements → plan → implement → PR → review → CI)
