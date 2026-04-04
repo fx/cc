@@ -34,6 +34,15 @@ Then, your primary responsibilities:
    - Do NOT put spec/change references in the title
    - Exception: if the PR is primarily about finalizing lingering tasks in a spec/change doc, the title MAY reference it (e.g., `docs: complete remaining tasks for 0003-add-oauth`)
 
+   - **Test plan** — a checklist of concrete verification steps someone (or the verify-web-change skill) can follow to confirm the PR works. Each item should be a checkbox:
+     ```markdown
+     ## Test plan
+     - [ ] Navigate to /settings and confirm the new "Notifications" tab appears
+     - [ ] Toggle notifications off, refresh, confirm the toggle persists
+     - [ ] No console errors on the /settings page
+     ```
+     Write test plan items that are **specific and observable** — not vague ("works correctly") but actionable ("click X, see Y"). Include the route/URL where each item can be verified when applicable.
+
    **DO NOT include** (this information is already visible in GitHub's UI):
    - List of files changed (visible in the Files tab)
    - Number of files/lines added/removed (visible in the diff)

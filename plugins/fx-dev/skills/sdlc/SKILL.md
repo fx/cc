@@ -235,6 +235,111 @@ Agent tool:
 
 ---
 
+### STEP 5.5: Web Verification (if applicable)
+
+**Run this step if the PR touches web application code.** Skip if the changes are purely backend, CLI, infrastructure, or documentation with no UI component.
+
+#### 5.5.1 Detect Web Changes
+
+```bash
+# Check if any changed files are web-related
+WEB_FILES=$(git diff main --name-only | grep -E '\.(tsx|jsx|vue|svelte|html|css|scss|less)$' || true)
+
+# Check for web framework configs in the repo
+HAS_WEB_STACK=false
+for cfg in vite.config.ts vite.config.js next.config.js next.config.ts next.config.mjs nuxt.config.ts svelte.config.js angular.json astro.config.mjs; do
+    if [[ -f "$cfg" ]]; then
+        HAS_WEB_STACK=true
+        break
+    fi
+done
+
+if [[ -n "$WEB_FILES" ]] && [[ "$HAS_WEB_STACK" == "true" ]]; then
+    echo "Web changes detected — proceeding with browser verification."
+else
+    echo "No web changes detected — skipping Step 5.5."
+fi
+```
+
+If no web changes are detected, skip to Step 6.
+
+#### 5.5.2 Extract the Test Plan from the PR
+
+Read the PR description and extract the Test Plan section:
+
+```bash
+gh pr view [PR_NUMBER] --json body --jq '.body'
+```
+
+Parse the `## Test plan` section. Each `- [ ]` item is a verification target.
+
+If the PR has no Test Plan section, construct one from the PR diff — identify the routes/pages affected and the UI changes made, then create verification steps. Add them to the PR description before proceeding:
+
+```bash
+gh pr edit [PR_NUMBER] --body "$(cat <<'EOF'
+[existing body]
+
+## Test plan
+- [ ] [generated verification step 1]
+- [ ] [generated verification step 2]
+EOF
+)"
+```
+
+#### 5.5.3 Run verify-web-change
+
+Invoke the verify-web-change skill to launch the app stack and verify each Test Plan item in a real browser:
+
+```
+Skill tool: skill="fx-dev:verify-web-change"
+```
+
+The skill will:
+1. Ensure Docker is running and compose services are up (if needed)
+2. Detect the package manager and dev server port
+3. Start the dev server and wait for readiness
+4. Use Playwright MCP to navigate, snapshot, click, and verify each Test Plan item
+5. Report pass/fail per item with evidence
+
+#### 5.5.4 Update the Test Plan in the PR Description
+
+After verification, update the PR description to check off verified items and annotate failures:
+
+```bash
+# Fetch current PR body
+BODY=$(gh pr view [PR_NUMBER] --json body --jq '.body')
+```
+
+For each Test Plan item:
+- **Verified**: Change `- [ ]` to `- [x]` (checked)
+- **Failed**: Leave as `- [ ]` and append failure details: `- [ ] ~~Item~~ — FAILED: [reason]`
+- **Could not verify** (e.g., requires auth, external service): Leave as `- [ ]` and append: `- [ ] Item — SKIPPED: [reason]`
+
+Update the PR:
+
+```bash
+gh pr edit [PR_NUMBER] --body "$UPDATED_BODY"
+```
+
+#### 5.5.5 Handle Failures
+
+If any Test Plan items failed verification:
+1. Delegate fixes to the coder sub-agent:
+   ```
+   Agent tool:
+     subagent_type: "fx-dev:coder"
+     prompt: "Fix these verification failures from browser testing:
+              [FAILURE DETAILS FROM verify-web-change]
+              Push fixes to the PR branch."
+     description: "Fix web verification failures"
+   ```
+2. After fixes are pushed, re-run Step 5.5.3 (verify again)
+3. **Maximum 2 fix iterations.** If still failing after 2 attempts, proceed to Step 6 and note the unverified items in the PR description.
+
+**⛔ DO NOT PROCEED until verification passes or max iterations reached**
+
+---
+
 ### STEP 6: Review & Quality
 
 **MANDATORY: Execute ALL sub-steps.**
@@ -532,6 +637,7 @@ Awaiting your approval to merge.
 | 4,6.2 | Coder | `fx-dev:coder` |
 | 4.5 | Code Cleanup | Skill: `simplify` |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
+| 5.5 | Web Verification | Skill: `fx-dev:verify-web-change` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
 | 6.4 | PR Feedback Resolver | Skill: `fx-dev:resolve-pr-feedback` |
 | 7.4 | CI Failure Resolver | Skill: `fx-dev:resolve-ci-failures` |
@@ -546,7 +652,9 @@ Workflow complete when ALL true:
 - ✅ Plan created
 - ✅ Code implemented with atomic commits
 - ✅ Code reviewed via /simplify (reuse, quality, efficiency)
-- ✅ PR created with description (including links to related specs/changes)
+- ✅ PR created with description (including links to related specs/changes and test plan)
+- ✅ Web changes verified in browser via verify-web-change (if applicable)
+- ✅ PR test plan items checked off with verification results
 - ✅ Self-review done, issues fixed
 - ✅ Automated review feedback resolved (Copilot/CodeRabbit)
 - ✅ All CI/CD checks pass
