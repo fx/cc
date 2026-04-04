@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: ensures plugin and marketplace versions are bumped
+# when their contents change.
+#
+# Rules:
+#   1. If files inside plugins/<name>/ changed, plugins/<name>/.claude-plugin/plugin.json
+#      must have a version bump compared to HEAD.
+#   2. If any plugin version was bumped, .claude-plugin/marketplace.json must also
+#      have its metadata.version bumped.
+#   3. If top-level repo files changed (CLAUDE.md, README.md, index.html, .github/*, etc.),
+#      .claude-plugin/marketplace.json must have its metadata.version bumped.
+#
+# The hook prints actionable messages so an LLM can fix the commit.
+
+set -euo pipefail
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+errors=()
+
+# Get list of staged files (added, modified, deleted, renamed)
+staged_files=$(git diff --cached --name-only --diff-filter=AMDRT 2>/dev/null || true)
+
+if [ -z "$staged_files" ]; then
+  exit 0
+fi
+
+# --- Helper: get version from a JSON file at a git ref or from the index ---
+
+version_at_head() {
+  local file="$1"
+  local jq_path="$2"
+  git show "HEAD:${file}" 2>/dev/null | jq -r "$jq_path" 2>/dev/null || echo ""
+}
+
+version_in_index() {
+  local file="$1"
+  local jq_path="$2"
+  git show ":${file}" 2>/dev/null | jq -r "$jq_path" 2>/dev/null || echo ""
+}
+
+# --- Detect which plugins have changes ---
+
+changed_plugins=()
+while IFS= read -r file; do
+  if [[ "$file" =~ ^plugins/([^/]+)/ ]]; then
+    plugin="${BASH_REMATCH[1]}"
+    # Deduplicate
+    if [[ ! " ${changed_plugins[*]:-} " =~ " ${plugin} " ]]; then
+      changed_plugins+=("$plugin")
+    fi
+  fi
+done <<< "$staged_files"
+
+# --- Check each changed plugin for a version bump ---
+
+plugins_needing_marketplace_bump=()
+
+for plugin in "${changed_plugins[@]:-}"; do
+  [ -z "$plugin" ] && continue
+
+  manifest="plugins/${plugin}/.claude-plugin/plugin.json"
+
+  # Check if the manifest itself is staged
+  if ! echo "$staged_files" | grep -qx "$manifest"; then
+    old_ver=$(version_at_head "$manifest" '.version')
+    errors+=("${RED}BLOCKED:${NC} Plugin ${YELLOW}${plugin}${NC} has changes but ${manifest} is not staged.\n  Current version: ${old_ver:-unknown}\n  Bump the version in ${manifest} and stage it.\n  Use patch bump for fixes, minor for features, major for breaking changes.")
+    continue
+  fi
+
+  old_ver=$(version_at_head "$manifest" '.version')
+  new_ver=$(version_in_index "$manifest" '.version')
+
+  # New plugin (no HEAD version) — no bump needed
+  if [ -z "$old_ver" ]; then
+    plugins_needing_marketplace_bump+=("$plugin")
+    continue
+  fi
+
+  if [ "$old_ver" = "$new_ver" ]; then
+    errors+=("${RED}BLOCKED:${NC} Plugin ${YELLOW}${plugin}${NC} has changes but version in ${manifest} was not bumped.\n  Current version: ${old_ver}\n  Bump the version in ${manifest} (e.g., patch: $(echo "$old_ver" | awk -F. '{print $1"."$2"."$3+1}')).\n  Use patch bump for fixes, minor for features, major for breaking changes.")
+  else
+    plugins_needing_marketplace_bump+=("$plugin")
+  fi
+done
+
+# --- Check if top-level (non-plugin) files changed ---
+
+top_level_changed=false
+while IFS= read -r file; do
+  if [[ ! "$file" =~ ^plugins/ ]] && [[ "$file" != ".claude-plugin/marketplace.json" ]]; then
+    top_level_changed=true
+    break
+  fi
+done <<< "$staged_files"
+
+# --- Check marketplace.json version bump ---
+
+marketplace="/.claude-plugin/marketplace.json"
+marketplace_rel=".claude-plugin/marketplace.json"
+needs_marketplace_bump=false
+
+if [ "$top_level_changed" = true ]; then
+  needs_marketplace_bump=true
+fi
+
+if [ ${#plugins_needing_marketplace_bump[@]} -gt 0 ]; then
+  needs_marketplace_bump=true
+fi
+
+if [ "$needs_marketplace_bump" = true ]; then
+  old_mp_ver=$(version_at_head "$marketplace_rel" '.metadata.version')
+  new_mp_ver=$(version_in_index "$marketplace_rel" '.metadata.version')
+
+  # If marketplace.json isn't even staged
+  if ! echo "$staged_files" | grep -qx "$marketplace_rel"; then
+    new_mp_ver="$old_mp_ver"
+  fi
+
+  if [ -n "$old_mp_ver" ] && [ "$old_mp_ver" = "$new_mp_ver" ]; then
+    reason=""
+    if [ ${#plugins_needing_marketplace_bump[@]} -gt 0 ]; then
+      reason="Plugin version(s) bumped: ${plugins_needing_marketplace_bump[*]}"
+    fi
+    if [ "$top_level_changed" = true ]; then
+      [ -n "$reason" ] && reason="$reason; also top-level files changed" || reason="Top-level repo files changed"
+    fi
+    errors+=("${RED}BLOCKED:${NC} ${marketplace_rel} metadata.version was not bumped.\n  Reason: ${reason}\n  Current version: ${old_mp_ver}\n  Bump the version (e.g., patch: $(echo "$old_mp_ver" | awk -F. '{print $1"."$2"."$3+1}')).\n  Stage the file after editing.")
+  fi
+fi
+
+# --- Report ---
+
+if [ ${#errors[@]} -gt 0 ]; then
+  echo ""
+  echo -e "${RED}╔══════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${RED}║           VERSION BUMP REQUIRED BEFORE COMMIT           ║${NC}"
+  echo -e "${RED}╚══════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+  for err in "${errors[@]}"; do
+    echo -e "  $err"
+    echo ""
+  done
+  echo -e "  ${YELLOW}Semver guide:${NC}"
+  echo "    patch (0.1.0 → 0.1.1): bug fixes, typos, minor tweaks"
+  echo "    minor (0.1.0 → 0.2.0): new features, new skills, enhancements"
+  echo "    major (0.1.0 → 1.0.0): breaking changes, major rewrites"
+  echo ""
+  exit 1
+fi
+
+exit 0

@@ -248,8 +248,12 @@ Manual testing required for:
 ### Versioning
 
 - Use semantic versioning: `MAJOR.MINOR.PATCH`
-- Update version in `plugin.json` when releasing changes
-- Document changes in CHANGELOG.md
+- A **pre-commit hook** enforces version bumps automatically:
+  - If files inside `plugins/<name>/` change, that plugin's `plugin.json` version must be bumped
+  - If any plugin version is bumped or top-level files change, `marketplace.json` `metadata.version` must be bumped
+  - The hook rejects the commit with an actionable message — the LLM should read the message and apply the appropriate bump
+- **Semver rules**: patch for fixes/typos, minor for new features/skills, major for breaking changes
+- After cloning, run: `git config core.hooksPath .githooks`
 
 ### Backward Compatibility
 
