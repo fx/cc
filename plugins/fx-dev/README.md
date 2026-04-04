@@ -8,11 +8,10 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 
 ## Components
 
-### Skills (24)
+### Skills (23)
 
 #### SDLC Skills
-- **sdlc** - Orchestrates complete workflows including planning, implementation, review, and finalization
-- **dev** - Unified entry point that loads the SDLC skill and follows its workflow
+- **dev** - Orchestrates the complete SDLC workflow including planning, implementation, review, and finalization
 - **fix** - Test-first bug fix workflow (write failing test, then fix, then verify)
 - **team** - Coordinated multi-sub-agent implementation for specs and multi-task features
 - **coder** - Implements features, bug fixes, and refactorings; when used within the SDLC workflow, PR creation is handled by **pr-preparer**
@@ -46,7 +45,7 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 
 ### Implement a GitHub Issue
 
-Just describe the work — the `dev` and `sdlc` skills auto-trigger:
+Just describe the work — the `dev` skill auto-triggers:
 
 ```
 Implement https://github.com/owner/repo/issues/123
@@ -100,7 +99,7 @@ Issue Done (issue-updater skill)
 
 ### SDLC Skills
 
-#### sdlc
+#### dev
 Orchestrates the complete software development lifecycle by coordinating sub-agents through planning, implementation, review, and finalization phases.
 
 #### coder
@@ -154,7 +153,7 @@ Meta-skill that detects all unresolved automated feedback (Copilot, CodeRabbit, 
 2. **GitHub issues** - Provide issue URLs for tracked work
 3. **Bug fixes** - Describe the bug; the fix skill enforces test-first
 4. **Multi-PR work** - Use the team skill for parallel implementation
-5. **Let the SDLC skill coordinate** - It handles orchestration via sub-agents
+5. **Let the dev skill coordinate** - It handles orchestration via sub-agents
 
 ### Pull Request Management
 
