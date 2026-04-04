@@ -4,15 +4,17 @@ Complete development workflow including SDLC, pull requests, git utilities, and 
 
 ## Overview
 
-The fx-dev plugin provides a comprehensive suite of tools for the entire software development lifecycle. From requirements analysis through implementation, code review, PR management, to deployment - everything developers need in one integrated plugin.
+The fx-dev plugin provides a comprehensive suite of skills for the entire software development lifecycle. From requirements analysis through implementation, code review, PR management, to deployment - everything developers need in one integrated plugin.
 
 ## Components
 
-### Skills (22)
+### Skills (24)
 
 #### SDLC Skills
 - **sdlc** - Orchestrates complete workflows including planning, implementation, review, and finalization
 - **dev** - Unified entry point that loads the SDLC skill and follows its workflow
+- **fix** - Test-first bug fix workflow (write failing test, then fix, then verify)
+- **team** - Coordinated multi-sub-agent implementation for specs and multi-task features
 - **coder** - Implements features, bug fixes, and refactorings with PR creation
 - **requirements-analyzer** - Fetches and analyzes GitHub issues, extracts requirements, gathers context
 - **planner** - Creates comprehensive implementation plans based on requirements
@@ -40,41 +42,32 @@ The fx-dev plugin provides a comprehensive suite of tools for the entire softwar
 - **upstream-contrib** - Contributes local UI component changes upstream to @fx/ui
 - **verify-web-change** - Verifies web application changes work in a real browser
 
-### Commands (2)
-
-- **/dev** - Unified command for all development tasks (GitHub issues, quick fixes, ad-hoc coding)
-- **/gitingest** - Analyzes public GitHub repositories to understand structure and contents
-
 ## Quick Start
 
 ### Implement a GitHub Issue
 
-```bash
-/dev https://github.com/owner/repo/issues/123
+Just describe the work — the `dev` and `sdlc` skills auto-trigger:
+
+```
+Implement https://github.com/owner/repo/issues/123
 ```
 
-Or find the next logical issue:
+### Quick Bug Fix
 
-```bash
-/dev
 ```
-
-### Quick Fix for an Error
-
-```bash
-/dev fix: TypeError in auth.js:42 - Cannot read property 'id' of undefined
+Fix the TypeError in auth.js:42 - Cannot read property 'id' of undefined
 ```
 
 ### Implement a Feature
 
-```bash
-/dev Add dark mode toggle to settings page
+```
+Add dark mode toggle to settings page
 ```
 
-### Analyze a Repository
+### Parallel Team Implementation
 
-```bash
-/gitingest https://github.com/vercel/next.js
+```
+Use the team skill to implement docs/specs/auth/
 ```
 
 ## Complete Workflow
@@ -110,199 +103,72 @@ Issue Done (issue-updater skill)
 #### sdlc
 Orchestrates the complete software development lifecycle by coordinating sub-agents through planning, implementation, review, and finalization phases.
 
-**Use when:** You need end-to-end orchestration of a fresh implementation
-
 #### coder
-Implements new features, fixes bugs, refactors code, or makes any code changes to the project. Works with GitHub issues or standalone tasks.
+Implements new features, fixes bugs, refactors code, or makes any code changes to the project.
 
-**Use when:** You need to implement any code changes
+#### fix
+Test-first bug fix workflow. Mandates writing a failing test that reproduces the bug before implementing any fix.
+
+#### team
+Spawns coordinated sub-agent teams for parallel implementation of specs or multi-task features. The main session acts as coordinator.
 
 #### requirements-analyzer
-Fetches and analyzes GitHub issues, extracts requirements, gathers context from referenced URLs, and compiles comprehensive requirements documentation.
-
-**Use when:** Starting work on a GitHub issue
+Fetches and analyzes GitHub issues, extracts requirements, gathers context from referenced URLs.
 
 #### planner
-Creates comprehensive implementation plans based on requirements analysis. Breaks down complex features into actionable steps and identifies dependencies.
-
-**Use when:** You need a detailed implementation plan
+Creates comprehensive implementation plans based on requirements analysis.
 
 #### issue-updater
-Updates GitHub issues with planning information, status changes, and implementation progress. Ensures proper tagging and project board synchronization.
-
-**Use when:** You need to update issue status or add plans
+Updates GitHub issues with planning information, status changes, and implementation progress.
 
 ### PR Management Skills
 
 #### pr-reviewer
-Reviews pull requests with a pragmatic approach, approving PRs with minor issues rather than blocking on nitpicks. Focuses on bugs, security, and performance.
-
-**Use when:** After code changes are complete
+Reviews pull requests with a pragmatic approach. Focuses on bugs, security, and performance.
 
 #### pr-preparer
-Analyzes branch changes, reviews commit history, and ensures PRs adhere to all project standards before submission.
-
-**Use when:** Before creating a PR
+Analyzes branch changes, reviews commit history, and ensures PRs adhere to project standards.
 
 #### pr-check-monitor
-Monitors GitHub pull request checks and automatically coordinates fixes for failing checks by delegating to appropriate sub-agents.
-
-**Use when:** After PR creation to monitor checks
+Monitors GitHub pull request checks and coordinates fixes for failing checks via sub-agents.
 
 #### pr-changeset-minimalist
-Reviews pull requests to ensure they contain only the minimal necessary changes without extraneous modifications or artifacts from commit progression.
-
-**Use when:** Before submitting PR to validate change scope
+Reviews changesets to ensure only minimal necessary changes without extraneous modifications.
 
 #### workflow-runner
-Executes complete workflows from start to finish without stopping, ensuring all phases complete and looping until success criteria are met.
-
-**Use when:** You need multi-step workflow execution
+Executes complete workflows from start to finish, looping until success criteria are met.
 
 ### Review & CI Skills
 
 #### copilot-feedback-resolver
-Processes and resolves GitHub Copilot's automated PR review comments. Distinguishes between outdated, incorrect, and valid concerns.
+Processes and resolves GitHub Copilot's automated PR review comments.
 
-**Use when:** After Copilot reviews your PR
-**Invocation:** Use the Skill tool with `skill="fx-dev:copilot-feedback-resolver"`
-
-## Command Details
-
-### /dev
-
-Unified development command that intelligently routes to the appropriate workflow based on input.
-
-**Usage:**
-```bash
-# GitHub issue workflow
-/dev https://github.com/owner/repo/issues/123
-/dev  # Auto-selects next logical issue
-
-# Quick fix workflow
-/dev fix: TypeError in auth.js:42
-/dev error: Cannot read property 'id'
-
-# Ad-hoc coding workflow
-/dev Add dark mode toggle to settings page
-/dev Refactor auth module to use async/await
-```
-
-**Intelligent Routing:**
-- GitHub issue URL or empty → Full SDLC with issue tracking
-- Prefix `fix:`, `error:`, `bug:` → Quick fix workflow
-- Other descriptions → Ad-hoc coding workflow
-
-**See:** `commands/dev.md` for complete workflow documentation
-
-### /gitingest
-
-Analyzes public GitHub repositories to understand structure and contents. Useful for learning project organization before contributing.
-
-**Usage:**
-```bash
-/gitingest <github-url>
-```
-
-## Examples
-
-### Example 1: Complete Feature Implementation
-
-```bash
-# Implement a feature from a GitHub issue
-/dev https://github.com/myorg/myapp/issues/456
-```
-
-This automatically:
-- Fetches and analyzes the issue
-- Creates an implementation plan
-- Implements all code changes
-- Creates a PR with proper description
-- Reviews and iterates until ready
-- Monitors checks and fixes failures
-- Updates issue status to Done
-
-### Example 2: Quick Bug Fix
-
-```bash
-# Fix a specific error quickly
-/dev fix: ReferenceError: user is not defined in api/auth.js:42
-```
-
-### Example 3: Research Before Contributing
-
-```bash
-# Understand a repository structure
-/gitingest https://github.com/facebook/react
-
-# Then implement your contribution
-/dev Add custom hook for handling form validation
-```
-
-### Example 4: Manual Workflow with Sub-Agents
-
-```python
-# Prepare PR
-Agent(
-    description="Prepare PR",
-    prompt="Prepare PR for authentication feature",
-    subagent_type="fx-dev:pr-preparer"
-)
-
-# Review for minimal changes
-Agent(
-    description="Check minimal changes",
-    prompt="Ensure only necessary changes are included",
-    subagent_type="fx-dev:pr-changeset-minimalist"
-)
-
-# Review code quality
-Agent(
-    description="Review PR",
-    prompt="Review the authentication implementation",
-    subagent_type="fx-dev:pr-reviewer"
-)
-
-# Handle Copilot feedback
-Skill(skill="fx-dev:copilot-feedback-resolver")
-
-# Monitor checks
-Agent(
-    description="Monitor checks",
-    prompt="Monitor PR #42 and fix any failures",
-    subagent_type="fx-dev:pr-check-monitor"
-)
-```
+#### resolve-pr-feedback
+Meta-skill that detects all unresolved automated feedback (Copilot, CodeRabbit, Codecov) and invokes appropriate resolvers.
 
 ## Best Practices
 
 ### Development Workflow
 
-1. **Use /dev for all tasks** - Unified command with intelligent routing
-2. **GitHub issues** - Use issue URLs for tracked work
-3. **Quick fixes** - Use `fix:` prefix for rapid error resolution
-4. **Ad-hoc tasks** - Just describe what you want to build
+1. **Describe what you want** - Skills auto-trigger based on your request
+2. **GitHub issues** - Provide issue URLs for tracked work
+3. **Bug fixes** - Describe the bug; the fix skill enforces test-first
+4. **Multi-PR work** - Use the team skill for parallel implementation
 5. **Let the SDLC skill coordinate** - It handles orchestration via sub-agents
 
 ### Pull Request Management
 
-1. **Always prepare PRs** - Use pr-preparer before creating PRs
-2. **Review for minimalism** - Run pr-changeset-minimalist to catch extraneous changes
+1. **Always prepare PRs** - pr-preparer runs before creating PRs
+2. **Review for minimalism** - pr-changeset-minimalist catches extraneous changes
 3. **Pragmatic reviews** - pr-reviewer focuses on blocking issues, not perfection
-4. **Auto-resolve Copilot nitpicks** - copilot-feedback-resolver skill handles [nitpick] comments automatically
-5. **Monitor checks** - Use pr-check-monitor to catch and fix failures early
-
-### Git Utilities
-
-1. **Research before contributing** - Use /gitingest to understand project structure
-2. **Keep fixes focused** - One error per /dev fix command
-3. **Verify GitHub auth** - Ensure `gh auth status` succeeds
+4. **Auto-resolve feedback** - copilot-feedback-resolver and rabbit-feedback-resolver handle automated comments
+5. **Monitor checks** - pr-check-monitor catches and fixes CI failures
 
 ## Configuration
 
 The skills respect project conventions from:
 - `CLAUDE.md` - Project-specific guidelines
-- `.github/copilot-instructions.md` - AI coding guidelines (updated by copilot-feedback-resolver skill)
+- `.github/copilot-instructions.md` - AI coding guidelines
 - Git commit and branch conventions
 - GitHub Actions check configurations
 
@@ -311,55 +177,29 @@ The skills respect project conventions from:
 ### GitHub Authentication
 
 ```bash
-# Check authentication status
 gh auth status
-
-# If not authenticated
-gh auth login
+gh auth login  # if not authenticated
 ```
 
 ### Sub-Agent Failures
 
-If a sub-agent fails:
 1. Check the error message
 2. Verify GitHub CLI authentication
 3. Ensure proper permissions on the repository
 4. Try running the sub-agent again with adjusted parameters
 
-### PR Check Failures
-
-If pr-check-monitor can't fix checks:
-1. Review the check failure logs
-2. Manually investigate complex failures
-3. Adjust GitHub Actions if configuration issues exist
-
-### Review Issues
-
-If pr-reviewer reports issues:
-1. Review the specific feedback
-2. Launch a sub-agent with the coder skill to fix issues
-3. Re-run pr-reviewer after fixes
-
 ## Installation
 
-This plugin is part of the fx/cc marketplace. To install:
-
-```bash
-# Install from marketplace
-/plugin marketplace add /path/to/fx-cc
-
-# Enable fx-dev plugin when prompted
-```
+This plugin is part of the fx/cc marketplace.
 
 ## Contributing
 
-To add or modify skills/commands in this plugin:
+To add or modify skills in this plugin:
 
 1. Place skill directories in `skills/`
-2. Place command markdown files in `commands/`
-3. Ensure proper frontmatter with name and description
-4. Update this README
-5. Test locally before submitting
+2. Ensure proper SKILL.md frontmatter with name and description
+3. Update this README
+4. Test locally before submitting
 
 ## License
 

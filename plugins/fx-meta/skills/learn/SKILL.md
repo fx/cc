@@ -1,11 +1,11 @@
 ---
 name: learn
-description: Update fx-cc plugin skills or commands based on conversation learnings. Use when the user says "use /learn to...", "learn to...", "remember to...", "don't do X again", or when a skill misbehaved and needs correction. This skill modifies plugin source files but does NOT commit changes - they require manual review before committing.
+description: Update fx-cc plugin skills based on conversation learnings. Use when the user says "use /learn to...", "learn to...", "remember to...", "don't do X again", or when a skill misbehaved and needs correction. This skill modifies plugin source files but does NOT commit changes - they require manual review before committing.
 ---
 
 # Learn
 
-This skill updates fx-cc marketplace plugins based on learnings from the current conversation. It modifies skill or command definitions to prevent future mistakes or improve behavior.
+This skill updates fx-cc marketplace plugins based on learnings from the current conversation. It modifies skill definitions to prevent future mistakes or improve behavior.
 
 ## Prerequisites
 
@@ -24,7 +24,7 @@ The remote must be `git@github.com:fx/cc.git`. If not accessible, inform the use
 Examine the current conversation to understand:
 
 1. **What went wrong** - Identify the specific behavior that needs correction
-2. **Root cause** - Determine which skill or command caused the issue
+2. **Root cause** - Determine which skill caused the issue
 3. **Desired behavior** - Understand what should happen instead
 
 Common scenarios:
@@ -48,7 +48,6 @@ grep -r "keyword" ~/.claude/plugins/marketplaces/fx-cc/plugins/
 
 Key locations:
 - **Skills**: `plugins/<plugin>/skills/<skill>/SKILL.md`
-- **Commands**: `plugins/<plugin>/commands/<command>.md`
 
 ### Step 3: Make Targeted Modifications
 

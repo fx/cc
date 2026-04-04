@@ -1,18 +1,15 @@
-# Fix Command
+---
+name: fix
+description: "MUST BE USED for bug fixes that require test-first verification. Use when user says '/fix', 'fix this bug', 'fix the error', 'debug this', or provides an error/bug report. This skill mandates writing a failing test BEFORE implementing any fix, then loads the SDLC workflow."
+---
+
+# Fix (Test-First Bug Resolution)
 
 Entry point for bug fixes that **mandates test-first verification**. Before ANY fix is implemented, the bug MUST be reproduced via automated test.
 
-## Usage
-
-```bash
-/fix TypeError in auth.js
-/fix Shopping cart total not updating
-/fix https://github.com/owner/repo/issues/123
-```
-
 ## Critical Rule: Test-First Verification
 
-**⛔ NEVER proceed with a fix without first writing a failing test that reproduces the bug.**
+**NEVER proceed with a fix without first writing a failing test that reproduces the bug.**
 
 This is NON-NEGOTIABLE. The workflow is:
 
@@ -91,6 +88,4 @@ Agent tool:
   description: "Implement bug fix"
 ```
 
-**Task:** [USER INPUT]
-
-The SDLC skill provides the remaining mandatory steps. Follow them exactly.
+The SDLC skill provides the remaining mandatory steps (PR creation, review, CI). Follow them exactly.

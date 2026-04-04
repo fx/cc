@@ -1,18 +1,13 @@
-# Team Command
+---
+name: team
+description: "Spawn a coordinated sub-agent team to implement a spec or multi-task feature in parallel. Use when user says '/team', 'use a team', 'parallel implementation', 'work on multiple tasks', or provides a spec/issue that requires coordinated multi-PR work. The main session acts as coordinator — no code, no commits, only delegation and quality control."
+---
+
+# Team (Coordinated Sub-Agent Implementation)
 
 Spawn a coordinated sub-agent team to implement a spec or multi-task feature. The main session (you) acts strictly as coordinator — no code, no commits, only delegation and quality control.
 
-## Usage
-
-```bash
-/team docs/specs/0001-my-feature.md
-/team Implement user authentication with OAuth and session management
-/team https://github.com/owner/repo/issues/42
-```
-
-## Action
-
-### STEP 0: Understand the Work
+## STEP 0: Understand the Work
 
 1. **If given a spec file path:** Read it to extract all tasks.
 2. **If given an issue URL:** Fetch it with `gh issue view`.
@@ -23,7 +18,7 @@ Identify:
 - Which tasks can run in parallel vs. which must be sequential
 - A sensible sub-agent-to-task mapping (1 sub-agent can own 1-3 related tasks)
 
-### STEP 1: Create the Team
+## STEP 1: Create the Team
 
 ```
 TeamCreate tool:
@@ -31,17 +26,17 @@ TeamCreate tool:
   description: "<what the team is building>"
 ```
 
-### STEP 2: Create and Organize Tasks
+## STEP 2: Create and Organize Tasks
 
-Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `TaskUpdate` (`addBlockedBy`/`addBlocks`) so agents work in the correct order.
+Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `TaskUpdate` (`addBlockedBy`/`addBlocks`) so sub-agents work in the correct order.
 
 **Task descriptions MUST include:**
 - Exactly what to implement (files, components, endpoints)
 - Acceptance criteria
 - Which spec task(s) it maps to (if from a spec)
-- Explicit instruction: "Use `/fx-dev:sdlc` skill and follow ALL steps in order"
+- Explicit instruction: "Use `fx-dev:sdlc` skill and follow ALL steps in order"
 
-### STEP 3: Spawn Teammate Sub-Agents
+## STEP 3: Spawn Teammate Sub-Agents
 
 Spawn sub-agents using the Agent tool. Each sub-agent gets a clear name and assignment.
 
@@ -78,7 +73,7 @@ Agent tool:
 - For dependent tasks, wait until the blocking sub-agent completes before spawning the next
 - Assign blocked tasks to sub-agents only after their dependencies merge
 
-### STEP 4: Coordinate (Your Main Loop)
+## STEP 4: Coordinate (Your Main Loop)
 
 **You are the coordinator. Your ONLY actions are:**
 
@@ -100,33 +95,31 @@ Agent tool:
 6. **Unblock** — After merging, notify waiting sub-agents or spawn sub-agents for newly-unblocked tasks
 7. **Repeat** — Continue until all tasks are complete
 
-### ⛔ MANDATORY MERGE GATE CHECKLIST (BLOCKING)
+### MANDATORY MERGE GATE CHECKLIST (BLOCKING)
 
 **BEFORE running `gh pr merge` on ANY PR — no matter how small — you MUST verify ALL of the following. This is non-negotiable. A single unmet condition means DO NOT MERGE.**
 
 | # | Gate | How to verify | Blocking? |
 |---|------|--------------|-----------|
-| 1 | **CI checks ALL green** | `gh pr checks <NUMBER>` — every check must show `pass` | ⛔ YES |
-| 2 | **Copilot review RECEIVED** | `gh api repos/{owner}/{repo}/pulls/<NUMBER>/reviews --jq '.[] \| select(.user.login == "copilot-pull-request-reviewer[bot]")'` — must return a review | ⛔ YES |
-| 3 | **Copilot comments ADDRESSED** | `gh pr view <NUMBER> --json reviewThreads --jq '[.reviewThreads[] \| select(.isResolved == false)] \| length'` — must be 0 unresolved | ⛔ YES |
-| 4 | **CodeRabbit review received** (if configured) | Check reviews for `coderabbitai[bot]` | ⛔ YES |
-| 5 | **CodeRabbit comments addressed** (if configured) | All CodeRabbit threads resolved | ⛔ YES |
-| 6 | **Codecov passing** | `gh pr checks <NUMBER>` — codecov/patch and codecov/project both pass, 0 missing lines | ⛔ YES |
-| 7 | **Implementation matches spec/task** | Read the diff and verify against requirements | ⛔ YES |
-| 8 | **Spec task marked complete** | Check via project-management skill | ⛔ YES |
-| 9 | **PR description is clear** | Read PR body | ⛔ YES |
+| 1 | **CI checks ALL green** | `gh pr checks <NUMBER>` — every check must show `pass` | YES |
+| 2 | **Copilot review RECEIVED** | `gh api repos/{owner}/{repo}/pulls/<NUMBER>/reviews --jq '.[] \| select(.user.login == "copilot-pull-request-reviewer[bot]")'` — must return a review | YES |
+| 3 | **Copilot comments ADDRESSED** | `gh pr view <NUMBER> --json reviewThreads --jq '[.reviewThreads[] \| select(.isResolved == false)] \| length'` — must be 0 unresolved | YES |
+| 4 | **CodeRabbit review received** (if configured) | Check reviews for `coderabbitai[bot]` | YES |
+| 5 | **CodeRabbit comments addressed** (if configured) | All CodeRabbit threads resolved | YES |
+| 6 | **Codecov passing** | `gh pr checks <NUMBER>` — codecov/patch and codecov/project both pass, 0 missing lines | YES |
+| 7 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
+| 8 | **Spec task marked complete** | Check via project-management skill | YES |
+| 9 | **PR description is clear** | Read PR body | YES |
 
 **If Copilot review has NOT been received yet:** WAIT. Poll every 60 seconds for up to 15 minutes. Do NOT merge without it.
 
 **If a "small" or "follow-up" PR:** Same rules. No exceptions. PR size is NEVER a reason to skip merge gates.
 
-**Incident context:** PR #430 was merged without waiting for Copilot review. Copilot left 5 valid comments (timing bugs, missing tests, race condition) that were never addressed. This checklist exists to prevent that from ever happening again.
-
-### STEP 5: Shutdown
+## STEP 5: Shutdown
 
 When all tasks are complete and all PRs merged:
 
-1. Verify all spec tasks are marked done (load `/fx-dev:project-management` to check)
+1. Verify all spec tasks are marked done (load `fx-dev:project-management` to check)
 2. Send shutdown requests to all teammates
 3. Clean up the team with `TeamDelete`
 4. Report final summary to user
@@ -141,7 +134,7 @@ When all tasks are complete and all PRs merged:
 - **NEVER merge without completing the MERGE GATE CHECKLIST** — every gate must pass, every time, for every PR
 - **NEVER merge without Copilot review** — if not received, WAIT for it. No exceptions for PR size.
 - **NEVER mark a teammate's PR as ready** until you've inspected it
-- **ALWAYS use `/fx-dev:project-management`** to verify task tracking
+- **ALWAYS use `fx-dev:project-management`** to verify task tracking
 - **ALWAYS ensure sub-agents follow full SDLC** — if a sub-agent skips steps, send them back
 - **ALWAYS run the full merge gate checklist** even for "trivial" or "follow-up" PRs
 
