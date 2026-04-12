@@ -57,13 +57,15 @@ Agent tool:
            4. Create your PR as a DRAFT
            5. Wait for and resolve Copilot/CodeRabbit review feedback
            6. Wait for and resolve CI check failures
-           7. Send a message to the coordinator when your PR is ready
+           7. Run verify-web-change (Skill tool: skill='fx-dev:verify-web-change') to confirm the app loads and your changes work in the browser
+           8. Send a message to the coordinator when your PR is ready — you MUST include whether browser verification passed or failed
 
            CRITICAL RULES:
-           - You MUST follow full SDLC progression (requirements → plan → implement → PR → review → CI)
-           - You MUST NOT skip the review or CI steps
+           - You MUST follow full SDLC progression (requirements → plan → implement → PR → review → CI → verify)
+           - You MUST NOT skip the review, CI, or browser verification steps
            - You MUST NOT mark your PR as ready-for-review yourself
-           - You MUST send a message when done with PR URL and summary"
+           - You MUST run verify-web-change before reporting completion — this catches runtime errors that CI misses (circular deps, SSR issues, etc.)
+           - You MUST send a message when done with PR URL, summary, and browser verification result"
   description: "<3-5 word summary>"
   mode: "bypassPermissions"
 ```
@@ -110,6 +112,22 @@ Agent tool:
 | 7 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
 | 8 | **Spec task marked complete** | Check via project-management skill | YES |
 | 9 | **PR description is clear** | Read PR body | YES |
+| 10 | **Browser verification completed** | Sub-agent reported "browser verification passed" in their completion message. If NOT reported, spawn a verify agent (see below). | YES |
+
+**If browser verification was NOT reported by the sub-agent:** Do NOT skip it. Spawn a dedicated verify agent:
+
+```
+Agent tool:
+  name: "verify-<pr-number>"
+  prompt: "Load the verify-web-change skill (Skill tool: skill='fx-dev:verify-web-change').
+           Verify PR #<NUMBER> on branch <branch-name>.
+           Check out the branch, start the dev server, and confirm the app loads without errors.
+           Report back whether verification passed or failed, with details of any errors."
+  description: "Verify PR #<NUMBER> in browser"
+  mode: "bypassPermissions"
+```
+
+**Why this gate exists:** CI (lint + typecheck + vitest) does NOT catch runtime-only errors like circular dependencies, SSR failures, or broken module initialization. These only surface when the app actually runs in a browser. This gate was added after shipping 14 PRs with a circular dependency that broke the entire app at runtime while all CI checks passed.
 
 **If Copilot review has NOT been received yet:** WAIT. Poll every 60 seconds for up to 15 minutes. Do NOT merge without it.
 
@@ -137,6 +155,7 @@ When all tasks are complete and all PRs merged:
 - **ALWAYS use `fx-dev:project-management`** to verify task tracking
 - **ALWAYS ensure sub-agents follow full SDLC** — if a sub-agent skips steps, send them back
 - **ALWAYS run the full merge gate checklist** even for "trivial" or "follow-up" PRs
+- **NEVER merge without browser verification** — if the sub-agent didn't report it, spawn a verify agent. CI alone does NOT catch runtime errors.
 
 ## Handling Sub-Agent Issues
 
