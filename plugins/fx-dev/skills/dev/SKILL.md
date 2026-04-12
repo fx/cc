@@ -255,35 +255,11 @@ Agent tool:
 
 ---
 
-### STEP 5.5: Web Verification (if applicable)
+### STEP 5.5: Test Plan Verification (MANDATORY)
 
-**Run this step if the PR touches web application code.** Skip if the changes are purely backend, CLI, infrastructure, or documentation with no UI component.
+**This step is MANDATORY for every PR that has a test plan.** It is NOT limited to web/UI changes. Backend changes, platform integrations, CLI tools, and infrastructure changes all have test plans that must be addressed.
 
-#### 5.5.1 Detect Web Changes
-
-```bash
-# Check if any changed files are web-related
-WEB_FILES=$(git diff main --name-only | grep -E '\.(tsx|jsx|vue|svelte|html|css|scss|less)$' || true)
-
-# Check for web framework configs in the repo
-HAS_WEB_STACK=false
-for cfg in vite.config.ts vite.config.js next.config.js next.config.ts next.config.mjs nuxt.config.ts svelte.config.js angular.json astro.config.mjs; do
-    if [[ -f "$cfg" ]]; then
-        HAS_WEB_STACK=true
-        break
-    fi
-done
-
-if [[ -n "$WEB_FILES" ]] && [[ "$HAS_WEB_STACK" == "true" ]]; then
-    echo "Web changes detected — proceeding with browser verification."
-else
-    echo "No web changes detected — skipping Step 5.5."
-fi
-```
-
-If no web changes are detected, skip to Step 6.
-
-#### 5.5.2 Extract the Test Plan from the PR
+#### 5.5.1 Extract and Classify the Test Plan
 
 Read the PR description and extract the Test Plan section:
 
@@ -293,22 +269,35 @@ gh pr view [PR_NUMBER] --json body --jq '.body'
 
 Parse the `## Test plan` section. Each `- [ ]` item is a verification target.
 
-If the PR has no Test Plan section, construct one from the PR diff — identify the routes/pages affected and the UI changes made, then create verification steps. Add them to the PR description before proceeding:
+If the PR has no Test Plan section, construct one from the PR diff — identify what changed and create verification steps. Add them to the PR description before proceeding.
+
+**Classify each test plan item into one of three categories:**
+
+| Category | Description | Action |
+|----------|-------------|--------|
+| **Browser-verifiable** | Can be tested via Playwright MCP (UI routes, visual changes, interactions) | Run verify-web-change (Step 5.5.2) |
+| **Programmatically verifiable** | Can be tested via CLI, API calls, log inspection, or automated scripts | Run verification commands directly (Step 5.5.3) |
+| **Manual-only** | Requires external systems, user accounts, or physical interaction (e.g., "send a Discord message", "check email") | Annotate for user and prompt them to verify (Step 5.5.4) |
+
+#### 5.5.2 Browser Verification (for browser-verifiable items)
+
+**Skip this sub-step if no test plan items are browser-verifiable.**
+
+Detect if browser verification is possible:
 
 ```bash
-gh pr edit [PR_NUMBER] --body "$(cat <<'EOF'
-[existing body]
+WEB_FILES=$(git diff main --name-only | grep -E '\.(tsx|jsx|vue|svelte|html|css|scss|less)$' || true)
 
-## Test plan
-- [ ] [generated verification step 1]
-- [ ] [generated verification step 2]
-EOF
-)"
+HAS_WEB_STACK=false
+for cfg in vite.config.ts vite.config.js next.config.js next.config.ts next.config.mjs nuxt.config.ts svelte.config.js angular.json astro.config.mjs; do
+    if [[ -f "$cfg" ]]; then
+        HAS_WEB_STACK=true
+        break
+    fi
+done
 ```
 
-#### 5.5.3 Run verify-web-change via Sub-Agent
-
-**MANDATORY: Launch a sub-agent that loads the verify-web-change skill.** The sub-agent handles the full browser verification lifecycle (Docker, dev server, Playwright MCP).
+If web changes exist and browser-verifiable items are present, launch the verify-web-change sub-agent:
 
 ```
 Agent tool:
@@ -316,7 +305,7 @@ Agent tool:
 
            Verify the following Test Plan items for PR #[PR_NUMBER] using browser automation:
 
-           [TEST PLAN ITEMS FROM 5.5.2]
+           [BROWSER-VERIFIABLE TEST PLAN ITEMS]
 
            For each item:
            1. Navigate to the relevant page/route
@@ -329,19 +318,52 @@ Agent tool:
   description: "Verify web changes in browser"
 ```
 
-#### 5.5.4 Update the Test Plan in the PR Description
+#### 5.5.3 Programmatic Verification (for programmatically verifiable items)
 
-After the sub-agent reports results, update the PR description to check off verified items and annotate failures:
+**Skip this sub-step if no test plan items are programmatically verifiable.**
+
+For items that can be verified via commands (API calls, log inspection, test runs, etc.), run the verification directly:
+
+- Check test output: `bun --bun run test` — confirm relevant tests pass
+- Inspect logs: Check dev server output for expected behavior
+- Call APIs: Use `curl` or similar to verify endpoint behavior
+- Check database state: Verify schema/data changes applied correctly
+
+Record PASS/FAIL per item with evidence.
+
+#### 5.5.4 Manual Verification (for manual-only items)
+
+**⛔ NEVER silently skip manual-only test plan items.**
+
+For items that require manual interaction (external services, physical devices, user accounts), you MUST:
+
+1. **Tell the user** which items require their manual verification
+2. **Explain what to test** — be specific about the steps
+3. **Ask them to confirm** each item passes or fails
+4. **Wait for their response** before proceeding
+
+Example:
+```
+The following test plan items require manual verification:
+- [ ] Send a message to the Discord bot and verify the typing indicator appears immediately
+- [ ] Confirm the typing indicator stays active for responses > 10 seconds
+
+Please test these and let me know the results.
+```
+
+#### 5.5.5 Update the Test Plan in the PR Description
+
+**MANDATORY: After all verification (automated + manual), update the PR description.**
 
 ```bash
-# Fetch current PR body
 BODY=$(gh pr view [PR_NUMBER] --json body --jq '.body')
 ```
 
 For each Test Plan item:
-- **Verified**: Change `- [ ]` to `- [x]` (checked)
-- **Failed**: Leave as `- [ ]` and append failure details: `- [ ] ~~Item~~ — FAILED: [reason]`
-- **Could not verify** (e.g., requires auth, external service): Leave as `- [ ]` and append: `- [ ] Item — SKIPPED: [reason]`
+- **Verified (pass)**: Change `- [ ]` to `- [x]`
+- **Verified (fail)**: Leave as `- [ ]` and append: `— FAILED: [reason]`
+- **Manual — confirmed by user**: Change `- [ ]` to `- [x]` and append: `(manually verified)`
+- **Manual — not yet verified**: Leave as `- [ ]` and append: `— requires manual testing`
 
 Update the PR:
 
@@ -349,7 +371,9 @@ Update the PR:
 gh pr edit [PR_NUMBER] --body "$UPDATED_BODY"
 ```
 
-#### 5.5.5 Handle Failures
+**⛔ DO NOT PROCEED to Step 6 until every test plan item has been addressed** — either verified (pass/fail), confirmed by user, or explicitly annotated as requiring manual testing.
+
+#### 5.5.6 Handle Failures
 
 If any Test Plan items failed verification:
 1. Launch a sub-agent with the coder skill to fix:
@@ -357,12 +381,12 @@ If any Test Plan items failed verification:
    Agent tool:
      prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
 
-              Fix these verification failures from browser testing:
-              [FAILURE DETAILS FROM verify-web-change]
+              Fix these verification failures:
+              [FAILURE DETAILS]
               Push fixes to the PR branch."
-     description: "Fix web verification failures"
+     description: "Fix verification failures"
    ```
-2. After fixes are pushed, re-run Step 5.5.3 (verify again)
+2. After fixes are pushed, re-run the relevant verification step (5.5.2 or 5.5.3)
 3. **Maximum 2 fix iterations.** If still failing after 2 attempts, proceed to Step 6 and note the unverified items in the PR description.
 
 **⛔ DO NOT PROCEED until verification passes or max iterations reached**
@@ -672,7 +696,7 @@ All sub-agents are launched via the Agent tool. Each loads its skill via the Ski
 | 4,6.2,8.2 | Coder | `fx-dev:coder` |
 | 4.5 | Code Cleanup | `simplify` |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
-| 5.5 | Web Verification | `fx-dev:verify-web-change` |
+| 5.5.2 | Browser Verification | `fx-dev:verify-web-change` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
 | 6.4 | PR Feedback Resolver | `fx-dev:resolve-pr-feedback` |
 | 7.4 | CI Failure Resolver | `fx-dev:resolve-ci-failures` |
@@ -695,8 +719,8 @@ Workflow complete when ALL true:
 - ✅ Code implemented with atomic commits
 - ✅ Code reviewed via /simplify (reuse, quality, efficiency)
 - ✅ PR created with description (including links to related specs/changes and test plan)
-- ✅ Web changes verified in browser via verify-web-change (if applicable)
-- ✅ PR test plan items checked off with verification results
+- ✅ ALL test plan items addressed: browser-verified, programmatically verified, or user-confirmed manual verification (NEVER silently skipped)
+- ✅ PR test plan items checked off or annotated with verification results in the PR description
 - ✅ Self-review done, issues fixed
 - ✅ Automated review feedback resolved (Copilot/CodeRabbit)
 - ✅ All CI/CD checks pass
