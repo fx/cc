@@ -612,6 +612,7 @@ Agent tool:
            - Mark those tasks as done: - [x] Task name (PR #N)
            - Do NOT mark tasks that were not addressed
            - If all tasks in a change doc are done, update Status: complete
+           - SYNC INDEXES: Update docs/index.yml (status field) and docs/index.md (table row) to match
            - Commit the change with: docs: mark completed tasks in [DOC_NAME]
            - Push to the PR branch"
   description: "Update task tracking"

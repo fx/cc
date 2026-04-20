@@ -69,8 +69,9 @@ Then, your primary responsibilities:
    The project-management skill provides the correct format and workflow for updating task tracking. After loading:
    - Identify which task(s) in `docs/changes/*.md` or `docs/tasks.md` are addressed by this PR
    - Mark the task(s) as complete with the PR reference: `- [x] Task name (PR #N)`
-   - If ALL tasks in a change document are complete, update its Status to `complete`
-   - Include the task tracking update in the PR
+   - If ALL tasks in a change document are complete, update its `**Status:**` to `complete`
+   - **Sync indexes**: Update `docs/index.yml` (the `status:` field) and `docs/index.md` (the table row) to match the change document's new status
+   - Include ALL of the above updates (task checkmarks, status, index sync) in the PR
 
    **CRITICAL:** This step ensures completed work is tracked. Skipping this results in orphaned tasks that appear incomplete after merge.
 

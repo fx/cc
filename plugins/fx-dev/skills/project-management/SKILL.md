@@ -132,12 +132,15 @@ When `docs/tasks.md` doesn't exist:
    - "Other (Jira, Linear, etc.)"
 3. **Migrate existing tracking** (PROJECT.md, TODO.md, STATUS.md) if present
 
-### Workflow 5: Update Indexes
+### Workflow 5: Update Indexes (CRITICAL — MUST NOT BE SKIPPED)
 
-After any task modification (creation, completion, status change), update the documentation indexes:
+**After ANY change document status change (draft → in-progress → complete), update ALL THREE locations in the SAME PR:**
 
-1. **Update `docs/index.yml`** — Update the status field for any affected change documents
-2. **Update `docs/index.md`** — Update the status in the table
+1. **Update the change document itself** — Set `**Status:** complete` (or `in-progress`) in the frontmatter
+2. **Update `docs/index.yml`** — Update the `status:` field for the affected change entry
+3. **Update `docs/index.md`** — Update the status in the corresponding table row
+
+**All three updates MUST be included in the same commit/PR that marks tasks complete.** Never leave the index files stale — they are the primary way contributors discover change document status. Forgetting to sync indexes causes massive drift that requires manual cleanup.
 
 ---
 
@@ -162,7 +165,9 @@ This is fast and idempotent — it checks what exists and only creates/modifies 
 
 1. Mark task complete in the file where the task lives: `- [x] Task (PR #N)`
 2. Task lists may be in `docs/tasks.md` OR in `docs/changes/*.md` files
-3. Include the task-list update in the PR
+3. If ALL tasks in a change document are now complete, update its `**Status:**` to `complete`
+4. **Sync indexes** — Update `docs/index.yml` and `docs/index.md` to reflect the new status (see Workflow 5)
+5. Include ALL of the above updates in the same PR
 
 ### Before Creating Tasks:
 
