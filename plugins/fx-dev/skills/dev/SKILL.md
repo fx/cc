@@ -424,44 +424,23 @@ Agent tool:
   description: "Fix review issues"
 ```
 
-#### 6.3 Request and Wait for Copilot Review (15 minute timeout)
+#### 6.3 Copilot Review (Request, Wait, Resolve)
 
-**First, request Copilot review via the GitHub API:**
-
-```bash
-# Request Copilot review using JSON body format (most reliable)
-gh api --method POST /repos/{owner}/{repo}/pulls/[PR_NUMBER]/requested_reviewers \
-  --input - <<'EOF'
-{"reviewers":["copilot-pull-request-reviewer[bot]"]}
-EOF
-```
-
-**Then run the bundled script in the FOREGROUND to wait for completion (15 minute timeout):**
-
-```bash
-# IMPORTANT: Use the FULL path from the skill's base directory
-# CRITICAL: Run in FOREGROUND — do NOT use run_in_background
-bash [SKILL_BASE_DIR]/skills/dev/scripts/wait-for-copilot-review.sh [PR_NUMBER]
-```
-
-**⚠️ CRITICAL: Run this script in the FOREGROUND with `timeout: 660000` (11 minutes) on the Bash tool call.** Do NOT use `run_in_background`. The output must be directly available to determine the result and proceed to the next step.
-
-Script behavior:
-- Checks if Copilot review was requested
-- Polls every 60s until review is received (timeout: 900s / 15 minutes)
-- Exit 0: Review received -> **proceed to Step 6.4 immediately**
-- Exit 1: Timeout after 15 minutes -> proceed to Step 6.4 anyway (will find no threads)
-- Exit 2: Review request not detected -> re-request using JSON body format above, then re-run script
-
-#### 6.4 Handle Automated Review Feedback (Copilot/CodeRabbit)
-
-**ALWAYS invoke this skill after Step 6.3, regardless of whether the Copilot review arrived or timed out.** This skill detects and resolves all unresolved automated review threads.
+**MANDATORY: Invoke the copilot-review skill.** This handles the full Copilot lifecycle — requesting review, waiting for it (up to 15 min), and resolving all feedback.
 
 ```
-Skill tool: skill="fx-dev:resolve-pr-feedback"
+Skill tool: skill="fx-dev:copilot-review", args="[PR_NUMBER]"
 ```
 
-**⛔ DO NOT PROCEED until all review issues resolved**
+**Copilot reviews EVERY PR automatically — it does NOT need to be configured. It is completely independent of CI. NEVER skip this step.**
+
+The skill will:
+1. Request Copilot review via the GitHub API
+2. Poll until the review is received (15 min timeout)
+3. Invoke `fx-dev:resolve-pr-feedback` to categorize and resolve all threads
+4. Confirm 0 unresolved threads remain
+
+**⛔ DO NOT PROCEED until the skill confirms all Copilot feedback is resolved**
 
 ---
 
@@ -550,10 +529,13 @@ Step 7.3 (wait) → fail → Step 7.4 (fix) → Step 7.3 (wait) → ...
 # 1. CI checks — ALL must be green
 gh pr checks [NUMBER]
 
-# 2. Copilot review — MUST be received (wait up to 10 min if pending)
-gh api repos/{owner}/{repo}/pulls/[NUMBER]/reviews \
-  --jq '.[] | select(.user.login == "copilot-pull-request-reviewer[bot]") | {state, submitted_at}'
-
+# 2. Copilot review — MUST be received and resolved (if not already done in Step 6.3)
+# Use the dedicated skill — NEVER raw gh api commands
+```
+```
+Skill tool: skill="fx-dev:copilot-review", args="[NUMBER]"
+```
+```bash
 # 3. Unresolved review threads — MUST be 0
 gh pr view [NUMBER] --json reviewThreads \
   --jq '[.reviewThreads[] | select(.isResolved == false)] | length'
@@ -565,13 +547,11 @@ gh pr checks [NUMBER]  # verify codecov/patch and codecov/project
 **Merge gate checklist (every item must pass):**
 - [ ] PR is open and mergeable
 - [ ] ALL CI checks green
-- [ ] Copilot review RECEIVED (not just requested — actually submitted)
+- [ ] Copilot review RECEIVED and ALL threads resolved (via `fx-dev:copilot-review` skill — NEVER raw `gh api`)
 - [ ] ALL Copilot review comments addressed and threads resolved
 - [ ] CodeRabbit review received and addressed (if configured)
 - [ ] Codecov coverage passing with 0 missing lines
 - [ ] No unresolved review threads from any reviewer
-
-**If Copilot review not yet received:** WAIT. Poll every 60s for up to 15 minutes. NEVER proceed without it.
 
 **PR size is NEVER a reason to skip merge gates.** A 1-line fix gets the same verification as a 1000-line feature.
 
@@ -699,7 +679,8 @@ All sub-agents are launched via the Agent tool. Each loads its skill via the Ski
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 5.5.2 | Browser Verification | `fx-dev:verify-web-change` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
-| 6.4 | PR Feedback Resolver | `fx-dev:resolve-pr-feedback` |
+| 6.3 | Copilot Review | `fx-dev:copilot-review` |
+| 6.3 | PR Feedback Resolver | `fx-dev:resolve-pr-feedback` (called by copilot-review) |
 | 7.4 | CI Failure Resolver | `fx-dev:resolve-ci-failures` |
 
 **Pattern for every sub-agent call:**
