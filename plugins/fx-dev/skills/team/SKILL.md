@@ -7,6 +7,16 @@ description: "Spawn a coordinated sub-agent team to implement a spec or multi-ta
 
 Spawn a coordinated sub-agent team to implement a spec or multi-task feature. The main session (you) acts strictly as coordinator — no code, no commits, only delegation and quality control.
 
+## ⛔ Critical Architecture Rule: Coordinator Owns the SDLC
+
+**Sub-agents CANNOT spawn their own sub-agents.** If you tell a teammate to "run the full SDLC," it will try to do implementation inline (instead of delegating to a coder sub-agent), bloat its context window, and skip later steps like Copilot review. This has been observed in production.
+
+**Therefore: YOU (the coordinator) orchestrate each SDLC step per task.** You spawn focused, single-purpose agents for each step and handle cross-cutting concerns (Copilot review, CI, merge gates) directly.
+
+**Never tell an agent to "load the dev skill and follow all steps." Instead, give each agent ONE focused job.**
+
+---
+
 ## STEP 0: Understand the Work
 
 1. **If given a spec file path:** Read it to extract all tasks.
@@ -16,7 +26,7 @@ Spawn a coordinated sub-agent team to implement a spec or multi-task feature. Th
 Identify:
 - Total tasks and their dependencies
 - Which tasks can run in parallel vs. which must be sequential
-- A sensible sub-agent-to-task mapping (1 sub-agent can own 1-3 related tasks)
+- A sensible task grouping (1 coder agent can own 1-3 related tasks)
 
 ## STEP 1: Create the Team
 
@@ -28,93 +38,68 @@ TeamCreate tool:
 
 ## STEP 2: Create and Organize Tasks
 
-Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `TaskUpdate` (`addBlockedBy`/`addBlocks`) so sub-agents work in the correct order.
+Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `TaskUpdate` (`addBlockedBy`/`addBlocks`) so work proceeds in the correct order.
 
 **Task descriptions MUST include:**
 - Exactly what to implement (files, components, endpoints)
 - Acceptance criteria
 - Which spec task(s) it maps to (if from a spec)
-- Explicit instruction: "Use `fx-dev:dev` skill and follow ALL steps in order"
 
-## STEP 3: Spawn Teammate Sub-Agents
+## STEP 3: Execute Tasks (Coordinator-Driven SDLC)
 
-Spawn sub-agents using the Agent tool. Each sub-agent gets a clear name and assignment.
+**Load the dev skill** (`Skill tool: skill='fx-dev:dev'`) and read its SDLC steps. The dev skill is the single source of truth for the development workflow — do not duplicate its instructions here.
 
-```
-Agent tool:
-  team_name: "<team-name>"
-  name: "<descriptive-name>"  # e.g., "schema-worker", "ui-worker"
-  prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev'), then:
+For each task (or group of parallel tasks), walk through the dev skill's SDLC steps yourself. For each step, decide:
 
-           You are a teammate on the <team-name> team.
+1. **Can I handle this step directly?** (e.g., invoking a skill, running a `gh` command) → Do it yourself.
+2. **Does this step require writing/modifying code?** → Spawn a focused agent with a single-purpose prompt for just that step.
 
-           YOUR TASK: <task description from TaskCreate>
+### Key orchestration principles
 
-           MANDATORY WORKFLOW:
-           1. The dev skill is already loaded — follow EVERY step of its SDLC workflow in order, no skipping
-           2. Use /fx-dev:project-management skill to mark your spec task(s) as done
-           3. Include the task completion change in your PR
-           4. Create your PR as a DRAFT
-           5. Wait for and resolve Copilot/CodeRabbit review feedback
-           6. Wait for and resolve CI check failures
-           7. Run verify-web-change (Skill tool: skill='fx-dev:verify-web-change') to confirm the app loads and your changes work in the browser
-           8. Send a message to the coordinator when your PR is ready — you MUST include whether browser verification passed or failed
+**Implementation steps** (planning, coding, testing) → Spawn focused agents. Use `isolation: "worktree"` for coder agents so each works on an isolated copy. Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC.
 
-           CRITICAL RULES:
-           - You MUST follow full SDLC progression (requirements → plan → implement → PR → review → CI → verify)
-           - You MUST NOT skip the review, CI, or browser verification steps
-           - You MUST NOT mark your PR as ready-for-review yourself
-           - You MUST run verify-web-change before reporting completion — this catches runtime errors that CI misses (circular deps, SSR issues, etc.)
-           - You MUST send a message when done with PR URL, summary, and browser verification result"
-  description: "<3-5 word summary>"
-  mode: "bypassPermissions"
-```
+**PR creation** → Either do it yourself via `gh pr create` or spawn a focused PR preparer agent. Load `fx-dev:github` skill first.
 
-**Parallelization rules:**
-- Spawn sub-agents for independent tasks simultaneously (multiple Agent calls in one message)
-- For dependent tasks, wait until the blocking sub-agent completes before spawning the next
-- Assign blocked tasks to sub-agents only after their dependencies merge
+**Review and CI steps** (Copilot review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. Invoke `fx-dev:copilot-review` yourself. Run `gh pr checks --watch` yourself. Invoke `fx-dev:resolve-pr-feedback` yourself.
 
-## STEP 4: Coordinate (Your Main Loop)
+**Merge gates** → Always handle directly. See MANDATORY MERGE GATE CHECKLIST below.
 
-**You are the coordinator. Your ONLY actions are:**
+**Browser verification** → Spawn a dedicated verify agent if the task has UI changes.
 
-1. **Monitor** — Watch for teammate messages reporting PR completion
-2. **Inspect** — Review each PR for completeness:
-   ```bash
-   gh pr view <NUMBER> --json title,body,additions,deletions,files,reviews,statusCheckRollup
-   gh pr diff <NUMBER>
-   ```
-3. **Validate** — Run the MANDATORY MERGE GATE CHECKLIST (see below). **Every single item must pass. No exceptions.**
-4. **Mark ready** — Only when ALL merge gate checks pass:
-   ```bash
-   gh pr ready <NUMBER>
-   ```
-5. **Merge** — After PR is marked ready and all checks still green:
-   ```bash
-   gh pr merge <NUMBER> --squash --delete-branch
-   ```
-6. **Unblock** — After merging, notify waiting sub-agents or spawn sub-agents for newly-unblocked tasks
-7. **Repeat** — Continue until all tasks are complete
+### Parallelization
 
-### MANDATORY MERGE GATE CHECKLIST (BLOCKING)
+- Spawn multiple coder agents simultaneously for independent tasks (each in its own worktree)
+- For dependent tasks, wait until the blocking task's PR is merged before spawning the next coder
+- After merging, repeat for newly-unblocked tasks
+
+---
+
+## MANDATORY MERGE GATE CHECKLIST (BLOCKING)
 
 **BEFORE running `gh pr merge` on ANY PR — no matter how small — you MUST verify ALL of the following. This is non-negotiable. A single unmet condition means DO NOT MERGE.**
 
 | # | Gate | How to verify | Blocking? |
 |---|------|--------------|-----------|
 | 1 | **CI checks ALL green** | `gh pr checks <NUMBER>` — every check must show `pass` | YES |
-| 2 | **Copilot review RECEIVED** | `gh api repos/{owner}/{repo}/pulls/<NUMBER>/reviews --jq '.[] \| select(.user.login == "copilot-pull-request-reviewer[bot]")'` — must return a review | YES |
-| 3 | **Copilot comments ADDRESSED** | `gh pr view <NUMBER> --json reviewThreads --jq '[.reviewThreads[] \| select(.isResolved == false)] \| length'` — must be 0 unresolved | YES |
-| 4 | **CodeRabbit review received** (if configured) | Check reviews for `coderabbitai[bot]` | YES |
-| 5 | **CodeRabbit comments addressed** (if configured) | All CodeRabbit threads resolved | YES |
-| 6 | **Codecov passing** | `gh pr checks <NUMBER>` — codecov/patch and codecov/project both pass, 0 missing lines | YES |
-| 7 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
-| 8 | **Spec task marked complete** | Check via project-management skill | YES |
-| 9 | **PR description is clear** | Read PR body | YES |
-| 10 | **Browser verification completed** | Sub-agent reported "browser verification passed" in their completion message. If NOT reported, spawn a verify agent (see below). | YES |
+| 2 | **Copilot review RECEIVED and feedback RESOLVED** | Invoke `fx-dev:copilot-review` skill — confirm 0 unresolved threads | YES |
+| 3 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
+| 4 | **Spec task marked complete** | Check via project-management skill | YES |
+| 5 | **PR description is clear** | Read PR body | YES |
+| 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
 
-**If browser verification was NOT reported by the sub-agent:** Do NOT skip it. Spawn a dedicated verify agent:
+### ⛔ Copilot Gate (Gate 2) — CRITICAL
+
+**Copilot reviews EVERY pull request automatically. It does NOT need to be "configured" or "enabled." It is completely independent of CI. NEVER use raw `gh api` commands to check Copilot — use the dedicated skill.**
+
+```
+Skill tool: skill="fx-dev:copilot-review", args="<PR_NUMBER>"
+```
+
+This skill handles the full lifecycle: request review → wait (up to 15 min) → resolve all feedback. Only proceed to merge after it confirms 0 unresolved threads.
+
+### Browser Verification Gate (Gate 6)
+
+For tasks with UI changes, spawn a dedicated verify agent:
 
 ```
 Agent tool:
@@ -127,18 +112,16 @@ Agent tool:
   mode: "bypassPermissions"
 ```
 
-**Why this gate exists:** CI (lint + typecheck + vitest) does NOT catch runtime-only errors like circular dependencies, SSR failures, or broken module initialization. These only surface when the app actually runs in a browser. This gate was added after shipping 14 PRs with a circular dependency that broke the entire app at runtime while all CI checks passed.
-
-**If Copilot review has NOT been received yet:** WAIT. Poll every 60 seconds for up to 15 minutes. Do NOT merge without it.
+**Why this gate exists:** CI does NOT catch runtime-only errors like circular dependencies, SSR failures, or broken module initialization.
 
 **If a "small" or "follow-up" PR:** Same rules. No exceptions. PR size is NEVER a reason to skip merge gates.
 
-## STEP 5: Shutdown
+## STEP 4: Shutdown
 
 When all tasks are complete and all PRs merged:
 
 1. Verify all spec tasks are marked done (load `fx-dev:project-management` to check)
-2. Send shutdown requests to all teammates
+2. Send shutdown requests to all active teammates
 3. Clean up the team with `TeamDelete`
 4. Report final summary to user
 
@@ -146,21 +129,22 @@ When all tasks are complete and all PRs merged:
 
 ## Coordinator Rules (NON-NEGOTIABLE)
 
-- **NEVER write code yourself** — all implementation goes through `fx-dev:dev` sub-agents
-- **NEVER create branches or commits** — sub-agents handle this via SDLC
+- **NEVER write code yourself** — all implementation goes through coder agents
+- **NEVER create branches or commits** — coder agents handle this
+- **NEVER delegate the full SDLC to a single agent** — agents cannot spawn sub-agents, so they will inline everything and skip later steps
 - **NEVER skip PR inspection** — every PR gets reviewed before marking ready
 - **NEVER merge without completing the MERGE GATE CHECKLIST** — every gate must pass, every time, for every PR
-- **NEVER merge without Copilot review** — if not received, WAIT for it. No exceptions for PR size.
+- **NEVER merge without Copilot review** — always invoke `fx-dev:copilot-review` yourself. No exceptions.
 - **NEVER mark a teammate's PR as ready** until you've inspected it
+- **ALWAYS handle Copilot review and CI monitoring directly** — these are coordinator responsibilities, not sub-agent responsibilities
 - **ALWAYS use `fx-dev:project-management`** to verify task tracking
-- **ALWAYS ensure sub-agents follow full SDLC** — if a sub-agent skips steps, send them back
 - **ALWAYS run the full merge gate checklist** even for "trivial" or "follow-up" PRs
-- **NEVER merge without browser verification** — if the sub-agent didn't report it, spawn a verify agent. CI alone does NOT catch runtime errors.
+- **NEVER merge without browser verification** — spawn a verify agent if needed. CI alone does NOT catch runtime errors.
 
-## Handling Sub-Agent Issues
+## Handling Agent Issues
 
-If a sub-agent reports problems or skips SDLC steps:
+If a coder agent reports problems:
 
-1. **Send a message** telling them exactly what step they missed
-2. **Do NOT do the work for them** — they must follow the workflow
-3. If a sub-agent is stuck after 2 retries, report to user and ask for guidance
+1. Read the error details from their message
+2. Spawn a new focused agent to fix the specific issue
+3. If stuck after 2 retries, report to user and ask for guidance
