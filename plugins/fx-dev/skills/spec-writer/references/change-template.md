@@ -24,6 +24,17 @@ Why this change is needed:
 
 ## Requirements
 
+### Testing Requirements
+
+This change MUST satisfy the project's standing testing rules (see [<link to the project's testing conventions — usually the architecture spec's Testing section>]). CI enforces these as merge gates:
+
+- <Project-specific rule 1 — e.g., coverage threshold, framework, isolation requirements>
+- <Project-specific rule 2>
+- <Project-specific rule 3>
+- <Project-specific rule 4 — e.g., justified suppression pragmas only>
+
+Skipping or weakening any of these rules to land the PR MUST be treated as a bug in the PR, not in the rule.
+
 ### <Requirement>
 
 Description using RFC 2119 language.
@@ -91,3 +102,4 @@ What this change explicitly does NOT address (to prevent scope creep).
 - **Link to spec**: Every change document MUST reference the spec it modifies
 - **Status tracking**: Update the Status field as work progresses (draft → in-progress → complete). Values MUST be lowercase. NEVER use `Proposed`, `Current`, or other alternative values
 - **Depends On**: If this change depends on other changes being completed first, list their IDs. Use `—` if no dependencies. This field MUST match what appears in `docs/index.yml` and `docs/index.md`
+- **Testing Requirements is mandatory and project-specific**: Every change document MUST lead its Requirements section with `### Testing Requirements`. Populate it from the target project's actual testing conventions — usually the architecture spec's Testing section, or an equivalent standing-conventions document. Do NOT copy rules from another project. If the project has no documented testing conventions yet, flag that as an Open Question and state a minimal defensible baseline (e.g., "tests MUST exist for changed behavior; CI MUST run them") until the project codifies its rules. The link in the stanza MUST point at the real section; leaving a placeholder link is not acceptable.

@@ -282,6 +282,56 @@ Read the template at `references/change-template.md` and write each change to `d
 - Include design decisions with rationale
 - Be specific about files to modify, APIs to change, tests to write
 - **NEVER duplicate change document tasks into `docs/tasks.md`** — tasks belong in the change document that defines them. `docs/tasks.md` is ONLY for work not tied to any change document.
+- **MANDATORY `### Testing Requirements` subsection** — Every change document's `## Requirements` section MUST open with a `### Testing Requirements` subsection that restates the project's standing, merge-blocking testing rules in tight bullet form. See 5.3.1 below.
+
+#### 5.3.1 Project-Specific Testing Requirements (mandatory)
+
+Every change document MUST include a `### Testing Requirements` subsection as the **first** item under `## Requirements`. This is not optional and applies to every change, no matter how small. Skipping this subsection is a defect in the change document.
+
+**Source the rules from the target project, not from this skill.** Before writing the subsection:
+
+1. **Look for the project's testing conventions.** Common locations, in order of preference:
+   - The architecture spec's Testing / Development Conventions section (e.g., `docs/specs/architecture/index.md#testing`)
+   - A dedicated `docs/specs/<testing-or-quality-spec>/`
+   - `CONTRIBUTING.md` or `docs/contributing.md`
+   - `.github/copilot-instructions.md` or `CLAUDE.md` at the repo root
+2. **Extract the actual project rules.** These will differ per project. Examples of the kinds of rules you might find:
+   - Coverage thresholds (total, per-diff, or none)
+   - Required frameworks (e.g., `pytest`, `go test`, `vitest`)
+   - Isolation rules (e.g., "integration tests MUST use real Postgres via containers", or conversely "unit tests MUST mock all I/O")
+   - Race/concurrency flags (e.g., `-race` in Go, `asyncio` strict-mode in Python)
+   - Allowed suppression pragmas and their justification rules
+   - E2E / contract / snapshot policies
+3. **Phrase the subsection to reference the source.** The first sentence MUST link to the exact section in the project documentation where the rules live. This makes the change doc self-healing when rules evolve.
+4. **Use tight bullets.** Each rule is one line. RFC 2119 language where appropriate.
+5. **State the consequence.** Close with a one-line reminder that weakening any rule to land the PR is a defect in the PR, not in the rule.
+
+**Never invent rules or copy rules from a different project.** If a project has no documented testing conventions:
+- State this explicitly in the change doc's Testing Requirements as a known gap.
+- Propose a minimal defensible baseline (e.g., "new behavior MUST have tests; CI MUST execute the suite; failing tests MUST block merge").
+- Add an Open Question recommending the project codify a conventions document.
+
+**Minimal shape (language-agnostic):**
+
+```markdown
+### Testing Requirements
+
+This change MUST satisfy the project's standing testing rules (see [<Section Name>](<link>)). CI enforces these as merge gates:
+
+- <rule 1 from the project>
+- <rule 2 from the project>
+- <rule 3 from the project>
+
+Skipping or weakening any of these rules to land the PR MUST be treated as a bug in the PR, not in the rule.
+```
+
+**Examples — do NOT reuse verbatim across projects.** Each is specific to its project's conventions:
+
+- *Go service with strict coverage*: "100% diff-scoped coverage", "integration tests MUST use testcontainers-go — mocking Postgres is forbidden", "`go test ./... -race` MUST pass", "`//nolint` MUST carry a rule name and justification"
+- *TypeScript library*: "Every exported function MUST have a unit test", "`vitest run --coverage` MUST pass with coverage at or above the project's configured threshold", "no `.only` or `.skip` in committed tests"
+- *Python data pipeline*: "`pytest` MUST pass on the full suite", "new SQL transformations MUST ship with a dbt test", "type check (`mypy --strict`) MUST pass"
+
+The rules you write MUST come from the project you're operating in, discovered via step 1 above. If you didn't read the project's conventions, you aren't ready to write the Testing Requirements subsection.
 
 #### 5.4 Exhaustive Coverage
 
