@@ -58,6 +58,8 @@ For each task (or group of parallel tasks), walk through the dev skill's SDLC st
 
 **Implementation steps** (planning, coding, testing) → Spawn focused agents. Use `isolation: "worktree"` for coder agents so each works on an isolated copy. Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC.
 
+When you spawn the coder for the FINAL piece of a change, your prompt MUST include: "This is the final implementing PR for <change>. In the same commit, flip `**Status:** draft` → `**Status:** complete` in `docs/changes/<NNNN>-*.md` AND flip `status: draft` → `status: complete` for that change's entry in `docs/index.yml`. Sync `docs/index.md` if present." For every NON-final coder on the same change, your prompt MUST include: "Leave the change-doc `**Status:**` field and `docs/index.yml` entry untouched — the final PR flips them." This split prevents rebase-conflict storms across multi-PR changes and ensures the final PR carries the Status flip atomically.
+
 **PR creation** → Either do it yourself via `gh pr create` or spawn a focused PR preparer agent. Load `fx-dev:github` skill first.
 
 **Review and CI steps** (Copilot review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. Invoke `fx-dev:copilot-review` yourself. Run `gh pr checks --watch` yourself. Invoke `fx-dev:resolve-pr-feedback` yourself.
@@ -116,14 +118,47 @@ Agent tool:
 
 **If a "small" or "follow-up" PR:** Same rules. No exceptions. PR size is NEVER a reason to skip merge gates.
 
+## PRE-MERGE: Change-Doc Status Flip (BLOCKING)
+
+**The FINAL PR for a change document MUST mark the change `complete` IN that PR — NOT in a follow-up.** A change doc still showing `**Status:** draft` after its last implementing PR merges is a bug; the docs lie about state and the index is out of sync with reality on `main`.
+
+There are two places to flip:
+
+1. **Change doc body** — `docs/changes/<NNNN>-<slug>.md` — flip the front-matter line `**Status:** draft` → `**Status:** complete`.
+2. **Index** — `docs/index.yml` — flip `status: draft` → `status: complete` on that change's entry. Sync `docs/index.md` if the project keeps both.
+
+### Whose job is it?
+
+**The implementing coder is responsible for the flip** when they are shipping the final piece of a change. That coder's PR description should already note "this completes 0094"; they MUST also include the Status flip in the same PR.
+
+**The coordinator's job, BEFORE merging, is to verify the flip is in the PR's diff.** Add this to your PR-inspection step (Gate 3 — implementation matches spec). If the flip is missing:
+
+1. **Do NOT merge.**
+2. Push a tiny commit to the PR branch yourself (or via a focused fix agent) flipping both files. Commit message: `docs(changes): mark <NNNN> complete`.
+3. Wait for CI to re-pass on the new commit.
+4. Then merge.
+
+This MUST NOT become a follow-up PR. Doing it post-merge means main spent some window in a wrong state, and the user sees a stale `draft` for every change you ship.
+
+### Multi-PR changes
+
+When a change decomposes into multiple PRs (e.g., 0090 split into 0090A and 0090B): only the LAST implementing PR flips Status. Earlier sub-PRs MUST leave Status as `draft`. The coordinator decides which PR is "last" — typically the final task in the change doc's task list. Tell THAT coder explicitly in their spawn prompt to include the Status flip; tell every other coder to leave Status alone (multi-PR rebases against a flipped Status field create spurious conflicts).
+
+If you mis-identified which PR was last and you've already merged a sub-PR with `Status: complete` flipped early, the doc is wrong on main until the remaining PRs land — open a tiny corrective PR flipping it back to `draft` until the real final PR lands.
+
+### Partial implementations
+
+If a single PR is only a partial implementation of its change doc (more PRs to come), the PR MUST leave Status as `draft`. The Status flip rides only with the final piece.
+
 ## STEP 4: Shutdown
 
 When all tasks are complete and all PRs merged:
 
 1. Verify all spec tasks are marked done (load `fx-dev:project-management` to check)
-2. Send shutdown requests to all active teammates
-3. Clean up the team with `TeamDelete`
-4. Report final summary to user
+2. **Verify every implemented change is `status: complete`** on `main` — check both `docs/changes/<NNNN>-*.md` front-matter AND `docs/index.yml`. If any are still `draft`, you missed the pre-merge gate; open a corrective PR right now (the goal is the gate catches it pre-merge, but if it slipped, fix it before declaring done).
+3. Send shutdown requests to all active teammates
+4. Clean up the team with `TeamDelete`
+5. Report final summary to user
 
 ---
 
@@ -140,6 +175,7 @@ When all tasks are complete and all PRs merged:
 - **ALWAYS use `fx-dev:project-management`** to verify task tracking
 - **ALWAYS run the full merge gate checklist** even for "trivial" or "follow-up" PRs
 - **NEVER merge without browser verification** — spawn a verify agent if needed. CI alone does NOT catch runtime errors.
+- **NEVER merge the FINAL PR of a change doc with `Status: draft` still in the diff.** The flip to `complete` rides in that PR, in both `docs/changes/<NNNN>-*.md` and `docs/index.yml`. If the coder forgot, push a fix commit to their branch and wait for CI before merging. Do NOT defer to a follow-up PR. See PRE-MERGE: Change-Doc Status Flip above.
 
 ## Handling Agent Issues
 
