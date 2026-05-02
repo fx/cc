@@ -62,7 +62,9 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 
 **PR creation** → Either do it yourself via `gh pr create` or spawn a focused PR preparer agent. Load `fx-dev:github` skill first.
 
-**Review and CI steps** (Copilot review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. Invoke `fx-dev:copilot-review` yourself. Run `gh pr checks --watch` yourself. Invoke `fx-dev:resolve-pr-feedback` yourself.
+**Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. Invoke `fx-dev:copilot-review` AND `fx-dev:coderabbit-review` yourself (sequentially, or with the slow CodeRabbit waiter as a background Bash process while you handle Copilot in the foreground — see the Reviewer Gates section below). Run `gh pr checks --watch` yourself. Invoke `fx-dev:resolve-pr-feedback` yourself.
+
+**⛔ NEVER spawn sub-agents to handle reviewer waits.** `fx-dev:dev` Step 6.3's mode A (parallel sub-agents per reviewer) is for the **root-session caller** only. As a team coordinator you ARE the root agent for the team's lifecycle and must use mode B (sequential or background-Bash overlap).
 
 **Merge gates** → Always handle directly. See MANDATORY MERGE GATE CHECKLIST below.
 
@@ -82,22 +84,33 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 
 | # | Gate | How to verify | Blocking? |
 |---|------|--------------|-----------|
-| 1 | **CI checks ALL green** | `gh pr checks <NUMBER>` — every check must show `pass` | YES |
-| 2 | **Copilot review RECEIVED and feedback RESOLVED** | Invoke `fx-dev:copilot-review` skill — confirm 0 unresolved threads | YES |
+| 1 | **CI checks ALL green** | `gh pr checks <NUMBER>` — every check must show `pass` (includes the `CodeRabbit` check) | YES |
+| 2 | **Copilot review RECEIVED and feedback RESOLVED** | Invoke `fx-dev:copilot-review` skill — confirm 0 unresolved Copilot threads | YES |
+| 2b | **CodeRabbit check terminal-passing AND feedback RESOLVED** | Invoke `fx-dev:coderabbit-review` skill — confirm `CodeRabbit` check is `success` AND 0 unresolved CodeRabbit threads. CodeRabbit re-reviews on every push, so loop until convergence | YES (when configured) |
 | 3 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
 | 4 | **Spec task marked complete** | Check via project-management skill | YES |
 | 5 | **PR description is clear** | Read PR body | YES |
 | 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
 
-### ⛔ Copilot Gate (Gate 2) — CRITICAL
+### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
 
-**Copilot reviews EVERY pull request automatically. It does NOT need to be "configured" or "enabled." It is completely independent of CI. NEVER use raw `gh api` commands to check Copilot — use the dedicated skill.**
+**As coordinator, YOU handle reviewer waits directly. Do NOT spawn sub-agents for reviewer waits — sub-agents in this team context cannot spawn their own sub-agents, and `fx-dev:dev` mode A would fail. You ARE the root agent for the team; invoke each reviewer skill in the foreground sequentially, OR launch the slow waiter (CodeRabbit) as a background `Bash` process while you handle Copilot in the foreground.**
 
 ```
-Skill tool: skill="fx-dev:copilot-review", args="<PR_NUMBER>"
+# Sequential (simple, always correct):
+Skill tool: skill="fx-dev:copilot-review",     args="<PR_NUMBER>"
+Skill tool: skill="fx-dev:coderabbit-review",  args="<PR_NUMBER>"
+
+# Or background-overlapped (faster):
+# 1. Bash run_in_background:
+#      bash <skill>/coderabbit-review/scripts/wait-for-coderabbit-review.sh <PR_NUMBER>
+# 2. Foreground: Skill fx-dev:copilot-review
+# 3. When Bash task completes: Skill fx-dev:rabbit-feedback-resolver
 ```
 
-This skill handles the full lifecycle: request review → wait (up to 15 min) → resolve all feedback. Only proceed to merge after it confirms 0 unresolved threads.
+Both reviewers MUST converge: the loop is "wait → resolve → if anyone pushed, wait again". CodeRabbit specifically re-runs on every push and may post new threads on the new SHA. Cap at 4 outer iterations and escalate to user if not converged. Only proceed to merge after BOTH reviewers report terminal-passing checks AND 0 unresolved threads.
+
+If CodeRabbit isn't configured for the repo (no `CodeRabbit` check ever appears, the wait script exits 2), report this to the user once and proceed without that gate. Do not silently skip when it IS configured.
 
 ### Browser Verification Gate (Gate 6)
 
@@ -170,6 +183,8 @@ When all tasks are complete and all PRs merged:
 - **NEVER skip PR inspection** — every PR gets reviewed before marking ready
 - **NEVER merge without completing the MERGE GATE CHECKLIST** — every gate must pass, every time, for every PR
 - **NEVER merge without Copilot review** — always invoke `fx-dev:copilot-review` yourself. No exceptions.
+- **NEVER merge without CodeRabbit review when CodeRabbit is configured** — always invoke `fx-dev:coderabbit-review` yourself; cycle until its check is `success` and 0 threads. No exceptions.
+- **NEVER spawn sub-agents to handle reviewer waits** in the team-coordinator context — sub-agents can't spawn sub-agents. Run reviewer skills in the foreground (or background-Bash for the slow ones).
 - **NEVER mark a teammate's PR as ready** until you've inspected it
 - **ALWAYS handle Copilot review and CI monitoring directly** — these are coordinator responsibilities, not sub-agent responsibilities
 - **ALWAYS use `fx-dev:project-management`** to verify task tracking

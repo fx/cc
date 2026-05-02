@@ -107,11 +107,21 @@ Skill tool: skill="fx-dev:rabbit-feedback-resolver"
 Skill tool: skill="fx-dev:resolve-codecov-feedback"
 ```
 
-**If multiple exist:** Invoke sequentially (Copilot first, then CodeRabbit, then Codecov).
+**If multiple exist:** Prefer running Copilot and CodeRabbit resolvers **in parallel** by spawning each as a sub-agent in the same message (see `fx-dev:dev` Step 6.3 for the exact pattern). Codecov is sequential after them since coverage fixes typically require code from the other resolvers to be in place first.
 
-### 5. Verify All Resolved
+### 5. Verify All Resolved AND Loop Until Convergence
 
-After invoking resolver skills, re-query to confirm all threads are resolved:
+After invoking resolver skills, re-query to confirm all threads are resolved AND that no reviewer has posted new feedback in response to the fixes that were pushed.
+
+**Cycle, don't single-shot.** CodeRabbit specifically re-runs after every push and may post new threads on the new commits. Single-pass resolvers leave a stale "settled" state behind. Loop:
+
+1. Wait for all reviewer checks to reach terminal state (use the dedicated waiters: `fx-dev:copilot-review` for Copilot, `fx-dev:coderabbit-review` for CodeRabbit).
+2. Re-query unresolved threads (per below).
+3. If count > 0, re-invoke the relevant resolver(s).
+4. After fixes are pushed, restart at step 1.
+5. Stop when two consecutive passes produce zero new feedback. Cap at 4 outer iterations and escalate to the user if not converged.
+
+Re-query to count remaining unresolved threads:
 
 ```bash
 # Replace OWNER, REPO, PR_NUMBER with actual values
@@ -159,9 +169,11 @@ If unresolved threads remain, report which reviewers still have open feedback.
 ## Success Criteria
 
 1. All unresolved automated review threads identified
-2. Appropriate resolver skill(s) invoked
-3. Final verification confirms all threads resolved
-4. Summary output provided
+2. Appropriate resolver skill(s) invoked (Copilot + CodeRabbit in parallel where applicable)
+3. The wait-and-resolve loop has CONVERGED — two consecutive passes produced zero new feedback from any reviewer
+4. CodeRabbit's check is in a terminal passing state (or absent if not configured)
+5. Final verification confirms all threads resolved
+6. Summary output provided
 
 ## Error Handling
 

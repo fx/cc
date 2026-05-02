@@ -424,23 +424,90 @@ Agent tool:
   description: "Fix review issues"
 ```
 
-#### 6.3 Copilot Review (Request, Wait, Resolve)
+#### 6.3 Automated Reviewer Wait (Copilot + CodeRabbit + future)
 
-**MANDATORY: Invoke the copilot-review skill.** This handles the full Copilot lifecycle — requesting review, waiting for it (up to 15 min), and resolving all feedback.
+**MANDATORY: Wait for and resolve EVERY automated reviewer configured on the repo.** Copilot and CodeRabbit are the two we know about today; future integrations slot in here. Reviewers are **independent feedback channels** with different latencies (Copilot ≈30–90 s; CodeRabbit 2–10+ min and re-runs after every push).
+
+##### Reviewer-by-reviewer skills
+
+| Reviewer | Skill | Notes |
+|----------|-------|-------|
+| GitHub Copilot | `fx-dev:copilot-review` | Auto-reviews; we explicitly request via API as a defensive belt. Does NOT re-review on push by default. |
+| CodeRabbit | `fx-dev:coderabbit-review` | Auto-reviews; **re-reviews after every push**. Exposes state via the `CodeRabbit` GitHub check. Cycle until check is terminal AND 0 threads. |
+
+##### Pick the right execution mode for your context
+
+**⛔ CRITICAL:** the right mode depends on whether YOU can spawn sub-agents right now.
+
+- **You ARE the root session / a standalone caller of `fx-dev:dev`** → use **mode A (parallel sub-agents)**.
+- **You are a `fx-dev:team` coordinator OR a sub-agent yourself** → sub-agents CANNOT spawn sub-agents. Use **mode B (sequential, with background wait scripts)**. Do NOT call the Agent tool here.
+
+If unsure: assume mode B. It's strictly slower but always correct; mode A is an optimisation that requires you to be a top-level agent.
+
+###### Mode A: parallel sub-agents (root session only)
+
+In a single message, spawn one sub-agent per reviewer using the Agent tool. Both wait scripts run concurrently and each resolves its own reviewer.
 
 ```
-Skill tool: skill="fx-dev:copilot-review", args="[PR_NUMBER]"
+Agent tool (spawn ALL reviewer sub-agents in the same message — parallel):
+
+Agent 1:
+  prompt: "Load the copilot-review skill (Skill tool: skill='fx-dev:copilot-review'),
+           then run it for PR #[PR_NUMBER]. Loop until 0 unresolved Copilot threads.
+           Report when done."
+  description: "Wait/resolve Copilot review"
+
+Agent 2:
+  prompt: "Load the coderabbit-review skill (Skill tool: skill='fx-dev:coderabbit-review'),
+           then run it for PR #[PR_NUMBER]. Loop until the CodeRabbit check is terminal
+           AND 0 unresolved CodeRabbit threads. Report when done."
+  description: "Wait/resolve CodeRabbit review"
 ```
 
-**Copilot reviews EVERY PR automatically — it does NOT need to be configured. It is completely independent of CI. NEVER skip this step.**
+Wait for **all** sub-agents to report completion before proceeding.
 
-The skill will:
-1. Request Copilot review via the GitHub API
-2. Poll until the review is received (15 min timeout)
-3. Invoke `fx-dev:resolve-pr-feedback` to categorize and resolve all threads
-4. Confirm 0 unresolved threads remain
+###### Mode B: sequential, with background wait scripts (team-coordinator / sub-agent)
 
-**⛔ DO NOT PROCEED until the skill confirms all Copilot feedback is resolved**
+You can't spawn sub-agents, so handle each reviewer's wait+resolve lifecycle yourself, sequentially. To recover some parallelism, kick off the slow waiter (CodeRabbit) in the background while you handle the fast one (Copilot) in the foreground. When Copilot is done, switch to CodeRabbit.
+
+Concrete recipe:
+
+1. Start the CodeRabbit waiter as a background bash process — its output streams to a file you can poll later:
+   ```bash
+   bash [SKILL_BASE_DIR]/skills/coderabbit-review/scripts/wait-for-coderabbit-review.sh [PR_NUMBER] \
+        > /tmp/coderabbit-wait-[PR_NUMBER].log 2>&1
+   ```
+   Use `Bash` with `run_in_background: true`. Capture the task ID.
+2. In the foreground, run the Copilot wait+resolve cycle by invoking the skill directly:
+   ```
+   Skill tool: skill="fx-dev:copilot-review", args="[PR_NUMBER]"
+   ```
+   That skill polls Copilot, then calls `fx-dev:resolve-pr-feedback` to fix and resolve threads. When it returns, Copilot is settled (for this pass).
+3. Wait for the background CodeRabbit waiter to finish (you'll receive a completion notification) or check its log; when its check is terminal, invoke the resolver directly:
+   ```
+   Skill tool: skill="fx-dev:rabbit-feedback-resolver", args="[PR_NUMBER]"
+   ```
+4. If either resolver pushed commits in steps 2–3, **CodeRabbit will re-run** on the new SHA. Restart at step 1 (relaunch the background waiter; it observes the now-pending check). Copilot does not re-review on push, but check for new threads anyway:
+   ```bash
+   gh api graphql -f query='...' --jq '[.threads ... copilot ...] | length'
+   ```
+   If 0, skip step 2. Otherwise re-run it.
+5. **Stop when two consecutive passes produce zero new feedback from any reviewer** (and CodeRabbit's check is `success`).
+
+If `Bash` `run_in_background` isn't available in your context, fall back to fully-serial: Copilot first, then CodeRabbit. Slower but correct.
+
+##### Cycle until convergence (both modes)
+
+Either reviewer's resolver may push commits to fix feedback. Pushed commits restart CodeRabbit's review automatically (its check goes back to pending), and may produce new Copilot feedback. Repeat the wait+resolve loop until two consecutive passes produce zero new feedback from either reviewer.
+
+**Cap at 4 outer iterations.** If reviewers keep producing new feedback after 4 cycles, escalate to the user — this usually indicates a design disagreement, not more code edits.
+
+##### Skip rules (use sparingly)
+
+- If a reviewer is **not configured** for the repo (e.g. `wait-for-coderabbit-review.sh` exits 2 because no `CodeRabbit` check ever appears), report this to the user once and proceed without that reviewer.
+- Never silently skip a reviewer that IS configured. If it's slow or stuck, prefer raising the timeout to skipping it.
+
+**⛔ DO NOT PROCEED until every configured reviewer has a terminal-passing check AND 0 unresolved threads.**
 
 ---
 
@@ -526,17 +593,20 @@ Step 7.3 (wait) → fail → Step 7.4 (fix) → Step 7.3 (wait) → ...
 **⛔ ALL of the following must be verified before ANY PR can be merged or marked ready. No exceptions.**
 
 ```bash
-# 1. CI checks — ALL must be green
+# 1. CI checks — ALL must be green (includes the CodeRabbit check)
 gh pr checks [NUMBER]
 
-# 2. Copilot review — MUST be received and resolved (if not already done in Step 6.3)
-# Use the dedicated skill — NEVER raw gh api commands
+# 2. Automated reviewers — MUST be settled and resolved (if not already done in Step 6.3)
+# Use the dedicated skills — NEVER raw gh api commands.
+# Run them in parallel via Agent sub-agents (see Step 6.3 pattern), or
+# sequentially if you only need to spot-check.
 ```
 ```
-Skill tool: skill="fx-dev:copilot-review", args="[NUMBER]"
+Skill tool: skill="fx-dev:copilot-review",     args="[NUMBER]"
+Skill tool: skill="fx-dev:coderabbit-review",  args="[NUMBER]"
 ```
 ```bash
-# 3. Unresolved review threads — MUST be 0
+# 3. Unresolved review threads — MUST be 0 (across ALL reviewers)
 gh pr view [NUMBER] --json reviewThreads \
   --jq '[.reviewThreads[] | select(.isResolved == false)] | length'
 
@@ -548,10 +618,10 @@ gh pr checks [NUMBER]  # verify codecov/patch and codecov/project
 - [ ] PR is open and mergeable
 - [ ] ALL CI checks green
 - [ ] Copilot review RECEIVED and ALL threads resolved (via `fx-dev:copilot-review` skill — NEVER raw `gh api`)
-- [ ] ALL Copilot review comments addressed and threads resolved
-- [ ] CodeRabbit review received and addressed (if configured)
+- [ ] CodeRabbit check is in a terminal passing state AND ALL CodeRabbit threads resolved (via `fx-dev:coderabbit-review` skill). If CodeRabbit is not configured for the repo, this gate is satisfied by an exit-code-2 from `wait-for-coderabbit-review.sh` — confirm with the user.
+- [ ] No reviewer has posted new feedback since the last fix push (the wait-and-resolve loop has converged)
 - [ ] Codecov coverage passing with 0 missing lines
-- [ ] No unresolved review threads from any reviewer
+- [ ] No unresolved review threads from any reviewer (Copilot, CodeRabbit, human, or future automated reviewer)
 
 **PR size is NEVER a reason to skip merge gates.** A 1-line fix gets the same verification as a 1000-line feature.
 
@@ -679,8 +749,9 @@ All sub-agents are launched via the Agent tool. Each loads its skill via the Ski
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 5.5.2 | Browser Verification | `fx-dev:verify-web-change` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
-| 6.3 | Copilot Review | `fx-dev:copilot-review` |
-| 6.3 | PR Feedback Resolver | `fx-dev:resolve-pr-feedback` (called by copilot-review) |
+| 6.3 | Copilot Review | `fx-dev:copilot-review` (run in parallel with coderabbit-review) |
+| 6.3 | CodeRabbit Review | `fx-dev:coderabbit-review` (run in parallel with copilot-review; cycles on its check until terminal + 0 threads) |
+| 6.3 | PR Feedback Resolver | `fx-dev:resolve-pr-feedback` (meta — called by reviewer skills) |
 | 7.4 | CI Failure Resolver | `fx-dev:resolve-ci-failures` |
 
 **Pattern for every sub-agent call:**
@@ -704,7 +775,7 @@ Workflow complete when ALL true:
 - ✅ ALL test plan items addressed: browser-verified, programmatically verified, or user-confirmed manual verification (NEVER silently skipped)
 - ✅ PR test plan items checked off or annotated with verification results in the PR description
 - ✅ Self-review done, issues fixed
-- ✅ Automated review feedback resolved (Copilot/CodeRabbit)
+- ✅ Automated review feedback resolved (Copilot AND CodeRabbit, run in parallel; cycle until both converge with zero new feedback)
 - ✅ All CI/CD checks pass
 - ✅ Task tracking docs updated (completed tasks marked in relevant change doc or tasks.md)
 - ✅ User notified, awaiting merge approval

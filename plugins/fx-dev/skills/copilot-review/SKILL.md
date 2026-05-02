@@ -22,6 +22,17 @@ Request, wait for, and resolve GitHub Copilot's automated PR review on a pull re
 - Before merging any PR (team coordinator merge gate)
 - When user says "check copilot", "wait for copilot", "copilot review"
 
+## Parallel With Other Reviewers
+
+This skill can run **in parallel** with `fx-dev:coderabbit-review` and any future automated-reviewer skills.
+
+**Pick the execution mode based on your context (see `fx-dev:dev` Step 6.3 for the full table):**
+
+- **Root session / standalone caller** → spawn one sub-agent per reviewer in a single message via the Agent tool (mode A). Best wall-clock latency.
+- **`fx-dev:team` coordinator OR a sub-agent yourself** → sub-agents CANNOT spawn sub-agents. Run each reviewer's lifecycle sequentially yourself, optionally with the slow waiter (CodeRabbit) launched as a background `Bash` process while you handle Copilot in the foreground (mode B).
+
+Don't serialize reviewers when you don't have to — Copilot is fast (≈30–90 s) and CodeRabbit is slow (2–10+ min and re-runs on every push). But never spawn sub-agents from a sub-agent context.
+
 ## Arguments
 
 This skill expects a PR number. Pass it as args: `skill='fx-dev:copilot-review', args='<PR_NUMBER>'`
