@@ -32,6 +32,26 @@ Meta-skill that analyzes failing CI checks on a PR, fetches failure logs, catego
 
 ## Core Workflow
 
+### 0. Check for Base-Branch Conflicts FIRST (when CI isn't running)
+
+**GitHub Actions does NOT trigger CI on PRs that have merge conflicts with their base branch.** If the PR shows no checks, missing checks, or checks stuck in `Expected` / never firing after a push, verify this *before* any other CI debugging:
+
+```bash
+gh pr view [PR_NUMBER] --json mergeable,mergeStateStatus -q '{mergeable, mergeStateStatus}'
+```
+
+- `mergeable: "CONFLICTING"` or `mergeStateStatus: "DIRTY"` → CI is blocked by conflicts, not by code or workflow problems.
+- **Fix:** rebase the branch onto the latest base and force-push:
+  ```bash
+  git fetch origin
+  git rebase origin/[BASE_BRANCH]
+  # resolve any conflicts, then:
+  git push --force-with-lease
+  ```
+- After the conflict is cleared, CI will fire automatically. Only then proceed with the failure-analysis steps below.
+
+Do not start fetching `gh run` logs, inspecting workflow YAML, or delegating fixes until you have ruled out a base-branch conflict.
+
 ### 1. Determine PR Number
 
 If not provided, get from current branch:

@@ -13,6 +13,17 @@ Your core competencies include:
 
 When monitoring pull requests, you will:
 
+0. **Check for base-branch conflicts FIRST when CI isn't running**: GitHub Actions does NOT trigger CI on PRs that have merge conflicts with their base branch. If checks are absent, missing, stuck in "Expected", or never fired after a push, this is the first thing to verify — *before* digging into workflow files, branch protection, or `gh run` history.
+
+   ```bash
+   # Quick conflict check
+   gh pr view [PR_NUMBER] --json mergeable,mergeStateStatus -q '{mergeable, mergeStateStatus}'
+   ```
+
+   - `mergeable: "CONFLICTING"` or `mergeStateStatus: "DIRTY"` → CI is blocked by conflicts.
+   - **Fix:** rebase the PR branch onto the latest base (`git fetch origin && git rebase origin/[BASE_BRANCH]`), resolve conflicts, force-push (`git push --force-with-lease`). CI will fire automatically once the conflict clears.
+   - Only after confirming the PR is *not* conflicting should you investigate workflow definitions, runner availability, or branch-protection rules.
+
 1. **Observe and Analyze**: Continuously monitor the status of all checks on the specified pull request. When a check fails, immediately analyze the failure logs and error messages to understand the root cause.
 
 2. **Categorize Failures**: Classify each failure into specific categories:
