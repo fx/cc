@@ -54,9 +54,28 @@ For each task (or group of parallel tasks), walk through the dev skill's SDLC st
 1. **Can I handle this step directly?** (e.g., invoking a skill, running a `gh` command) → Do it yourself.
 2. **Does this step require writing/modifying code?** → Spawn a focused agent with a single-purpose prompt for just that step.
 
+### ⛔ ALL Agent spawns MUST register as team members (BLOCKING)
+
+**Every single `Agent` tool call you make as the team coordinator — coder, verify, fix, anything — MUST pass BOTH `team_name` and `name`.** Spawning an Agent without these parameters in team mode is a bug: the agent runs as an orphan sub-agent instead of a registered teammate, doesn't appear in `~/.claude/teams/<team>/config.json` `members[]`, can't be addressed via `SendMessage` by name, and silently defeats the entire point of `/team`.
+
+```
+Agent tool:
+  team_name: "<the-team-you-just-created>"   # ← REQUIRED in team mode, NO EXCEPTIONS
+  name:      "<short-descriptive-handle>"    # ← REQUIRED in team mode, NO EXCEPTIONS
+  subagent_type: "general-purpose"
+  isolation: "worktree"                      # for coders
+  mode: "bypassPermissions"
+  prompt: "..."
+  run_in_background: true                    # usually
+```
+
+The `name` should be specific and human-readable so it's useful in logs and `SendMessage` (e.g., `coder-0105A`, `verify-pr-371`, `fix-0106-types`). One-shot generic names like `agent1` are bad.
+
+**Self-check before EVERY Agent call in team mode:** "Did I pass `team_name`? Did I pass `name`?" If either is missing, fix the call before sending it. This rule is non-negotiable — it has been violated in production and produced a coordinator session running orphan sub-agents that the team config didn't know about.
+
 ### Key orchestration principles
 
-**Implementation steps** (planning, coding, testing) → Spawn focused agents. Use `isolation: "worktree"` for coder agents so each works on an isolated copy. Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC.
+**Implementation steps** (planning, coding, testing) → Spawn focused agents. Use `isolation: "worktree"` for coder agents so each works on an isolated copy. Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC. Always pass `team_name` and `name` (see above).
 
 When you spawn the coder for the FINAL piece of a change, your prompt MUST include: "This is the final implementing PR for <change>. In the same commit, flip `**Status:** draft` → `**Status:** complete` in `docs/changes/<NNNN>-*.md` AND flip `status: draft` → `status: complete` for that change's entry in `docs/index.yml`. Sync `docs/index.md` if present." For every NON-final coder on the same change, your prompt MUST include: "Leave the change-doc `**Status:**` field and `docs/index.yml` entry untouched — the final PR flips them." This split prevents rebase-conflict storms across multi-PR changes and ensures the final PR carries the Status flip atomically.
 
@@ -118,7 +137,8 @@ For tasks with UI changes, spawn a dedicated verify agent:
 
 ```
 Agent tool:
-  name: "verify-<pr-number>"
+  team_name: "<the-team-you-created>"   # REQUIRED — register as teammate
+  name: "verify-<pr-number>"            # REQUIRED — addressable handle
   prompt: "Load the verify-web-change skill (Skill tool: skill='fx-dev:verify-web-change').
            Verify PR #<NUMBER> on branch <branch-name>.
            Check out the branch, start the dev server, and confirm the app loads without errors.
@@ -177,6 +197,7 @@ When all tasks are complete and all PRs merged:
 
 ## Coordinator Rules (NON-NEGOTIABLE)
 
+- **ALWAYS pass `team_name` AND `name` to EVERY `Agent` call** — coder, verify, fix, anything. Spawning an Agent without these in team mode produces an orphan sub-agent that the team config doesn't know about and defeats the entire point of `/team`. No exceptions.
 - **NEVER write code yourself** — all implementation goes through coder agents
 - **NEVER create branches or commits** — coder agents handle this
 - **NEVER delegate the full SDLC to a single agent** — agents cannot spawn sub-agents, so they will inline everything and skip later steps
