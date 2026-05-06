@@ -18,7 +18,7 @@ Request, wait for, and resolve GitHub Copilot's automated PR review on a pull re
 
 ## When to Use
 
-- After creating a draft PR (SDLC Step 6.3)
+- After creating a PR (SDLC Step 6.3)
 - Before merging any PR (team coordinator merge gate)
 - When user says "check copilot", "wait for copilot", "copilot review"
 

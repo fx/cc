@@ -314,35 +314,25 @@ gh repo create my-repo --private --clone
 
 ### Create Pull Requests
 
-**CRITICAL - Draft PR Requirement:**
+**CRITICAL — NEVER create draft PRs:**
 
-ALL pull requests MUST be created as drafts initially. Never create a PR that is immediately ready for review.
+ALL pull requests MUST be created READY FOR REVIEW. **Never use `--draft`.** Never include "draft" / "WIP" / "for review" language in the title or body. The full review/CI cycle (CI checks, Copilot, CodeRabbit, codecov) runs from the moment the PR opens — drafting it has been used repeatedly as an excuse to skip those steps.
 
 **Workflow:**
-1. Create PR as draft with `--draft` flag
-2. Wait for `fx-dev:pr-reviewer` sub-agent to review the changes
-3. Leave it to the USER to mark ready for review (do NOT do this automatically)
+1. Create the PR ready for review (no `--draft` flag)
+2. Run the full review/CI cycle (handled by `fx-dev:dev` Steps 6 and 7)
+3. Merge once all gates pass and the user approves
 
 **Correct approach:**
 ```bash
-# Always include --draft flag
-gh pr create --draft --title "feat: add feature" --body "$(cat <<'EOF'
+gh pr create --title "feat: add feature" --body "$(cat <<'EOF'
 ## Summary
 ...
 EOF
 )"
 ```
 
-**After fx-dev:pr-reviewer completes:**
-- Inform user: "PR created as draft. After addressing any review feedback, you can mark it ready with: `gh pr ready <PR_NUMBER>`"
-- DO NOT run `gh pr ready` automatically
-- Let the user decide when to flag it ready
-
-**Why drafts:**
-- Ensures internal review happens before external visibility
-- Prevents premature notifications to team members
-- Gives opportunity to address issues found by automated reviewers
-- User maintains control over when PR is officially ready
+**Never use `--draft`. Never run `gh pr ready` as a workaround for having opened a draft.** If the work isn't ready for review, don't open the PR yet — finish it first.
 
 ### Update PR Description
 

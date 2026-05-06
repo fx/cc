@@ -209,9 +209,11 @@ Fix any issues found, commit the fixes, then proceed to PR creation.
 
 ---
 
-### STEP 5: Pull Request Creation (as Draft)
+### STEP 5: Pull Request Creation
 
-**MANDATORY: Launch a sub-agent that loads the pr-preparer skill. ALL PRs MUST be created as drafts.**
+**MANDATORY: Launch a sub-agent that loads the pr-preparer skill. ALL PRs MUST be created READY FOR REVIEW — never as drafts.**
+
+**⛔ NEVER use the `--draft` flag. NEVER create draft PRs.** Draft PRs have repeatedly been used as an excuse to skip downstream steps (reviewer waits, CI monitoring, CodeRabbit/Copilot resolution). The SDLC ALWAYS executes the full review/CI cycle from PR creation onward — opening as draft defeats this. If the work isn't ready for review, don't open the PR yet.
 
 **Before creating the PR, identify related spec and change documents:**
 
@@ -229,7 +231,7 @@ If the work was driven by a specific change document or spec, note the paths for
 Agent tool:
   prompt: "Load the pr-preparer skill (Skill tool: skill='fx-dev:pr-preparer'), then:
 
-           Create DRAFT PR for current branch.
+           Create PR (ready for review, NOT draft) for current branch.
            Task: [ORIGINAL TASK]
            Summary: [WHAT WAS IMPLEMENTED]
 
@@ -237,21 +239,24 @@ Agent tool:
            - Spec: [SPEC_PATH or 'none']
            - Change: [CHANGE_DOC_PATH or 'none']
 
-           CRITICAL: Use --draft flag. Never create non-draft PRs.
+           CRITICAL: Do NOT pass --draft. The PR must be opened ready for review so
+           CI, Copilot, and CodeRabbit run from the start.
            - Push branch if needed
-           - Create PR with: gh pr create --draft
+           - Create PR with: gh pr create  (NO --draft flag)
            - Include links to related spec/change docs in the PR body
              (use relative paths from repo root, e.g. docs/specs/auth/ or docs/changes/0003-add-oauth.md)
            - Do NOT put spec/change references in the PR title unless the PR is
              primarily about finalizing lingering tasks in a spec/change doc
            - Reference related issues
+           - Do NOT include any 'this is a draft' / 'draft for review' language
+             anywhere in the title or body
            - Return PR number and URL"
-  description: "Create draft PR"
+  description: "Create PR"
 ```
 
 **Capture the PR number for remaining steps.**
 
-**⛔ DO NOT PROCEED until PR is created**
+**⛔ DO NOT PROCEED until PR is created (as ready for review)**
 
 ---
 
@@ -515,34 +520,11 @@ Either reviewer's resolver may push commits to fix feedback. Pushed commits rest
 
 **MANDATORY: Execute ALL sub-steps. Maximum 3 fix iterations.**
 
-#### 7.1 Analyze Workflow Configuration
+Because Step 5 opens the PR ready for review (NOT draft), CI workflows that
+trigger on `pull_request` start immediately. There is no draft → ready
+transition to manage in this workflow.
 
-Examine `.github/workflows/` to determine if CI checks trigger on draft PRs:
-
-```bash
-# Read all workflow files and check their trigger configuration
-ls .github/workflows/
-```
-
-Look for `pull_request` event triggers in each workflow file:
-- **Triggers on drafts**: `pull_request:` with no `types:` filter, or `types:` includes `opened` / `synchronize` without special draft exclusion
-- **Does NOT trigger on drafts**: Workflow uses `pull_request_target`, or has conditional like `if: github.event.pull_request.draft == false`, or no `pull_request` trigger at all
-
-Output: Whether CI checks will run on a draft PR.
-
-#### 7.2 Ensure CI Checks Are Triggered
-
-**If workflows do NOT trigger on draft PRs:**
-
-```bash
-gh pr ready [PR_NUMBER]
-```
-
-This marks the PR as ready for review, which triggers CI workflows that only run on non-draft PRs.
-
-**If workflows DO trigger on drafts:** No action needed — checks should already be running or queued.
-
-#### 7.3 Wait for CI Checks to Start and Complete
+#### 7.1 Wait for CI Checks to Start and Complete
 
 **Run the bundled CI check script in the FOREGROUND:**
 
@@ -557,13 +539,13 @@ Script behavior:
 - Phase 1: Waits for checks to appear (some repos have a startup delay)
 - Phase 2: Polls every 30s until all checks complete (timeout: 900s / 15 minutes)
 - Exit 0: All checks passed → **proceed to Step 8**
-- Exit 1: One or more checks failed → **proceed to Step 7.4**
+- Exit 1: One or more checks failed → **proceed to Step 7.2**
 - Exit 2: Timeout waiting for checks → report to user, ask whether to continue waiting or proceed
 - Exit 3: Invalid arguments or gh error
 
-#### 7.4 Handle CI Failures (LOOP — max 3 iterations)
+#### 7.2 Handle CI Failures (LOOP — max 3 iterations)
 
-**If Step 7.3 exits with code 1 (failures detected):**
+**If Step 7.1 exits with code 1 (failures detected):**
 
 ```
 Skill tool: skill="fx-dev:resolve-ci-failures"
@@ -574,10 +556,10 @@ Pass the failure details from the script output to the skill. The skill will:
 2. Delegate fixes to a sub-agent with the coder skill
 3. Push the fixes
 
-**After the skill completes and fixes are pushed, GO BACK TO Step 7.3** — re-run the wait script to monitor the new check run. This creates a loop:
+**After the skill completes and fixes are pushed, GO BACK TO Step 7.1** — re-run the wait script to monitor the new check run. This creates a loop:
 
 ```
-Step 7.3 (wait) → fail → Step 7.4 (fix) → Step 7.3 (wait) → ...
+Step 7.1 (wait) → fail → Step 7.2 (fix) → Step 7.1 (wait) → ...
 ```
 
 **⚠️ Maximum 3 iterations.** Track the current iteration count. If checks still fail after 3 fix attempts, STOP and report the persistent failures to the user with full details.
@@ -590,7 +572,7 @@ Step 7.3 (wait) → fail → Step 7.4 (fix) → Step 7.3 (wait) → ...
 
 #### 8.1 Final Verification (MANDATORY MERGE GATES)
 
-**⛔ ALL of the following must be verified before ANY PR can be merged or marked ready. No exceptions.**
+**⛔ ALL of the following must be verified before ANY PR can be merged. No exceptions.**
 
 ```bash
 # 1. CI checks — ALL must be green (includes the CodeRabbit check)
@@ -625,15 +607,9 @@ gh pr checks [NUMBER]  # verify codecov/patch and codecov/project
 
 **PR size is NEVER a reason to skip merge gates.** A 1-line fix gets the same verification as a 1000-line feature.
 
-#### 8.1.1 Mark PR Ready for Review
-
-**After confirming all checks pass and all feedback is resolved, mark the PR as ready:**
-
-```bash
-gh pr ready [NUMBER]
-```
-
-This removes the draft status so the PR is visible for merge.
+The PR was opened ready-for-review in Step 5, so there is no draft → ready
+transition to perform here. Do NOT run `gh pr ready` — it is unnecessary and
+will fail on a non-draft PR.
 
 #### 8.2 Update Task Tracking Docs
 
@@ -752,7 +728,7 @@ All sub-agents are launched via the Agent tool. Each loads its skill via the Ski
 | 6.3 | Copilot Review | `fx-dev:copilot-review` (run in parallel with coderabbit-review) |
 | 6.3 | CodeRabbit Review | `fx-dev:coderabbit-review` (run in parallel with copilot-review; cycles on its check until terminal + 0 threads) |
 | 6.3 | PR Feedback Resolver | `fx-dev:resolve-pr-feedback` (meta — called by reviewer skills) |
-| 7.4 | CI Failure Resolver | `fx-dev:resolve-ci-failures` |
+| 7.2 | CI Failure Resolver | `fx-dev:resolve-ci-failures` |
 
 **Pattern for every sub-agent call:**
 ```

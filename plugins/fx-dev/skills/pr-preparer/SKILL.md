@@ -75,17 +75,17 @@ Then, your primary responsibilities:
 
    **CRITICAL:** This step ensures completed work is tracked. Skipping this results in orphaned tasks that appear incomplete after merge.
 
-7. **Create the PR as Draft**: Use `gh pr create --draft` to create the pull request on GitHub. **ALL PRs MUST be created as drafts initially.** Never create a PR that is immediately ready for review.
+7. **Create the PR (ready for review)**: Use `gh pr create` to create the pull request on GitHub. **ALL PRs MUST be created READY FOR REVIEW — never as drafts.** Do NOT pass `--draft`. Do NOT include "draft" / "WIP" / "for review" language anywhere in the title or body. The downstream SDLC steps (CI monitoring, Copilot, CodeRabbit) ALL run from the moment the PR is opened — opening as draft has been used as an excuse to skip them.
 
    ```bash
-   gh pr create --draft --title "type: description" --body "$(cat <<'EOF'
+   gh pr create --title "type: description" --body "$(cat <<'EOF'
    ## Summary
    ...
    EOF
    )"
    ```
 
-   After PR creation, inform the user: "PR created as draft. After review feedback is addressed, mark ready with: `gh pr ready <PR_NUMBER>`"
+   If the work isn't actually ready for review, do NOT open the PR yet — finish it first. There is no "draft" middle state in this workflow.
 
 8. **Provide Actionable Feedback**: If issues are found:
    - Clearly explain what needs to be fixed
