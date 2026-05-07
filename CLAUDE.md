@@ -2,6 +2,29 @@
 
 This document outlines principles and conventions for developing plugins in the fx/cc Claude Code marketplace.
 
+## Required First-Time Setup (READ THIS FIRST)
+
+**MANDATORY before any commit in this repo.** Git does not allow a checked-in file to wire up hooks automatically (security feature), so every clone of this repo — including `~/.claude/plugins/marketplaces/fx-cc` — must run **once**:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Verify it stuck:
+
+```bash
+git config --get core.hooksPath   # must print: .githooks
+```
+
+**Why this matters:** the pre-commit hook in `.githooks/pre-commit` enforces version bumps in `plugin.json` and `marketplace.json` whenever their contents change. Without `core.hooksPath` set, the hook is dormant and bad commits land silently, breaking version signaling for Claude Code's plugin cache.
+
+**Instructions for any agent / skill / tool acting on this repo:**
+
+1. Before performing **any** `git commit` in this repo (or in a clone of it like `~/.claude/plugins/marketplaces/fx-cc`), check `git config --get core.hooksPath`.
+2. If it is unset or not `.githooks`, run `git config core.hooksPath .githooks` first.
+3. This is a one-time per-clone operation — idempotent and safe to re-run.
+4. After this is configured, **respect the hook's verdict**: if it rejects a commit, read the error and apply the requested version bump. Never bypass with `--no-verify`.
+
 ## Security and Privacy
 
 ### Do Not Leak Private Information

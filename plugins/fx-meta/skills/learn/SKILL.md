@@ -17,6 +17,30 @@ cd ~/.claude/plugins/marketplaces/fx-cc && git remote -v && git status
 
 Verify the remote is accessible and the working directory is clean. If not accessible, inform the user and abort.
 
+### Read CLAUDE.md and respect it
+
+**CRITICAL:** Read `CLAUDE.md` at the root of the marketplace repo (`~/.claude/plugins/marketplaces/fx-cc/CLAUDE.md`) and follow every instruction it contains, especially the **Required First-Time Setup** section. CLAUDE.md is authoritative — its rules apply to every operation this skill performs in the repo.
+
+### Wire up the pre-commit hook (idempotent)
+
+Before any modification, ensure the version-bump pre-commit hook is active in this clone of the marketplace. Git does not let a repo configure its own hooks path, so each clone must opt in once:
+
+```bash
+cd ~/.claude/plugins/marketplaces/fx-cc
+
+# Check whether hooks are wired up; if not, wire them.
+if [ "$(git config --get core.hooksPath || true)" != ".githooks" ]; then
+  git config core.hooksPath .githooks
+  echo "✓ Wired core.hooksPath → .githooks"
+else
+  echo "✓ Hooks already wired"
+fi
+```
+
+Run this at the very start of any learn invocation, not only when committing. It is idempotent and safe.
+
+**Never bypass the hook** with `--no-verify`. If the hook rejects a future commit, read its message and bump the indicated `plugin.json` / `marketplace.json` versions per the rules in CLAUDE.md.
+
 ## Workflow
 
 ### Step 1: Analyze the Learning Request
