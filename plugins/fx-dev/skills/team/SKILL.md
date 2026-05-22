@@ -28,6 +28,19 @@ Identify:
 - Which tasks can run in parallel vs. which must be sequential
 - A sensible task grouping (1 coder agent can own 1-3 related tasks)
 
+### Do NOT pause to confirm scope on clearly-scoped requests (BLOCKING)
+
+When the user's invocation is unambiguous — e.g. `implement all pending changes fully`, `ship all of these`, `do everything in docs/changes/`, a concrete list of PR numbers, or a single spec file — **treat that as the authoritative scope and proceed immediately to Step 1**. Do NOT pause to ask "should I do all 6 now or just wave 1 first to sanity-check?" Do NOT report `failure` to the Coder dashboard asking for scope confirmation when the user already gave it. Words like "all", "fully", "every", "the whole list" are explicit scope — honor them.
+
+**You can still split execution into waves internally.** Wave-based execution (Wave 1: independent tasks in parallel; Wave 2: their dependents once unblocked; etc.) is the correct way to run a multi-PR team, and you should plan it that way. The rule is about **not stopping to ask the user** whether to do waves or which wave to start with — just plan the waves and execute them.
+
+**Reserve confirmation for genuine ambiguity only:**
+- Conflicting instructions ("ship 0051 — actually wait, also 0055?")
+- Vague scope ("clean up the changes folder" without saying which)
+- Destructive operations not implied by the request (deleting branches, force-pushing, dropping data)
+
+If you find yourself drafting a "before I burn that compute, one quick check…" message in response to a clearly-scoped instruction, stop. Delete the draft. Spawn the team.
+
 ## STEP 1: Create the Team
 
 ```
