@@ -60,7 +60,7 @@ Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `
 
 ## STEP 2.5: Worktree Isolation Setup (MANDATORY for concurrent coders)
 
-**Why this step exists:** `isolation: "worktree"` on the Agent tool does nothing for team members (bug #33045 — see STEP 3). Without real isolation, every concurrent coder shares the coordinator's single working tree and git HEAD and they corrupt each other. The coordinator MUST pre-create one git worktree per coder that will run concurrently, each on its own branch, and pin each teammate to its worktree via a prompt preamble.
+**Why this step exists:** `isolation: "worktree"` on the Agent tool does nothing for team members (it is silently ignored when `team_name` is set — see STEP 3). Without real isolation, every concurrent coder shares the coordinator's single working tree and git HEAD and they corrupt each other. The coordinator MUST pre-create one git worktree per coder that will run concurrently, each on its own branch, and pin each teammate to its worktree via a prompt preamble.
 
 **Skip this step only if you will run coders strictly one-at-a-time** (fully sequential, never two coders alive at once). In that single-writer case the shared tree is safe. The moment you want parallelism, this step is required.
 
@@ -281,7 +281,7 @@ When all tasks are complete and all PRs merged:
 ## Coordinator Rules (NON-NEGOTIABLE)
 
 - **ALWAYS pass `team_name` AND `name` to EVERY `Agent` call** — coder, verify, fix, anything. Spawning an Agent without these in team mode produces an orphan sub-agent that the team config doesn't know about and defeats the entire point of `/team`. No exceptions.
-- **NEVER rely on `isolation: "worktree"` for a team member** — it is silently ignored when `team_name` is set (bug #33045). For any coders that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run coders strictly one-at-a-time. Always tear the worktrees down in STEP 4.
+- **NEVER rely on `isolation: "worktree"` for a team member** — it is silently ignored when `team_name` is set. For any coders that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run coders strictly one-at-a-time. Always tear the worktrees down in STEP 4.
 - **NEVER write code yourself** — all implementation goes through coder agents
 - **NEVER create branches or commits** — coder agents handle this
 - **NEVER delegate the full SDLC to a single agent** — agents cannot spawn sub-agents, so they will inline everything and skip later steps

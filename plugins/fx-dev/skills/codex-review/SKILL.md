@@ -38,7 +38,7 @@ Notes:
 - If the workspace is externally sandboxed and Codex prompts for approvals in a
   non-interactive context, add `--dangerously-bypass-approvals-and-sandbox`
   (review is read-only, so this is safe here). Try without it first.
-- Requires the `codex` CLI to be installed and authenticated (`codex login`).
+- Requires the `codex` CLI to be installed and already authenticated. The workspace is expected to be authed; if it is not, STOP and report to the user — do NOT run `codex login` (it is interactive).
 
 ## Workflow (fix → re-run → converge)
 
