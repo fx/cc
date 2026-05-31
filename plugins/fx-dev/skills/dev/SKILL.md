@@ -271,8 +271,17 @@ Agent tool:
            - Create PR with: gh pr create  (NO --draft flag)
            - Include links to related spec/change docs in the PR body
              (use relative paths from repo root, e.g. docs/specs/auth/ or docs/changes/0003-add-oauth.md)
-           - Do NOT put spec/change references in the PR title unless the PR is
-             primarily about finalizing lingering tasks in a spec/change doc
+           - Do NOT put spec/change references in the PR title — not as a number,
+             slug, or path, even when the PR finalizes a change doc. Describe the
+             work itself in the title; reference the doc by path in the body only.
+           - ⛔ NEVER put '#<number>' in the PR title ('#4', '(#4)', '#123')
+             unless N is a REAL existing PR/issue on the target repo that this PR
+             references. On squash-merge the title becomes the commit subject,
+             where '#N' auto-links to PR/issue #N. NEVER use '#N' for an
+             implementation wave, phase, step, or change-doc number, and NEVER
+             pre-add a '(#N)' suffix (GitHub appends the real PR number at squash
+             merge). No waves/phases/steps in the title at all — those go in the
+             body. See the fx-dev:github skill's '#<number> PR-Title Rule'.
            - Reference related issues
            - Do NOT include any 'this is a draft' / 'draft for review' language
              anywhere in the title or body
