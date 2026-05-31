@@ -159,20 +159,41 @@ Check `references/known-issues.md` before attempting operations that have failed
 
 **Content Rules:**
 - Describe the work being done and changes being made
-- Include issue/ticket references (e.g., `#123`, `JIRA-456`)
-- **Never mention**: implementation phases, steps of a process, project management terminology, or workflow stages
-- **Never include**: "Phase 1", "Step 2", "Part 3", "First iteration", "Initial implementation"
+- **Never mention** in the title: implementation phases, waves, steps of a process, project management terminology, workflow stages, or change-doc numbers
+- **Never include** in the title: "Phase 1", "Step 2", "Part 3", "Wave 4", "First iteration", "Initial implementation", "0004-..."
+- These belong in the PR **body** (description) if anywhere — never the title
+
+### ⛔ The `#<number>` PR-Title Rule (CRITICAL — BLOCKING)
+
+**A `#` immediately followed by a number — `#4`, `(#4)`, `#123` — in a PR title is NOT free text. GitHub interprets it as a hard reference to PR/issue #N in the target repo and auto-links it.** Putting an unrelated number there silently links your PR to whatever random PR/issue happens to have that number. This has repeatedly created messy, wrong cross-links (e.g. a title saying `(#4)` to mean "implementation wave 4" linking to PR #4).
+
+**Rules — no exceptions:**
+
+1. **NEVER put `#<number>` in a PR title to mean anything other than a real PR/issue reference.** Implementation waves, phases, steps, parts, iterations, change-doc numbers (`0004`), and task numbers are FORBIDDEN as `#N` in titles.
+2. **A `#<number>` is allowed in a title ONLY if N is a genuine, existing PR or issue in the target repo that this PR is actually about** — and even then, prefer putting the reference in the body (`Closes #123`). If you're not certain the number maps to a real PR/issue on this exact repo, do NOT write it.
+3. **GitHub itself appends `(#N)` to the squash-merge commit title automatically** using the real PR number. Do NOT pre-add any `(#N)` yourself — let GitHub do it at merge time. Your hand-authored title must contain no `(#N)` suffix.
+4. To reference a change document or wave in the body, write the **path** (`docs/changes/0004-add-oauth.md`) or plain words ("the second batch of tasks") — never `#0004`, `#4`, or `(#4)`.
 
 **Examples:**
 
-✅ **Good PR Title:**
+✅ **Good PR Title** (no `#N`, no wave/phase):
 ```
-feat: add user authentication with JWT tokens (#123)
+feat: add user authentication with JWT tokens
 ```
 
-❌ **Bad PR Title:**
+❌ **Bad PR Title** (`(#4)` means "wave 4" — GitHub links it to PR/issue #4):
+```
+feat: add user authentication (#4)
+```
+
+❌ **Bad PR Title** (phase/wave in title):
 ```
 feat: add user authentication - Phase 1: Initial Implementation
+```
+
+✅ **Allowed** only when #123 is a real issue this PR resolves on this repo (prefer doing this in the body instead):
+```
+fix: resolve login timeout reported in #123
 ```
 
 ✅ **Good Commit Message:**

@@ -31,8 +31,11 @@ Then, your primary responsibilities:
 
    **PR Title Rules:**
    - Follow commit message format (e.g., `feat(auth): add OAuth2 login`)
+   - **⛔ NEVER put `#<number>` in the title** (`#4`, `(#4)`, `#123`) unless N is a real, existing PR/issue in the **target repo** that this PR genuinely references. GitHub auto-links any `#N` to PR/issue #N — using it for an implementation **wave**, phase, step, or change-doc number wrongly cross-links the PR. This is BLOCKING. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule" for the full rule.
+   - **Do NOT pre-add a `(#N)` suffix** — GitHub appends the real PR number to the squash-merge title automatically at merge time. Your title must contain no `(#N)`.
+   - **NEVER mention implementation waves, phases, steps, iterations, or change-doc numbers in the title** (no "Wave 4", "Phase 1", "0003"). They go in the PR **body** if anywhere.
    - Do NOT put spec/change references in the title
-   - Exception: if the PR is primarily about finalizing lingering tasks in a spec/change doc, the title MAY reference it (e.g., `docs: complete remaining tasks for 0003-add-oauth`)
+   - Exception: if the PR is primarily about finalizing lingering tasks in a spec/change doc, the title MAY name it by **slug/path** (e.g., `docs: complete remaining tasks for 0003-add-oauth`) — never as `#0003` or `(#3)`
 
    - **Test plan** — a checklist of concrete verification steps someone (or the verify-web-change skill) can follow to confirm the PR works. Each item should be a checkbox:
      ```markdown

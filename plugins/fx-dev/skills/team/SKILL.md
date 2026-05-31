@@ -34,6 +34,11 @@ When the user's invocation is unambiguous — e.g. `implement all pending change
 
 **You can still split execution into waves internally.** Wave-based execution (Wave 1: independent tasks in parallel; Wave 2: their dependents once unblocked; etc.) is the correct way to run a multi-PR team, and you should plan it that way. The rule is about **not stopping to ask the user** whether to do waves or which wave to start with — just plan the waves and execute them.
 
+> **⛔ Waves are an INTERNAL execution concept — they MUST NEVER leak into a PR title (BLOCKING).** A wave/phase/step number is not a PR or issue, and `#<number>` in a PR title (`#4`, `(#4)`, `#123`) is auto-linked by GitHub to PR/issue #N in the repo. Writing `(#4)` to mean "wave 4" wrongly cross-links the PR to whatever PR/issue #4 is — this has happened repeatedly and is exactly what we are stamping out. When you spawn coders and when you author/verify titles before merge:
+> - **No `#<number>` in any PR title** unless N is a real, existing PR/issue on the target repo that the PR actually references. Never pre-add a `(#N)` suffix — GitHub appends the real PR number at squash-merge time.
+> - **No "Wave N", "Phase N", "Step N", batch/iteration labels, or change-doc numbers in titles.** They belong in the PR body only.
+> - **Gate-check this before merge:** if a PR title contains a stray `#N` or wave/phase wording, rename it with `gh pr edit <N> --title "..."` before merging. A squash merge bakes the title into `main`'s history — a wrong cross-link there is permanent. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule".
+
 **Reserve confirmation for genuine ambiguity only:**
 - Conflicting instructions ("ship 0051 — actually wait, also 0055?")
 - Vague scope ("clean up the changes folder" without saying which)
@@ -182,6 +187,7 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 | 3 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
 | 4 | **Spec task marked complete** | Check via project-management skill | YES |
 | 5 | **PR description is clear** | Read PR body | YES |
+| 5b | **PR title is clean** | Title has NO stray `#<number>` (only a real PR/issue ref) and NO wave/phase/step/change-doc number. Fix with `gh pr edit <N> --title "..."` before merge — squash bakes the title into `main` | YES |
 | 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
 
 ### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL

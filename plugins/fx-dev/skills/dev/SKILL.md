@@ -273,6 +273,13 @@ Agent tool:
              (use relative paths from repo root, e.g. docs/specs/auth/ or docs/changes/0003-add-oauth.md)
            - Do NOT put spec/change references in the PR title unless the PR is
              primarily about finalizing lingering tasks in a spec/change doc
+           - ⛔ NEVER put '#<number>' in the PR title ('#4', '(#4)', '#123')
+             unless N is a REAL existing PR/issue on the target repo that this PR
+             references. GitHub auto-links any '#N'. NEVER use '#N' for an
+             implementation wave, phase, step, or change-doc number, and NEVER
+             pre-add a '(#N)' suffix (GitHub appends the real PR number at squash
+             merge). No waves/phases/steps in the title at all — those go in the
+             body. See the fx-dev:github skill's '#<number> PR-Title Rule'.
            - Reference related issues
            - Do NOT include any 'this is a draft' / 'draft for review' language
              anywhere in the title or body
