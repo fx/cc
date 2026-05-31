@@ -165,13 +165,13 @@ Check `references/known-issues.md` before attempting operations that have failed
 
 ### ⛔ The `#<number>` PR-Title Rule (CRITICAL — BLOCKING)
 
-**A `#` immediately followed by a number — `#4`, `(#4)`, `#123` — in a PR title is NOT free text. GitHub interprets it as a hard reference to PR/issue #N in the target repo and auto-links it.** Putting an unrelated number there silently links your PR to whatever random PR/issue happens to have that number. This has repeatedly created messy, wrong cross-links (e.g. a title saying `(#4)` to mean "implementation wave 4" linking to PR #4).
+**A `#` immediately followed by a number — `#4`, `(#4)`, `#123` — in a PR title is a latent reference to PR/issue #N in the target repo.** The title bar itself renders it as plain text, so it looks harmless — but on **squash merge with GitHub's default commit-message setting, the PR title becomes the merge commit's subject line**, and `#N` in a *commit message* DOES auto-link and create a hard cross-reference to PR/issue #N. So a title saying `(#4)` to mean "implementation wave 4" ends up permanently cross-linking your merged commit (and the PR) to whatever PR/issue #4 happens to be. This has repeatedly created messy, wrong cross-links on `main`.
 
 **Rules — no exceptions:**
 
 1. **NEVER put `#<number>` in a PR title to mean anything other than a real PR/issue reference.** Implementation waves, phases, steps, parts, iterations, change-doc numbers (`0004`), and task numbers are FORBIDDEN as `#N` in titles.
 2. **A `#<number>` is allowed in a title ONLY if N is a genuine, existing PR or issue in the target repo that this PR is actually about** — and even then, prefer putting the reference in the body (`Closes #123`). If you're not certain the number maps to a real PR/issue on this exact repo, do NOT write it.
-3. **GitHub itself appends `(#N)` to the squash-merge commit title automatically** using the real PR number. Do NOT pre-add any `(#N)` yourself — let GitHub do it at merge time. Your hand-authored title must contain no `(#N)` suffix.
+3. **Do NOT pre-add a `(#N)` suffix.** When squash-merging with the default commit-message setting, GitHub appends `(#<real-PR-number>)` to the commit subject for you — a hand-added `(#4)` either duplicates or contradicts it. Leave your title clean and let GitHub add the real number at merge time.
 4. To reference a change document or wave in the body, write the **path** (`docs/changes/0004-add-oauth.md`) or plain words ("the second batch of tasks") — never `#0004`, `#4`, or `(#4)`.
 
 **Examples:**
@@ -181,7 +181,7 @@ Check `references/known-issues.md` before attempting operations that have failed
 feat: add user authentication with JWT tokens
 ```
 
-❌ **Bad PR Title** (`(#4)` means "wave 4" — GitHub links it to PR/issue #4):
+❌ **Bad PR Title** (`(#4)` means "wave 4" — becomes the squash-merge commit subject and cross-links to PR/issue #4):
 ```
 feat: add user authentication (#4)
 ```

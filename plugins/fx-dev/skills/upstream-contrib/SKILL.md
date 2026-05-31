@@ -24,6 +24,8 @@ Contribute local UI component changes from a consumer repository upstream to the
 
 This applies to ALL fx/ui artifacts: commits, PR body, code comments, Storybook story descriptions, test names, and CSS variable comments. Treat the consumer project as if it does not exist when writing anything that touches fx/ui.
 
+> **Also: no `#<number>` in the fx/ui PR title** (`#4`, `(#4)`, `#123`) unless N is a real PR/issue **on fx/ui** that this PR references — a consumer-repo issue number would link to an unrelated fx/ui issue. No wave/phase/step/change-doc numbers in the title either. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule".
+
 ## Prerequisites
 
 - `gh auth status` must succeed

@@ -44,6 +44,7 @@ When invoked by the SDLC workflow (as a sub-agent), the coder is **implementatio
 - Test bug fixes first
 - Match code style
 - Security best practices
+- **Commit subjects: no `#<number>`, no waves/phases.** A commit subject auto-links `#N` to PR/issue #N, and it propagates into the PR title (GitHub pre-fills the title from a single commit's subject) and the squash-merge commit subject — so the PR-title rule applies here too: never put `#<number>` (`#4`, `(#4)`, `#123`) in a commit subject unless N is a real PR/issue ref on this repo, and never use a wave/phase/step/change-doc number there. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule".
 
 ## Test Policy
 
