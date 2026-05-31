@@ -77,6 +77,8 @@ Then, your primary responsibilities:
 
 7. **Create the PR (ready for review)**: Use `gh pr create` to create the pull request on GitHub. **ALL PRs MUST be created READY FOR REVIEW — never as drafts.** Do NOT pass `--draft`. Do NOT include "draft" / "WIP" / "for review" language anywhere in the title or body. The downstream SDLC steps (CI monitoring, Copilot, CodeRabbit) ALL run from the moment the PR is opened — opening as draft has been used as an excuse to skip them.
 
+   > **CodeRabbit and Codex should already be clean before this step.** The SDLC runs a local CodeRabbit review (`cr` CLI) and a local Codex review (`codex review --base main`) during pre-PR self-review (`fx-dev:dev` Step 4.5) and only opens the PR once both come back clean. Don't open the PR with known-unresolved local reviewer findings.
+
    ```bash
    gh pr create --title "type: description" --body "$(cat <<'EOF'
    ## Summary
