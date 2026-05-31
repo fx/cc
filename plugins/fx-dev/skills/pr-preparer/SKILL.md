@@ -33,9 +33,8 @@ Then, your primary responsibilities:
    - Follow commit message format (e.g., `feat(auth): add OAuth2 login`)
    - **⛔ NEVER put `#<number>` in the title** (`#4`, `(#4)`, `#123`) unless N is a real, existing PR/issue in the **target repo** that this PR genuinely references. On squash-merge the title becomes the commit subject, where `#N` auto-links to PR/issue #N — so using it for an implementation **wave**, phase, step, or change-doc number wrongly cross-links the PR. This is BLOCKING. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule" for the full rule.
    - **Do NOT pre-add a trailing `(#N)` suffix** — GitHub appends the real PR number to the squash-merge title automatically at merge time, so a hand-written trailing `(#N)` is both redundant and likely wrong. (A genuine in-text PR/issue reference per the rule above is still allowed; what's forbidden is tacking on a `(#N)` suffix yourself.)
-   - **NEVER mention implementation waves, phases, steps, iterations, or change-doc numbers in the title** (no "Wave 4", "Phase 1", "0003"). They go in the PR **body** if anywhere.
-   - Do NOT put spec/change references in the title
-   - Exception: if the PR is primarily about finalizing lingering tasks in a spec/change doc, the title MAY name it by **slug/path** (e.g., `docs: complete remaining tasks for 0003-add-oauth`) — never as `#0003` or `(#3)`
+   - **NEVER mention implementation waves, phases, steps, iterations, or change-doc/spec references in the title** — not as a number (`0003`), not as a slug (`0003-add-oauth`), not as a path, and not as `#0003`/`(#3)`. No "Wave 4", "Phase 1" either. All of this goes in the PR **body** if anywhere, never the title.
+   - This applies even when the PR finalizes a change doc: describe the work itself (`docs: complete OAuth change tasks`), and reference the doc by path **in the body** (`docs/changes/0003-add-oauth.md`). There is no title exception.
 
    - **Test plan** — a checklist of concrete verification steps someone (or the verify-web-change skill) can follow to confirm the PR works. Each item should be a checkbox:
      ```markdown
