@@ -58,6 +58,65 @@ Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `
 - Acceptance criteria
 - Which spec task(s) it maps to (if from a spec)
 
+## STEP 2.5: Worktree Isolation Setup (MANDATORY for concurrent coders)
+
+**Why this step exists:** `isolation: "worktree"` on the Agent tool does nothing for team members (bug #33045 — see STEP 3). Without real isolation, every concurrent coder shares the coordinator's single working tree and git HEAD and they corrupt each other. The coordinator MUST pre-create one git worktree per coder that will run concurrently, each on its own branch, and pin each teammate to its worktree via a prompt preamble.
+
+**Skip this step only if you will run coders strictly one-at-a-time** (fully sequential, never two coders alive at once). In that single-writer case the shared tree is safe. The moment you want parallelism, this step is required.
+
+### 2.5.1 Create one worktree per concurrent coder
+
+Worktrees **MUST** live under the repo's own `.claude/worktrees/` directory — this matches Claude Code's native worktree convention, keeps them inside the (writable) repo, and survives a read-only parent filesystem. **NEVER** put them in `/tmp`, `$HOME`, or a sibling path outside the repo.
+
+```bash
+cd <REPO_ROOT>
+git fetch origin --quiet
+mkdir -p .claude/worktrees
+# one per coder — name the worktree after the task/change, branch off origin/main
+git worktree add .claude/worktrees/<slug> -b <branch> origin/main
+# e.g. git worktree add .claude/worktrees/0004 -b refactor/0004-unified-config-service origin/main
+```
+
+**Ensure `.claude/worktrees/` is ignored** before creating any (most projects already ignore `.claude/`, but verify — this one may not). A nested worktree dir otherwise shows up as untracked in the main repo and can get swept into a coder's `git add`. Use the repo-local, **untracked** `.git/info/exclude` so this scaffolding never dirties the coordinator's working tree or risks landing in a feature PR — do NOT append to the tracked `.gitignore`:
+
+```bash
+git check-ignore .claude/worktrees/x >/dev/null 2>&1 || \
+  printf '\n# Claude Code team worktrees (local only)\n.claude/worktrees/\n' >> .git/info/exclude
+```
+
+`.git/info/exclude` is never committed, so there is nothing to clean up later and `git status` stays clean.
+
+**Symlink `node_modules`** (and any other gitignored, install-only dir the toolchain needs) into each worktree so `vitest`/`biome`/`tsc` resolve — a fresh worktree has no `node_modules`:
+
+```bash
+ln -s <REPO_ROOT>/node_modules <REPO_ROOT>/.claude/worktrees/<slug>/node_modules
+```
+
+### 2.5.2 Smoke-test isolation BEFORE spawning real coders
+
+Spawn ONE cheap probe teammate pinned to a worktree. Have it write a marker file in the worktree and confirm (a) the marker is **absent** in the main repo, (b) `pwd`/branch/toplevel are the worktree's, then clean up. Only proceed once it reports isolation OK. This catches a broken setup before any real code is written. (If the probe lands in the main repo, the workaround failed — stop and re-check paths.)
+
+A confirmed gotcha: **the teammate's shell cwd RESETS to the main repo root after EVERY bash command** ("Shell cwd was reset to …"). That is exactly why the preamble below forces an absolute `cd` on every command — relative paths silently resolve against the MAIN repo, not the worktree.
+
+### 2.5.3 Pin each coder to its worktree (prompt preamble)
+
+Every coder/verify/fix teammate that must operate in a worktree **MUST** have its spawn `prompt` START with this preamble (substitute the absolute path):
+
+```
+CRITICAL — WORKTREE ISOLATION. Your working directory is <ABS_WORKTREE_PATH>.
+The shell cwd resets to the main repo after every command, so:
+- Prefix EVERY bash command with `cd <ABS_WORKTREE_PATH> && `.
+- Use ABSOLUTE paths (under <ABS_WORKTREE_PATH>/) for ALL file reads, writes, and edits.
+- Pass `path: <ABS_WORKTREE_PATH>` to EVERY Glob and Grep call.
+- Relative paths resolve to the MAIN repo, NOT your worktree — never rely on them.
+Your branch <branch> is already created and checked out in this worktree; do NOT
+create a new branch or run `git checkout`. Commit and push from inside the worktree.
+```
+
+### 2.5.4 Track the worktrees for cleanup
+
+Remember each `(worktree path, branch, node_modules symlink)` triple you created — STEP 4 must tear them all down.
+
 ## STEP 3: Execute Tasks (Coordinator-Driven SDLC)
 
 **Load the dev skill** (`Skill tool: skill='fx-dev:dev'`) and read its SDLC steps. The dev skill is the single source of truth for the development workflow — do not duplicate its instructions here.
@@ -88,7 +147,7 @@ The `name` should be specific and human-readable so it's useful in logs and `Sen
 
 ### Key orchestration principles
 
-**Implementation steps** (planning, coding, testing) → Spawn focused agents. Use `isolation: "worktree"` for coder agents so each works on an isolated copy. Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC. Always pass `team_name` and `name` (see above).
+**Implementation steps** (planning, coding, testing) → Spawn focused agents. For any coder that will run **concurrently** with another, give it an isolated worktree via STEP 2.5 and start its prompt with the worktree preamble — do NOT rely on `isolation: "worktree"` (it's a no-op for team members; see the prohibition above). Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC. Always pass `team_name` and `name` (see above).
 
 When you spawn the coder for the FINAL piece of a change, your prompt MUST include: "This is the final implementing PR for <change>. In the same commit, flip `**Status:** draft` → `**Status:** complete` in `docs/changes/<NNNN>-*.md` AND flip `status: draft` → `status: complete` for that change's entry in `docs/index.yml`. Sync `docs/index.md` if present." For every NON-final coder on the same change, your prompt MUST include: "Leave the change-doc `**Status:**` field and `docs/index.yml` entry untouched — the final PR flips them." This split prevents rebase-conflict storms across multi-PR changes and ensures the final PR carries the Status flip atomically.
 
@@ -104,9 +163,10 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 
 ### Parallelization
 
-- Spawn multiple coder agents simultaneously for independent tasks (each in its own worktree)
+- Spawn multiple coder agents simultaneously for independent tasks — but ONLY after giving each its own **pre-created worktree** per STEP 2.5 (the `isolation: "worktree"` flag does NOT work for team members). Each coder works in its own worktree on its own branch.
 - For dependent tasks, wait until the blocking task's PR is merged before spawning the next coder
 - After merging, repeat for newly-unblocked tasks
+- If you skip STEP 2.5, you MUST run coders strictly one-at-a-time (never two alive at once) — concurrent coders without real worktrees share one working tree and clobber each other
 
 ---
 
@@ -125,6 +185,8 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 | 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
 
 ### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
+
+> **CodeRabbit and Codex run LOCALLY first.** Implementing sub-agents MUST run a local CodeRabbit review via the `cr` CLI AND a local Codex review via `codex review --base main` during pre-PR self-review (`fx-dev:dev` Step 4.5 / `fx-dev:coderabbit-review` Mode 1 / `fx-dev:codex-review`) and open the PR only once both are clean. Gate 2b below is the **fallback** PR-level CodeRabbit gate — it applies only when the repo's CodeRabbit GitHub App also auto-reviews PRs. If a clean local `cr` review ran and no `CodeRabbit` check appears, Gate 2b is already satisfied.
 
 **As coordinator, YOU handle reviewer waits directly. Do NOT spawn sub-agents for reviewer waits — sub-agents in this team context cannot spawn their own sub-agents, and `fx-dev:dev` mode A would fail. You ARE the root agent for the team; invoke each reviewer skill in the foreground sequentially, OR launch the slow waiter (CodeRabbit) as a background `Bash` process while you handle Copilot in the foreground.**
 
@@ -203,14 +265,23 @@ When all tasks are complete and all PRs merged:
 1. Verify all spec tasks are marked done (load `fx-dev:project-management` to check)
 2. **Verify every implemented change is `status: complete`** on `main` — check both `docs/changes/<NNNN>-*.md` front-matter AND `docs/index.yml`. If any are still `draft`, you missed the pre-merge gate; open a corrective PR right now (the goal is the gate catches it pre-merge, but if it slipped, fix it before declaring done).
 3. Send shutdown requests to all active teammates
-4. Clean up the team with `TeamDelete`
-5. Report final summary to user
+4. **Tear down every worktree created in STEP 2.5.** For each one, in order: remove the `node_modules` symlink first (so `git worktree remove` doesn't traverse into the shared deps), then `git worktree remove --force <path>`, then `git worktree prune`. Delete the branch with `git branch -D <branch>` only if it's unmerged/abandoned (a merged PR's branch is already gone from origin). Confirm `git worktree list` shows only the main repo and `git status` is clean before continuing.
+
+   ```bash
+   rm -f <REPO_ROOT>/.claude/worktrees/<slug>/node_modules
+   git worktree remove --force <REPO_ROOT>/.claude/worktrees/<slug>
+   git worktree prune
+   git branch -D <branch>   # only if unmerged/abandoned
+   ```
+5. Clean up the team with `TeamDelete` (it fails if any member is still active — make sure step 3's shutdowns completed first)
+6. Report final summary to user
 
 ---
 
 ## Coordinator Rules (NON-NEGOTIABLE)
 
 - **ALWAYS pass `team_name` AND `name` to EVERY `Agent` call** — coder, verify, fix, anything. Spawning an Agent without these in team mode produces an orphan sub-agent that the team config doesn't know about and defeats the entire point of `/team`. No exceptions.
+- **NEVER rely on `isolation: "worktree"` for a team member** — it is silently ignored when `team_name` is set (bug #33045). For any coders that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run coders strictly one-at-a-time. Always tear the worktrees down in STEP 4.
 - **NEVER write code yourself** — all implementation goes through coder agents
 - **NEVER create branches or commits** — coder agents handle this
 - **NEVER delegate the full SDLC to a single agent** — agents cannot spawn sub-agents, so they will inline everything and skip later steps

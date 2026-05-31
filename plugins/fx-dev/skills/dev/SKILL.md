@@ -190,22 +190,48 @@ git diff main --stat
 
 ---
 
-### STEP 4.5: Code Cleanup (simplify)
+### STEP 4.5: Pre-PR Self-Review (simplify → review → CodeRabbit → Codex)
 
-**MANDATORY: Run the simplify skill before creating the PR.**
+**MANDATORY: Self-review the changes locally BEFORE creating the PR. The PR is opened only once all four passes are clean against the final diff at the same time.** Run them in order, fixing and committing findings after each; because a later pass's fixes invalidate earlier passes, loop the whole sequence until a full pass yields no new commits (see "Re-run after fixes" below).
+
+**1. `/simplify`** — reuse, quality, efficiency cleanup:
 
 ```
 Skill tool: skill="simplify"
 ```
 
-This reviews all changed code for:
-- **Reuse** — duplicated logic that could use existing utilities
-- **Quality** — copy-paste patterns, leaky abstractions, unnecessary nesting
-- **Efficiency** — redundant computations, missed concurrency, hot-path bloat
+Reviews all changed code for **reuse** (duplicated logic), **quality** (copy-paste, leaky abstractions, nesting), and **efficiency** (redundant computation, missed concurrency).
 
-Fix any issues found, commit the fixes, then proceed to PR creation.
+**2. `/code-review`** — correctness bugs in the diff:
 
-**⛔ DO NOT PROCEED until simplify has run and any findings are addressed**
+```
+Skill tool: skill="code-review"
+```
+
+**3. CodeRabbit (local, via `cr`)** — run CodeRabbit's AI review on the local changes BEFORE the PR exists, so its feedback is resolved up front instead of churning the PR:
+
+```
+Skill tool: skill="fx-dev:coderabbit-review"
+```
+
+The skill runs `cr review --agent` against the working tree (Mode 1), resolves every actionable finding, and re-runs until clean. If `cr` is **unavailable**, fall back to the PR-level CodeRabbit gate in Step 6.3. If `cr` reports it is **not authenticated**, STOP and report to the user — NEVER run `cr auth login` (it is interactive; the workspace should already be authed).
+
+**4. Codex (local, via `codex`)** — run OpenAI Codex's AI review one-shot on the branch BEFORE the PR exists. Codex and CodeRabbit are independent reviewers; each catches issues the other misses:
+
+```
+Skill tool: skill="fx-dev:codex-review"
+```
+
+The skill runs `codex review --base main` (read-only, one-shot, branch vs `main`), prints findings to stdout, and you resolve every actionable one before opening the PR. If the `codex` CLI is **unavailable or not authenticated**, report to the user once and proceed without this pass — NEVER run `codex login` (it is interactive; the workspace should already be authed).
+
+Fix any issues found in each pass and commit the fixes. **Whenever a later pass commits a change, the earlier passes' clean results no longer cover the final diff — re-run the whole sequence (simplify → review → CodeRabbit → Codex) from the top.** Only proceed to PR creation once a complete pass through all four reviewers produces **no new commits** (every available reviewer is clean against the final diff at once).
+
+**⛔ DO NOT PROCEED to Step 5 until simplify and review have run and all findings are addressed, AND each local AI reviewer has been resolved or correctly degraded:**
+
+- **CodeRabbit** clean, OR — if `cr` is **not installed** — fall back to the PR-level gate in Step 6.3. If `cr` is installed but **not authenticated**, STOP and report to the user; do NOT treat an auth failure as a skip.
+- **Codex** clean, OR — if the `codex` CLI is **unavailable or not authenticated** — report once and skip this pass.
+
+Opening the PR with unresolved findings from an *available, working* local reviewer is FORBIDDEN — the whole point is to open clean. A genuinely missing CLI degrades to the documented fallback above; it does NOT block PR creation.
 
 ---
 
@@ -433,12 +459,14 @@ Agent tool:
 
 **MANDATORY: Wait for and resolve EVERY automated reviewer configured on the repo.** Copilot and CodeRabbit are the two we know about today; future integrations slot in here. Reviewers are **independent feedback channels** with different latencies (Copilot ≈30–90 s; CodeRabbit 2–10+ min and re-runs after every push).
 
+> **CodeRabbit was already run LOCALLY in Step 4.5** (`cr review --agent`), so the PR should open clean. The CodeRabbit handling here is a **fallback merge gate** for repos whose CodeRabbit GitHub App also auto-reviews PRs: clear its `CodeRabbit` check and any threads it posts. If a clean local `cr` review ran and the App is not configured (no `CodeRabbit` check appears), this gate is already satisfied — don't block on it.
+
 ##### Reviewer-by-reviewer skills
 
 | Reviewer | Skill | Notes |
 |----------|-------|-------|
 | GitHub Copilot | `fx-dev:copilot-review` | Auto-reviews; we explicitly request via API as a defensive belt. Does NOT re-review on push by default. |
-| CodeRabbit | `fx-dev:coderabbit-review` | Auto-reviews; **re-reviews after every push**. Exposes state via the `CodeRabbit` GitHub check. Cycle until check is terminal AND 0 threads. |
+| CodeRabbit | `fx-dev:coderabbit-review` | Already run **locally** in Step 4.5 (`cr`). Here = fallback PR-level gate when the GitHub App auto-reviews PRs: **re-reviews after every push**, exposes state via the `CodeRabbit` check; cycle until terminal AND 0 threads. Skip if not configured. |
 
 ##### Pick the right execution mode for your context
 
@@ -721,7 +749,7 @@ All sub-agents are launched via the Agent tool. Each loads its skill via the Ski
 | 3 | Planner | `fx-dev:planner` |
 | 3,8 | Issue Updater | `fx-dev:issue-updater` |
 | 4,6.2,8.2 | Coder | `fx-dev:coder` |
-| 4.5 | Code Cleanup | `simplify` |
+| 4.5 | Pre-PR Self-Review | `simplify`, then `code-review`, then `fx-dev:coderabbit-review` (local `cr`), then `fx-dev:codex-review` (local `codex`) — all must be clean before opening the PR |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 5.5.2 | Browser Verification | `fx-dev:verify-web-change` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
@@ -746,7 +774,7 @@ Workflow complete when ALL true:
 - ✅ Requirements documented
 - ✅ Plan created
 - ✅ Code implemented with atomic commits
-- ✅ Code reviewed via /simplify (reuse, quality, efficiency)
+- ✅ Pre-PR self-review clean: /simplify (reuse, quality, efficiency), /review (correctness), a local CodeRabbit `cr` review, AND a local Codex `codex` review — all findings resolved BEFORE the PR was opened
 - ✅ PR created with description (including links to related specs/changes and test plan)
 - ✅ ALL test plan items addressed: browser-verified, programmatically verified, or user-confirmed manual verification (NEVER silently skipped)
 - ✅ PR test plan items checked off or annotated with verification results in the PR description

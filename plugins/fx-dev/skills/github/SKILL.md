@@ -86,9 +86,11 @@ This skill triggers automatically when:
 | CI checks ALL green | `gh pr checks <NUMBER>` — every check must show `pass` | ⛔ YES |
 | Copilot review RECEIVED | `gh api repos/{owner}/{repo}/pulls/<NUMBER>/reviews --jq '.[] \| select(.user.login == "copilot-pull-request-reviewer[bot]")'` — must return a review | ⛔ YES |
 | Copilot comments RESOLVED | All Copilot review threads resolved (0 unresolved) | ⛔ YES |
-| CodeRabbit review received (if configured) | Check reviews for `coderabbitai[bot]` | ⛔ YES |
-| CodeRabbit comments resolved (if configured) | All threads resolved | ⛔ YES |
+| CodeRabbit review received (if GitHub App configured) | Check reviews for `coderabbitai[bot]` | ⛔ YES |
+| CodeRabbit comments resolved (if GitHub App configured) | All threads resolved | ⛔ YES |
 | Codecov passing | `codecov/patch` and `codecov/project` checks pass | ⛔ YES |
+
+> **CodeRabbit is run primarily LOCALLY (via the `cr` CLI) BEFORE the PR is opened** — see `fx-dev:coderabbit-review` (Mode 1) and `fx-dev:dev` Step 4.5. The PR-level CodeRabbit gate above applies only when the repo's CodeRabbit GitHub App also auto-reviews PRs (a `CodeRabbit` check appears). If a clean local `cr` review ran and the App is not configured, the CodeRabbit gate is already satisfied.
 
 **If Copilot review has NOT been received:** WAIT. Poll every 60 seconds for up to 15 minutes. Do NOT merge without it.
 
