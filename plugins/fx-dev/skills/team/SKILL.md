@@ -53,7 +53,7 @@ If you find yourself drafting a "before I burn that compute, one quick check…"
 - **Do NOT call `TeamCreate`** — it was removed. Calling it (or waiting for it) is a bug.
 - **Prerequisite:** agent teams are experimental and gated behind `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` (in `settings.json` `env` or the environment). If teammates never appear when you spawn them, this is almost certainly unset — report it to the user rather than retrying.
 - **One team per session, no nested teams:** you cannot create additional named teams or share a team across sessions, and teammates **cannot spawn their own teammates** (only the lead manages the team). This is an official platform limitation, and it is exactly why the coordinator owns the whole SDLC (see the Critical Architecture Rule above).
-- The team config and shared task list live under a session-derived name (`session-` + first 8 chars of the session ID) at `~/.claude/teams/{team-name}/config.json` and `~/.claude/tasks/{team-name}/`. Claude Code writes and updates these automatically — never edit or pre-author them.
+- The team config and shared task list live under a **session-derived** name — the literal string `session-` followed by the first 8 chars of the session ID, e.g. `session-1a2b3c4d` — at `~/.claude/teams/{session-team-name}/config.json` and `~/.claude/tasks/{session-team-name}/`. Claude Code writes and updates these automatically — never edit or pre-author them.
 
 Skip straight to STEP 2 and start defining tasks; the team springs into existence when you spawn the first coder in STEP 3.
 
