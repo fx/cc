@@ -46,13 +46,16 @@ When the user's invocation is unambiguous — e.g. `implement all pending change
 
 If you find yourself drafting a "before I burn that compute, one quick check…" message in response to a clearly-scoped instruction, stop. Delete the draft. Spawn the team.
 
-## STEP 1: Create the Team
+## STEP 1: The Team Is Implicit — Do NOT Create One
 
-```
-TeamCreate tool:
-  team_name: "<short-kebab-name>"  # e.g., "auth-feature", "admin-ui"
-  description: "<what the team is building>"
-```
+**As of Claude Code v2.1.178 there is no team-creation step, and the `TeamCreate`/`TeamDelete` tools no longer exist.** A session has exactly **one implicit team**, scoped to that session, and it forms automatically the moment you spawn your first teammate via the `Agent` tool (you, the main session, are permanently the lead). There is nothing to name, nothing to provision, and nothing to tear down — cleanup is automatic when the session ends (see STEP 4).
+
+- **Do NOT call `TeamCreate`** — it was removed. Calling it (or waiting for it) is a bug.
+- **Prerequisite:** agent teams are experimental and gated behind `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` (in `settings.json` `env` or the environment). If teammates never appear when you spawn them, this is almost certainly unset — report it to the user rather than retrying.
+- **One team per session, no nested teams:** you cannot create additional named teams or share a team across sessions, and teammates **cannot spawn their own teammates** (only the lead manages the team). This is an official platform limitation, and it is exactly why the coordinator owns the whole SDLC (see the Critical Architecture Rule above).
+- The team config and shared task list live under a session-derived name (`session-` + first 8 chars of the session ID) at `~/.claude/teams/{team-name}/config.json` and `~/.claude/tasks/{team-name}/`. Claude Code writes and updates these automatically — never edit or pre-author them.
+
+Skip straight to STEP 2 and start defining tasks; the team springs into existence when you spawn the first coder in STEP 3.
 
 ## STEP 2: Create and Organize Tasks
 
@@ -65,7 +68,7 @@ Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `
 
 ## STEP 2.5: Worktree Isolation Setup (MANDATORY for concurrent coders)
 
-**Why this step exists:** `isolation: "worktree"` on the Agent tool does nothing for team members (it is silently ignored when `team_name` is set — see STEP 3). Without real isolation, every concurrent coder shares the coordinator's single working tree and git HEAD and they corrupt each other. The coordinator MUST pre-create one git worktree per coder that will run concurrently, each on its own branch, and pin each teammate to its worktree via a prompt preamble.
+**Why this step exists:** `isolation: "worktree"` on the Agent tool does nothing for teammates — a spawned teammate runs as a full independent session in the lead's working directory, not in an isolated worktree (see STEP 3). Without real isolation, every concurrent coder shares the coordinator's single working tree and git HEAD and they corrupt each other. The coordinator MUST pre-create one git worktree per coder that will run concurrently, each on its own branch, and pin each teammate to its worktree via a prompt preamble.
 
 **Skip this step only if you will run coders strictly one-at-a-time** (fully sequential, never two coders alive at once). In that single-writer case the shared tree is safe. The moment you want parallelism, this step is required.
 
@@ -131,16 +134,17 @@ For each task (or group of parallel tasks), walk through the dev skill's SDLC st
 1. **Can I handle this step directly?** (e.g., invoking a skill, running a `gh` command) → Do it yourself.
 2. **Does this step require writing/modifying code?** → Spawn a focused agent with a single-purpose prompt for just that step.
 
-### ⛔ ALL Agent spawns MUST register as team members (BLOCKING)
+### ⛔ ALL Agent spawns MUST pass `name` (BLOCKING)
 
-**Every single `Agent` tool call you make as the team coordinator — coder, verify, fix, anything — MUST pass BOTH `team_name` and `name`.** Spawning an Agent without these parameters in team mode is a bug: the agent runs as an orphan sub-agent instead of a registered teammate, doesn't appear in `~/.claude/teams/<team>/config.json` `members[]`, can't be addressed via `SendMessage` by name, and silently defeats the entire point of `/team`.
+**Every single `Agent` tool call you make as the team coordinator — coder, verify, fix, anything — MUST pass `name`.** `name` is what makes a teammate addressable via `SendMessage` and visible in the team config's `members[]` array; omitting it produces an effectively anonymous worker you can't message or steer by name, defeating the point of `/team`.
+
+**Do NOT pass `team_name`.** As of v2.1.178 the `team_name` input on the `Agent` tool is **accepted but ignored** (and the `team_name` field in hook payloads is deprecated). There is one implicit, session-scoped team; every `Agent` spawn joins it automatically. Passing `team_name` does nothing — drop it.
 
 ```
 Agent tool:
-  team_name: "<the-team-you-just-created>"   # ← REQUIRED in team mode, NO EXCEPTIONS
-  name:      "<short-descriptive-handle>"    # ← REQUIRED in team mode, NO EXCEPTIONS
+  name:      "<short-descriptive-handle>"    # ← REQUIRED, NO EXCEPTIONS
   subagent_type: "general-purpose"
-  isolation: "worktree"                      # for coders
+  isolation: "worktree"                      # NO-OP for teammates — see STEP 2.5; pre-create real worktrees instead
   mode: "bypassPermissions"
   prompt: "..."
   run_in_background: true                    # usually
@@ -148,11 +152,11 @@ Agent tool:
 
 The `name` should be specific and human-readable so it's useful in logs and `SendMessage` (e.g., `coder-0105A`, `verify-pr-371`, `fix-0106-types`). One-shot generic names like `agent1` are bad.
 
-**Self-check before EVERY Agent call in team mode:** "Did I pass `team_name`? Did I pass `name`?" If either is missing, fix the call before sending it. This rule is non-negotiable — it has been violated in production and produced a coordinator session running orphan sub-agents that the team config didn't know about.
+**Self-check before EVERY Agent call:** "Did I pass `name`?" If it's missing, fix the call before sending it. This rule is non-negotiable.
 
 ### Key orchestration principles
 
-**Implementation steps** (planning, coding, testing) → Spawn focused agents. For any coder that will run **concurrently** with another, give it an isolated worktree via STEP 2.5 and start its prompt with the worktree preamble — do NOT rely on `isolation: "worktree"` (it's a no-op for team members; see the prohibition above). Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC. Always pass `team_name` and `name` (see above).
+**Implementation steps** (planning, coding, testing) → Spawn focused agents. For any coder that will run **concurrently** with another, give it an isolated worktree via STEP 2.5 and start its prompt with the worktree preamble — do NOT rely on `isolation: "worktree"` (it's a no-op for teammates; see the prohibition above). Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC. Always pass `name` (see above).
 
 When you spawn the coder for the FINAL piece of a change, your prompt MUST include: "This is the final implementing PR for <change>. In the same commit, flip `**Status:** draft` → `**Status:** complete` in `docs/changes/<NNNN>-*.md` AND flip `status: draft` → `status: complete` for that change's entry in `docs/index.yml`. Sync `docs/index.md` if present." For every NON-final coder on the same change, your prompt MUST include: "Leave the change-doc `**Status:**` field and `docs/index.yml` entry untouched — the final PR flips them." This split prevents rebase-conflict storms across multi-PR changes and ensures the final PR carries the Status flip atomically.
 
@@ -168,7 +172,7 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 
 ### Parallelization
 
-- Spawn multiple coder agents simultaneously for independent tasks — but ONLY after giving each its own **pre-created worktree** per STEP 2.5 (the `isolation: "worktree"` flag does NOT work for team members). Each coder works in its own worktree on its own branch.
+- Spawn multiple coder agents simultaneously for independent tasks — but ONLY after giving each its own **pre-created worktree** per STEP 2.5 (the `isolation: "worktree"` flag does NOT work for teammates). Each coder works in its own worktree on its own branch.
 - For dependent tasks, wait until the blocking task's PR is merged before spawning the next coder
 - After merging, repeat for newly-unblocked tasks
 - If you skip STEP 2.5, you MUST run coders strictly one-at-a-time (never two alive at once) — concurrent coders without real worktrees share one working tree and clobber each other
@@ -218,8 +222,7 @@ For tasks with UI changes, spawn a dedicated verify agent:
 
 ```
 Agent tool:
-  team_name: "<the-team-you-created>"   # REQUIRED — register as teammate
-  name: "verify-<pr-number>"            # REQUIRED — addressable handle
+  name: "verify-<pr-number>"            # REQUIRED — addressable handle (do NOT pass team_name; it's ignored)
   prompt: "Load the verify-web-change skill (Skill tool: skill='fx-dev:verify-web-change').
            Verify PR #<NUMBER> on branch <branch-name>.
            Check out the branch, start the dev server, and confirm the app loads without errors.
@@ -270,7 +273,7 @@ When all tasks are complete and all PRs merged:
 
 1. Verify all spec tasks are marked done (load `fx-dev:project-management` to check)
 2. **Verify every implemented change is `status: complete`** on `main` — check both `docs/changes/<NNNN>-*.md` front-matter AND `docs/index.yml`. If any are still `draft`, you missed the pre-merge gate; open a corrective PR right now (the goal is the gate catches it pre-merge, but if it slipped, fix it before declaring done).
-3. Send shutdown requests to all active teammates
+3. Send shutdown requests to all active teammates (refer to each by `name`); each teammate approves and exits gracefully
 4. **Tear down every worktree created in STEP 2.5.** For each one, in order: remove the `node_modules` symlink first (so `git worktree remove` doesn't traverse into the shared deps), then `git worktree remove --force <path>`, then `git worktree prune`. Delete the branch with `git branch -D <branch>` only if it's unmerged/abandoned (a merged PR's branch is already gone from origin). Confirm `git worktree list` shows only the main repo and `git status` is clean before continuing.
 
    ```bash
@@ -279,15 +282,16 @@ When all tasks are complete and all PRs merged:
    git worktree prune
    git branch -D <branch>   # only if unmerged/abandoned
    ```
-5. Clean up the team with `TeamDelete` (it fails if any member is still active — make sure step 3's shutdowns completed first)
+5. **Do NOT call `TeamDelete`** — it was removed in v2.1.178. The team config directory is cleaned up automatically when the session ends; there is no manual teardown step. (The shared task list directory persists locally by design so resumed sessions keep their tasks — that's expected, not a leak.) Your only manual cleanup is the worktrees in step 4.
 6. Report final summary to user
 
 ---
 
 ## Coordinator Rules (NON-NEGOTIABLE)
 
-- **ALWAYS pass `team_name` AND `name` to EVERY `Agent` call** — coder, verify, fix, anything. Spawning an Agent without these in team mode produces an orphan sub-agent that the team config doesn't know about and defeats the entire point of `/team`. No exceptions.
-- **NEVER rely on `isolation: "worktree"` for a team member** — it is silently ignored when `team_name` is set. For any coders that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run coders strictly one-at-a-time. Always tear the worktrees down in STEP 4.
+- **ALWAYS pass `name` to EVERY `Agent` call** — coder, verify, fix, anything. `name` is what makes the teammate addressable via `SendMessage` and visible in `members[]`; omitting it produces an anonymous worker you can't steer by name. No exceptions.
+- **NEVER pass `team_name` and NEVER call `TeamCreate`/`TeamDelete`** — all three were removed/deprecated in v2.1.178. The team is implicit and session-scoped: it forms on the first `Agent` spawn and is cleaned up automatically on session exit. `team_name` on the `Agent` tool is accepted-but-ignored.
+- **NEVER rely on `isolation: "worktree"` for a teammate** — a teammate runs as a full session in the lead's working directory, so the flag is a no-op. For any coders that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run coders strictly one-at-a-time. Always tear the worktrees down in STEP 4.
 - **NEVER write code yourself** — all implementation goes through coder agents
 - **NEVER create branches or commits** — coder agents handle this
 - **NEVER delegate the full SDLC to a single agent** — agents cannot spawn sub-agents, so they will inline everything and skip later steps
