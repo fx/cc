@@ -635,6 +635,7 @@ gh pr checks [NUMBER]  # verify codecov/patch and codecov/project
 
 **Merge gate checklist (every item must pass):**
 - [ ] PR is open and mergeable
+- [ ] **PR title is a conventional-commit subject** (`type(scope): description`) — verify `gh pr view [NUMBER] --json title -q .title | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+'`; a plain prose title FAILS — rename with `gh pr edit [NUMBER] --title "type(scope): …"` BEFORE merging (squash bakes the title into `main`). Also no stray `#<number>`/wave/phase wording.
 - [ ] ALL CI checks green
 - [ ] Copilot review RECEIVED and ALL threads resolved (via `fx-dev:copilot-review` skill — NEVER raw `gh api`)
 - [ ] CodeRabbit check is in a terminal passing state AND ALL CodeRabbit threads resolved (via `fx-dev:coderabbit-review` skill). If CodeRabbit is not configured for the repo, this gate is satisfied by an exit-code-2 from `wait-for-coderabbit-review.sh` — confirm with the user.
