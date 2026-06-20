@@ -81,8 +81,10 @@ Then, your primary responsibilities:
 
    > **CodeRabbit and Codex should already be clean before this step.** The SDLC runs a local CodeRabbit review (`cr` CLI) and a local Codex review (`codex review --base main`) during pre-PR self-review (`fx-dev:dev` Step 4.5) and only opens the PR once both come back clean. Don't open the PR with known-unresolved local reviewer findings.
 
+   **⛔ FINAL TITLE SELF-CHECK (BLOCKING) — run before `gh pr create`:** the `--title` MUST be a conventional-commit subject matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (verify: `printf '%s' "<title>" | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+'`). If a caller or the `/dev` brief handed you a prose title (no `type:` prefix), REFORM it to `type(scope): description` — NEVER pass a prose title through. This is the same BLOCKING rule as the **PR Title Rules** above; the explicit self-check exists because prose titles have repeatedly slipped onto `main` via squash-merge.
+
    ```bash
-   gh pr create --title "type: description" --body "$(cat <<'EOF'
+   gh pr create --title "type(scope): description" --body "$(cat <<'EOF'
    ## Summary
    ...
    EOF

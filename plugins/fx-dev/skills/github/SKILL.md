@@ -153,7 +153,12 @@ Check `references/known-issues.md` before attempting operations that have failed
 
 **Use Conventional Formats:**
 - **Commit messages**: Follow conventional commit format (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)
-- **PR titles**: Use conventional commit format (e.g., `feat: add user authentication`)
+- **PR titles**: MUST use conventional commit format — `type(scope): description` (e.g., `feat: add user authentication`, `fix(api): handle null token`). **BLOCKING**: on squash-merge the PR title becomes the commit subject, so a plain prose title (no `type:` prefix) permanently pollutes a conventional-commit history. **Canonical check** — every PR title, no matter who creates it (pr-preparer, the `/dev` workflow, or a `/team` coordinator running `gh pr create` directly), MUST match this regex; verify before creating AND before merging:
+  ```bash
+  gh pr view <N> --json title -q .title | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+' \
+    && echo "OK: conventional" || echo "⛔ NOT conventional — gh pr edit <N> --title \"type(scope): …\""
+  ```
+  A prose title like `Add anti-fabrication grounding rules` is FORBIDDEN — reform it (`feat(scope): add anti-fabrication grounding rules`). Creating the PR directly (not via pr-preparer) does NOT exempt you from this.
 - **Branch names**: Use conventional naming (e.g., `feat/user-auth`, `fix/login-bug`)
 - **Comments**: Use conventional comment markers where applicable
 
