@@ -261,7 +261,7 @@ Many upstream projects (including fx/ui) publish **preview releases** automatica
 
 ```bash
 # Get the merge commit SHA from the merged PR
-MERGE_SHA=$(gh pr view [FX_UI_PR_NUMBER] --repo [OWNER/REPO] --json mergeCommit --jq '.mergeCommit.oid' | head -c 7)
+MERGE_SHA=$(gh pr view [FX_UI_PR_NUMBER] --repo fx/ui --json mergeCommit --jq '.mergeCommit.oid' | head -c 7)
 
 # Check if a preview version exists for this commit
 NODE_AUTH_TOKEN=$(gh auth token) npm view @fx/ui versions --json --registry https://npm.pkg.github.com 2>/dev/null | jq -r '.[] | select(contains("'$MERGE_SHA'"))'

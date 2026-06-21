@@ -32,15 +32,17 @@ ensure_docker_running() {
 
     echo "[Docker] Daemon is not running. Attempting to start..."
 
-    # Try without sudo first, then with sudo
+    # Try without sudo first, then with non-interactive sudo.
+    # 'sudo -n' fails fast instead of blocking on a password prompt in non-TTY
+    # automation (which would hang verification indefinitely).
     if service docker start 2>/dev/null; then
         echo "[Docker] Started via 'service docker start'"
     elif systemctl start docker 2>/dev/null; then
         echo "[Docker] Started via 'systemctl start docker'"
-    elif sudo service docker start 2>/dev/null; then
-        echo "[Docker] Started via 'sudo service docker start'"
-    elif sudo systemctl start docker 2>/dev/null; then
-        echo "[Docker] Started via 'sudo systemctl start docker'"
+    elif sudo -n service docker start 2>/dev/null; then
+        echo "[Docker] Started via 'sudo -n service docker start'"
+    elif sudo -n systemctl start docker 2>/dev/null; then
+        echo "[Docker] Started via 'sudo -n systemctl start docker'"
     else
         echo "[Docker] ❌ Failed to start Docker daemon."
         echo "  Try manually: sudo systemctl start docker"
@@ -79,15 +81,29 @@ detect_package_manager() {
 }
 
 detect_dev_command() {
-    if [[ -f "package.json" ]]; then
-        if grep -q '"dev"' package.json; then
-            echo "dev"
-        elif grep -q '"start"' package.json; then
-            echo "start"
-        elif grep -q '"serve"' package.json; then
-            echo "serve"
-        fi
+    [[ -f "package.json" ]] || return
+
+    # Inspect ONLY the "scripts" object — a bare substring grep for "dev"
+    # matches keys like "devDependencies" and picks a script that doesn't exist.
+    if command -v jq > /dev/null 2>&1; then
+        for cmd in dev start serve; do
+            if jq -e --arg c "$cmd" '(.scripts // {}) | has($c)' package.json > /dev/null 2>&1; then
+                echo "$cmd"
+                return
+            fi
+        done
+        return
     fi
+
+    # Fallback without jq: extract the scripts block, then match the key there.
+    local scripts
+    scripts=$(grep -oP '"scripts"\s*:\s*\{[^}]*\}' package.json 2>/dev/null || true)
+    for cmd in dev start serve; do
+        if echo "$scripts" | grep -qP "\"$cmd\"\s*:"; then
+            echo "$cmd"
+            return
+        fi
+    done
 }
 
 detect_compose_file() {
@@ -267,10 +283,10 @@ wait_for_server() {
         sleep 2
     done
 
-    echo "[Server] ⚠️  Server may not be ready after ${max_attempts} attempts."
+    echo "[Server] ❌ Server never became reachable after ${max_attempts} attempts."
     echo "[Server] Last output:"
     tail -10 /tmp/dev-server.log 2>/dev/null || true
-    return 0  # Proceed anyway — Playwright navigate may trigger lazy startup
+    return 1  # Evidence-driven: an unreachable server is a failure, not a success.
 }
 
 # --- Main execution ---
@@ -315,7 +331,13 @@ if [[ -n "$PACKAGE_MANAGER" ]] && [[ -n "$DEV_COMMAND" ]]; then
     echo "$DEV_PID" > /tmp/dev-server.pid
     echo "Dev server PID: $DEV_PID"
 
-    wait_for_server "$PORT" "$DEV_PID"
+    if ! wait_for_server "$PORT" "$DEV_PID"; then
+        echo ""
+        echo "=== ❌ Stack failed to start ==="
+        echo "  Dev server on http://localhost:$PORT never became reachable."
+        echo "  PID: $DEV_PID  Log: /tmp/dev-server.log"
+        exit 1
+    fi
 
     echo ""
     echo "=== Stack is running ==="
