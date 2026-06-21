@@ -1,0 +1,5 @@
+{
+  "name": "fx-ultra",
+  "version": "0.1.1",
+  "description": "Ultra-rigorous development workflow: the fx-dev SDLC taken to the extreme — autonomous end-to-end verification (ultra-verifier), uncompromising visual/UX polish (ultra-designer), and a final halting judge (ultra-judge), with 100% test/integration coverage baked into every change."
+}

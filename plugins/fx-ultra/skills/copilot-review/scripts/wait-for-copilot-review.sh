@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# wait-for-copilot-review.sh
+# Polls a PR for Copilot review completion with timeout
+#
+# Usage: ./wait-for-copilot-review.sh <PR_NUMBER> [TIMEOUT_SECONDS]
+# Default timeout: 900 seconds (15 minutes)
+#
+# Exit codes:
+#   0 - Copilot review received
+#   1 - Timeout waiting for review
+#   2 - No Copilot review requested
+#   3 - Invalid arguments or gh error
+
+set -euo pipefail
+
+MIN_GH_VERSION="2.50.0"
+
+PR_NUMBER="${1:-}"
+TIMEOUT="${2:-900}"
+POLL_INTERVAL=60
+
+if [[ -z "$PR_NUMBER" ]]; then
+    echo "Usage: $0 <PR_NUMBER> [TIMEOUT_SECONDS]" >&2
+    exit 3
+fi
+
+# Verify gh version meets minimum requirement (--json flag on pr view requires 2.50+)
+gh_version=$(gh --version | head -1 | grep -oP '\d+\.\d+\.\d+' || echo "0.0.0")
+if ! printf '%s\n' "$MIN_GH_VERSION" "$gh_version" | sort -V | head -1 | grep -q "^${MIN_GH_VERSION}$"; then
+    echo "Error: gh CLI version $gh_version is too old. Minimum required: $MIN_GH_VERSION" >&2
+    echo "Upgrade with: mise use -g gh@latest" >&2
+    exit 3
+fi
+
+# Copilot bot identifiers vary by API:
+#   REST requested_reviewers: login="Copilot"
+#   REST /reviews:            login="copilot-pull-request-reviewer[bot]"
+#   gh pr view --json:        login="copilot-pull-request-reviewer" (no [bot] suffix)
+COPILOT_BOT_ID="BOT_kgDOCnlnWA"
+
+# Get repo owner/name for REST API calls
+REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null)
+if [[ -z "$REPO_NWO" ]]; then
+    echo "Error: Could not determine repository" >&2
+    exit 3
+fi
+
+echo "Checking PR #${PR_NUMBER} for Copilot review..."
+
+# Check if Copilot review was requested (must use REST API — gh pr view returns empty for bots)
+check_review_requested() {
+    gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}" --jq \
+        '.requested_reviewers[] | select(.login == "Copilot" or .node_id == "BOT_kgDOCnlnWA") | .login' 2>/dev/null || true
+}
+
+# Check if Copilot has submitted a review (gh pr view strips [bot] suffix from login)
+check_review_submitted() {
+    gh pr view "$PR_NUMBER" --json reviews --jq \
+        '.reviews[] | select(.author.login | startswith("copilot-pull-request-reviewer")) | .state' 2>/dev/null | head -1 || true
+}
+
+# Check for Copilot review threads via GraphQL (gh pr view --json doesn't support reviewThreads)
+check_review_comments() {
+    local owner repo
+    owner="${REPO_NWO%%/*}"
+    repo="${REPO_NWO##*/}"
+    gh api graphql -f query="
+    query {
+      repository(owner: \"$owner\", name: \"$repo\") {
+        pullRequest(number: $PR_NUMBER) {
+          reviewThreads(first: 100) {
+            nodes {
+              comments(first: 1) {
+                nodes {
+                  author { login }
+                }
+              }
+            }
+          }
+        }
+      }
+    }" --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.comments.nodes[0].author.login == "copilot-pull-request-reviewer") | .comments.nodes[0].author.login' 2>/dev/null | head -1 || true
+}
+
+# Count unresolved Copilot review threads via GraphQL
+count_copilot_threads() {
+    local owner repo
+    owner="${REPO_NWO%%/*}"
+    repo="${REPO_NWO##*/}"
+    local result
+    result=$(gh api graphql -f query="
+    query {
+      repository(owner: \"$owner\", name: \"$repo\") {
+        pullRequest(number: $PR_NUMBER) {
+          reviewThreads(first: 100) {
+            nodes {
+              isResolved
+              comments(first: 1) {
+                nodes {
+                  author { login }
+                }
+              }
+            }
+          }
+        }
+      }
+    }" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .comments.nodes[0].author.login == "copilot-pull-request-reviewer")] | length' 2>&1)
+    if [[ $? -ne 0 ]]; then
+        echo "Error querying review threads: $result" >&2
+        echo "0"
+        return
+    fi
+    echo "$result"
+}
+
+# Initial check - is Copilot review requested?
+requested=$(check_review_requested)
+submitted=$(check_review_submitted)
+comments=$(check_review_comments)
+
+# If already reviewed, report threads and exit
+if [[ -n "$submitted" ]] || [[ -n "$comments" ]]; then
+    echo "Copilot review already present (state: ${submitted:-comments})"
+    thread_count=$(count_copilot_threads)
+    echo "Unresolved Copilot threads: $thread_count"
+    exit 0
+fi
+
+# If not requested, report and exit
+if [[ -z "$requested" ]]; then
+    echo "No Copilot review requested on PR #${PR_NUMBER}"
+    echo "To request via API (recommended): gh api --method POST /repos/{owner}/{repo}/pulls/${PR_NUMBER}/requested_reviewers -f 'reviewers[]=copilot-pull-request-reviewer[bot]'"
+    echo "See: https://github.com/cli/cli/issues/10598#issuecomment-2893526162"
+    exit 2
+fi
+
+echo "Copilot review requested. Polling for completion (timeout: ${TIMEOUT}s)..."
+
+elapsed=0
+while [[ $elapsed -lt $TIMEOUT ]]; do
+    sleep "$POLL_INTERVAL"
+    elapsed=$((elapsed + POLL_INTERVAL))
+
+    submitted=$(check_review_submitted)
+    comments=$(check_review_comments)
+
+    if [[ -n "$submitted" ]] || [[ -n "$comments" ]]; then
+        echo "Copilot review received after ${elapsed}s (state: ${submitted:-comments})"
+
+        # Show summary of review
+        echo ""
+        echo "=== Copilot Review Summary ==="
+        gh pr view "$PR_NUMBER" --json reviews --jq \
+            '.reviews[] | select(.author.login | startswith("copilot-pull-request-reviewer")) | "State: \(.state)\nBody: \(.body)"' || echo "(failed to fetch review summary)"
+
+        # Count unresolved review threads from Copilot via GraphQL
+        thread_count=$(count_copilot_threads)
+        echo "Unresolved Copilot threads: $thread_count"
+
+        exit 0
+    fi
+
+    echo "  Waiting... (${elapsed}s / ${TIMEOUT}s)"
+done
+
+echo "Timeout: Copilot review not received within ${TIMEOUT}s"
+exit 1
