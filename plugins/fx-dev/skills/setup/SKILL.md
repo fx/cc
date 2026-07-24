@@ -158,18 +158,35 @@ classify() {
 for p in AGENTS.md CLAUDE.md REVIEW.md .github/copilot-instructions.md; do classify "$p"; done
 ```
 
-Act on each result **before** Steps 6-8 touch the path:
+##### First: the one symlink that is SUPPOSED to exist
+
+**`.github/copilot-instructions.md` → `../REVIEW.md` is the target state, not a problem to fix.** Check it before applying the table below, or the preflight will delete the very link Step 8.3 exists to create — on every run, since setup is invoked automatically:
+
+```bash
+[ "$(canonicalize .github/copilot-instructions.md)" = "$(canonicalize REVIEW.md)" ] \
+  && echo "copilot-instructions -> REVIEW.md: ALREADY CORRECT, leave it alone" \
+  || echo "needs classification"
+```
+
+If it is already correct, exclude it from the table below and skip Step 8.1 for it.
+
+##### Then act on each remaining result, **before** Steps 6-8 touch the path
 
 | Classification | Action |
 |---|---|
 | `regular file` / `MISSING` | Nothing to do — Steps 6-8 handle it |
-| `SYMLINK -> in-repo` | Replace the link with a regular file holding the target's content, so later writes land in the repo |
+| `SYMLINK -> in-repo` | Replace the link with a regular file holding the target's content, so later writes land in the repo. **Exception: `.github/copilot-instructions.md` pointing at `REVIEW.md`, handled above** |
 | `SYMLINK -> ESCAPES REPO` or `UNRESOLVABLE` | **Do NOT read or copy the contents.** Delete the link, leave the path absent for Steps 6-8 to seed fresh, and report the path to the user so they can port anything they still want. Never inline it for them |
 | `MATERIALIZED POINTER` | It is a broken symlink, not content. **Delete it — never merge it.** Its text is a path, not a rule |
 
 This is a privacy boundary, not a style preference. **When in doubt, do not copy.**
 
-`CLAUDE.md` is the one special case: an in-repo `CLAUDE.md` symlink pointing at `AGENTS.md` has nothing to merge — just delete it, and Step 7 writes the regular pointer file in its place.
+Two path-specific notes on top of the table:
+
+- **`CLAUDE.md`** — an in-repo symlink pointing at `AGENTS.md` has nothing to merge. Just delete it; Step 7 writes the regular pointer file in its place.
+- **`.github/copilot-instructions.md`** — the only path where an in-repo symlink is the *desired* end state. Replace it with a regular file **only** when it points somewhere other than `REVIEW.md`.
+
+The canonical files (`AGENTS.md`, `REVIEW.md`) must always end up as regular files: they are what everything else points at.
 
 ---
 

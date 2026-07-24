@@ -65,9 +65,11 @@ gh api graphql -f owner="owner" -f repo="repo"
 
 **Bad examples** (leaking private info):
 ```bash
-gh api repos/fx/internal-project/pulls/13  # ❌ Private repo name
-gh api graphql -f owner="acme" -f repo="secret-service"  # ❌ Internal identifiers
+gh api repos/<real-org>/<real-private-repo>/pulls/13  # ❌ Private repo name
+gh api graphql -f owner="<real-company>" -f repo="<real-service>"  # ❌ Internal identifiers
 ```
+
+Note the bad examples use angle-bracket placeholders rather than plausible-looking org or service names. An illustration of the mistake must not itself commit the mistake — a realistic-looking name in a "don't do this" block is still a realistic-looking name in the repo, and it gets copied.
 
 This applies to:
 - Documentation files (README.md, AGENTS.md, REVIEW.md)
