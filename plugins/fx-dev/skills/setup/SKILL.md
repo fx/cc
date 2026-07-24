@@ -1,13 +1,26 @@
 ---
 name: setup
-description: "Initialize the docs/ folder structure for spec-driven development and scaffold the standard AI instruction files (AGENTS.md, REVIEW.md, the CLAUDE.md pointer, and .coderabbit.yaml) so task tracking defers to /project-management. Called automatically by /spec-writer and /project-management. Also use when user says 'setup docs', 'initialize docs', 'create docs structure'."
+description: "Initialize the docs/ folder structure for spec-driven development and create the standard AI instruction files (AGENTS.md, REVIEW.md, the CLAUDE.md pointer, and .coderabbit.yaml) if missing, so task tracking defers to /project-management. Creates defaults only — never migrates existing files; that is fx-dev:upgrade. Called automatically by /spec-writer and /project-management. Also use when user says 'setup docs', 'initialize docs', 'create docs structure'."
 ---
 
 # Setup
 
-This skill scaffolds the `docs/` folder structure required for spec-driven development and establishes the standard AI instruction files (`AGENTS.md`, `REVIEW.md`, plus the `CLAUDE.md` pointer and `.coderabbit.yaml`) so that task tracking defers to the `/project-management` skill. It is called automatically by `/spec-writer` and `/project-management` as a prerequisite.
+This skill scaffolds the `docs/` folder structure required for spec-driven development and creates the standard AI instruction files (`AGENTS.md`, `REVIEW.md`, plus the `CLAUDE.md` pointer and `.coderabbit.yaml`) so that task tracking defers to the `/project-management` skill. It is called automatically by `/spec-writer` and `/project-management` as a prerequisite.
 
-**Read `references/instruction-files.md` before touching any instruction file.** It defines the canonical layout, which tool reads which file, and how to migrate an existing repo. Do not invent alternative file names or locations.
+## ⛔ setup creates. It does not migrate.
+
+**setup runs unattended on every `/spec-writer` and `/project-management` invocation.** It must never make a change the user would want to review first.
+
+| setup MAY | setup MUST NOT |
+|---|---|
+| Create a missing file or directory | Move or rename a file |
+| Append or prepend a missing marker block | Delete or overwrite existing content |
+| Report a legacy layout it found | Merge two files together |
+| | Resolve or delete a symlink |
+
+When it finds anything needing those — a `CLAUDE.md` full of conventions, an obsolete `.github/copilot-instructions.md`, a symlinked canonical file — it **reports and defers to `fx-dev:upgrade`**. It does not act.
+
+**Read `references/instruction-files.md` before touching any instruction file.** It defines the canonical layout and which tool reads which file. Do not invent alternative file names or locations.
 
 ## When to Use
 
@@ -110,38 +123,33 @@ Only if it doesn't exist. **Use these exact column names — table schema is str
 
 ---
 
-### Step 5.5: Instruction-File Preflight (run BEFORE Steps 6-8)
+### Step 5.5: Legacy-Layout Detection (DETECT ONLY — never migrate)
 
-The canonical files must end up as **regular files** — they are what everything else points at. A legacy repo may have symlinked one, most often `CLAUDE.md -> AGENTS.md` and occasionally `CLAUDE.md -> ~/.claude/CLAUDE.md`. Writing "through" a symlink edits its **target**, not the link, so classify before anything writes:
+**setup creates defaults. It never moves, merges, overwrites, or deletes anything.** It runs automatically on every `/spec-writer` and `/project-management` invocation, so it must never make a change a user would want to review first. Migration is `fx-dev:upgrade`'s job.
 
 ```bash
-canonicalize() {
-  # Portable: GNU realpath -> GNU readlink -f -> Python (macOS has no readlink -f)
-  realpath "$1" 2>/dev/null \
-    || readlink -f "$1" 2>/dev/null \
-    || python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null
-}
-
-repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+legacy=0
 for p in AGENTS.md CLAUDE.md REVIEW.md; do
-  [ -L "$p" ] || { echo "$p: regular file or missing"; continue; }
-  t=$(canonicalize "$p")
-  case "${t:-UNRESOLVED}" in
-    "$repo_root"/*) echo "$p: SYMLINK -> in-repo: $t" ;;
-    *)              echo "$p: SYMLINK -> ESCAPES REPO: ${t:-unresolvable}" ;;
-  esac
+  [ -L "$p" ] && { echo "LEGACY: $p is a symlink"; legacy=1; }
 done
+[ -e .github/copilot-instructions.md ] && { echo "LEGACY: .github/copilot-instructions.md exists (obsolete)"; legacy=1; }
+if [ -f CLAUDE.md ] && ! [ -L CLAUDE.md ] && ! grep -q '^@AGENTS\.md' CLAUDE.md 2>/dev/null; then
+  echo "LEGACY: CLAUDE.md holds content that belongs in AGENTS.md"; legacy=1
+fi
+[ "$legacy" = "0" ] && echo "Layout is current — proceed" || echo "Run /fx-dev:upgrade"
 ```
 
-Act on each result **before** Steps 6-8 touch the path:
+**If any LEGACY line printed**, do NOT create or modify the affected files. Finish the steps that are unaffected, then report:
 
-| Classification | Action |
-|---|---|
-| regular file / missing | Nothing to do — Steps 6-8 handle it |
-| `SYMLINK -> in-repo` | Replace the link with a regular file holding the target's content, so later writes land in the repo. A `CLAUDE.md -> AGENTS.md` link has nothing to merge: delete it, and Step 7 writes the pointer file in its place |
-| `SYMLINK -> ESCAPES REPO` or unresolvable | **Do NOT read or copy the contents.** Delete the link, leave the path absent for Steps 6-8 to seed fresh, and report the path to the user so they can port anything they still want. Never inline it for them |
+```
+Legacy instruction-file layout detected:
+  - <the specific findings>
 
-`~/.claude/CLAUDE.md` holds private, machine-wide instructions; inlining it into a tracked, possibly public, `AGENTS.md` leaks them. This is a privacy boundary, not a style preference. **When in doubt, do not copy.**
+setup does not migrate — run /fx-dev:upgrade to move this content
+into AGENTS.md / REVIEW.md. Skipped: <files not created>.
+```
+
+The dangerous case is `AGENTS.md` missing while `CLAUDE.md` holds real conventions. **Do not seed an `AGENTS.md`** — that splits the project's conventions across two files and the user is left with neither complete. Skip Step 6 entirely and report.
 
 ---
 
@@ -149,34 +157,13 @@ Act on each result **before** Steps 6-8 touch the path:
 
 `AGENTS.md` at the repo root is the canonical project-conventions file. Codex, Copilot, and CodeRabbit all read it natively.
 
-#### 6.1 Migrate a legacy `CLAUDE.md` first
+#### 6.1 Preconditions
 
-**Step 5.5 has already run.** Every path below is a regular in-repo file or absent.
+Step 5.5 reported no legacy findings for `AGENTS.md` / `CLAUDE.md`. If it did, skip this entire step and report instead.
 
-##### 6.1.0 Already migrated? Stop here (idempotency guard)
-
-**This runs on every `/spec-writer` and `/project-management` invocation, so it MUST be a no-op once the layout is in place.** Check first:
-
-```bash
-test -f AGENTS.md && ! test -L AGENTS.md && grep -q '^@AGENTS\.md' CLAUDE.md 2>/dev/null \
-  && echo "ALREADY MIGRATED — skip all of 6.1" \
-  || echo "needs migration checks"
-```
-
-If already migrated, **skip the rest of 6.1 entirely** and go to 6.2. Treating the `@AGENTS.md` pointer as "content to merge" would append the import into `AGENTS.md` and make it import itself — and it would happen on every single run.
-
-##### 6.1.1 Handle what remains
-
-```bash
-test -f AGENTS.md && echo "AGENTS.md exists" || echo "AGENTS.md missing"
-test -f CLAUDE.md && echo "CLAUDE.md exists" || echo "CLAUDE.md missing"
-```
-
-- **`AGENTS.md` missing, `CLAUDE.md` has real content** → move it, then create the `CLAUDE.md` pointer in Step 7. Use `git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md` — the file may be untracked, and `git mv` aborts on untracked paths.
-
-  **Then split out any genuinely Claude-only rules**, exactly as the both-files path does. A wholesale move publishes rules written for Claude Code alone to Codex, Copilot, and CodeRabbit. Rules that name Claude Code mechanics — `/`-commands, skills, plan mode, `@`-imports, thinking budgets, hooks, MCP servers — belong under the `@AGENTS.md` line in `CLAUDE.md`, not in `AGENTS.md`. When it is ambiguous, leave it in `AGENTS.md`; cross-agent conventions are the common case.
-- **Both exist as regular files with content** → merge `CLAUDE.md`'s content into `AGENTS.md`, keeping any genuinely Claude-only rules aside for the pointer file. Never delete convention content — move it.
-- **Neither exists** → create `AGENTS.md` with just the block from 6.3.
+- **`AGENTS.md` exists** → go to 6.2.
+- **`AGENTS.md` missing, and no `CLAUDE.md` with content** → create it containing only the block from 6.3.
+- **`AGENTS.md` missing, but `CLAUDE.md` has content** → **stop.** This needs `/fx-dev:upgrade`. Creating a stub here would split conventions across two files.
 
 #### 6.2 Check for CURRENT language
 
@@ -187,12 +174,9 @@ Search `AGENTS.md` for the exact string `/project-management`. This is the only 
 
 #### 6.3 Handle stale or missing language
 
-**If stale task-tracking language exists** (anything referencing `PROJECT.md`, `docs/specs/` for tasks, `- [x]`, `mark.*done`, or task-tracking rules that don't mention `/project-management`):
-- Remove the entire stale section
-- Insert the new block in its place
+**Append** the block below to the end of `AGENTS.md`. That is the only write setup makes to this file.
 
-**If no task-tracking language exists at all:**
-- Append the new block to the end of `AGENTS.md`
+**If stale task-tracking language exists** (anything referencing `PROJECT.md`, `docs/specs/` for tasks, `- [x]`, `mark.*done`, or task-tracking rules that don't mention `/project-management`) → **do not remove it.** Append the new block anyway so the current rule is present, and report the stale section so the user can run `/fx-dev:upgrade` to clear it. Deleting a section from someone's file is not setup's call.
 
 **The EXACT block to insert (do NOT add to, modify, or expand this):**
 
@@ -220,7 +204,7 @@ Claude Code does **not** read `AGENTS.md`. A `CLAUDE.md` that imports it keeps t
 
 - **If `CLAUDE.md` does not exist** → create it with the block below.
 - **If `CLAUDE.md` already contains `@AGENTS.md`** → current, skip to Step 8.
-- **If `CLAUDE.md` exists with other content** → it should already have been merged into `AGENTS.md` in 6.1. Prepend `@AGENTS.md` and a blank line, and leave only genuinely Claude-only rules below it.
+- **If `CLAUDE.md` exists with other content** → Step 5.5 already flagged this as legacy. **Do not modify it** — run `/fx-dev:upgrade`.
 
 **The EXACT block for a fresh `CLAUDE.md`:**
 
@@ -236,31 +220,22 @@ That single line is the whole file. Claude Code expands the import at load time,
 
 `REVIEW.md` at the repo root is the canonical **review-conventions** file. **Copilot code review and Claude Code Review both read it natively**; Codex reaches it via the pointer in 8.3; CodeRabbit reaches it via Step 9.
 
-#### 8.1 Migrate a legacy `.github/copilot-instructions.md`
+#### 8.1 Preconditions
 
-`.github/copilot-instructions.md` is obsolete — Copilot reads `REVIEW.md` directly ([changelog, 2026-07-17](https://github.blog/changelog/2026-07-17-copilot-code-review-customization-and-configurability-improvements/)). **Never create one, and never symlink it to `REVIEW.md`.** A second path to the same rules is confusing at best; some tooling reports the symlink as a missing file.
+`.github/copilot-instructions.md` is obsolete — Copilot reads `REVIEW.md` directly ([changelog, 2026-07-17](https://github.blog/changelog/2026-07-17-copilot-code-review-customization-and-configurability-improvements/)). **Never create one, and never symlink it to `REVIEW.md`.**
+
+If Step 5.5 found one, do not touch it and do not create `REVIEW.md` from it — report and defer to `/fx-dev:upgrade`, which folds its rules into `REVIEW.md`.
 
 ```bash
-test -f REVIEW.md && echo "REVIEW.md exists" || echo "REVIEW.md missing"
-ls -l .github/copilot-instructions.md 2>/dev/null || echo "copilot-instructions absent (good)"
+test -f REVIEW.md && echo "REVIEW.md exists" || echo "REVIEW.md missing — will create"
 ```
-
-- **It is a symlink** (to `REVIEW.md` or anything else, from the old layout) → delete it. If the target is an in-repo file other than `REVIEW.md`, merge that content into `REVIEW.md` first; if the target escapes the repo, do not read it (see Step 5.5).
-- **It is a regular file with review rules, and `REVIEW.md` does not exist** → move it. The file may be untracked during first-time setup, and `git mv` aborts on untracked paths:
-
-  ```bash
-  git mv .github/copilot-instructions.md REVIEW.md 2>/dev/null \
-    || mv .github/copilot-instructions.md REVIEW.md
-  ```
-
-- **Both exist as regular files** → merge copilot-instructions content into `REVIEW.md`, then delete the original. Never drop review rules.
 
 #### 8.2 Check for CURRENT language
 
 Search `REVIEW.md` for the exact string `docs/changes/`.
 
 - **If `docs/changes/` is found** → current. Skip to 8.3.
-- **If NOT found** → missing or stale. Prepend the block below at the TOP, followed by `---` and a blank line. Remove any stale section that references `PROJECT.md` or `docs/specs/` for tasks.
+- **If NOT found** → prepend the block below at the TOP, followed by `---` and a blank line. This is additive; **remove nothing.** If a stale section references `PROJECT.md` or `docs/specs/` for tasks, report it for `/fx-dev:upgrade` rather than deleting it.
 
 **If `REVIEW.md` does not exist at all**, create it with exactly this block.
 
@@ -343,15 +318,18 @@ Instruction files:
 
 If everything was already current, report briefly: "Docs structure and instruction files verified — no changes needed."
 
+If Step 5.5 found a legacy layout, always end the report with the specific findings and `Run /fx-dev:upgrade to migrate.` Never report success over a skipped file.
+
 ## Rules
 
-- **Never overwrite** existing docs/ files — only create what's missing
-- **Never delete convention content** during migration — move it into `AGENTS.md` or `REVIEW.md`
+- **Never overwrite** existing files — only create what's missing
+- **Never migrate** — no moves, merges, deletions, or symlink resolution. Detect and defer to `/fx-dev:upgrade`
+- **Never delete convention content** — setup deletes nothing, ever
 - **Offer migration** if PROJECT.md exists
 - **Keep it minimal** — bare templates, not example content
 - **Idempotent** — safe to run multiple times; repeated runs MUST NOT duplicate content
 - **Exact marker checks** — AGENTS.md checks for `/project-management`, REVIEW.md checks for `docs/changes/`, CLAUDE.md checks for `@AGENTS.md`
-- **Replace stale language** — if old-style references exist (`PROJECT.md`, `docs/specs/` for tasks), remove and replace them
+- **Report stale language, do not replace it** — if old-style references exist (`PROJECT.md`, `docs/specs/` for tasks), append the current block and report the stale section for `/fx-dev:upgrade`
 - **Insert ONLY the exact blocks specified** — do NOT expand, embellish, or add detail to the AGENTS.md, REVIEW.md, or CLAUDE.md content. The blocks above are the complete content. Adding anything extra violates the design
 - **Prepend for REVIEW.md** — review rules go at the TOP so they're seen first
 - **Append for AGENTS.md** — task tracking section is appended to not disrupt existing structure

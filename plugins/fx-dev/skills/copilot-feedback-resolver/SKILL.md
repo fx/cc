@@ -70,7 +70,7 @@ One file means suppressing a false positive here also suppresses it for CodeRabb
 
 **If `REVIEW.md` does not exist**, run the `fx-dev:setup` skill first. See `fx-dev:setup` → `references/instruction-files.md` for the full standard.
 
-**Never create or edit `.github/copilot-instructions.md`.** It is obsolete. If the repo still has one, run `fx-dev:setup` to fold it into `REVIEW.md`.
+**Never create or edit `.github/copilot-instructions.md`.** It is obsolete. If the repo still has one, tell the user to run `/fx-dev:upgrade`, which folds it into `REVIEW.md`.
 
 Copilot reads instructions from the **head branch**, so a rule you add here takes effect on this same PR's next review.
 

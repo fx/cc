@@ -93,6 +93,8 @@ Patterns are **case-sensitive**: `review.md` does not match `**/REVIEW.md`.
 
 ## Migration from a pre-existing repo
 
+**`fx-dev:upgrade` performs this migration** — it is intentionally intrusive and asks for confirmation first. `fx-dev:setup` only creates what is missing and will refuse to touch a legacy layout. The table below is what upgrade applies.
+
 | Found | Do |
 |-------|-----|
 | `CLAUDE.md` with project conventions, no `AGENTS.md` | Move it to `AGENTS.md`, create `CLAUDE.md` containing `@AGENTS.md` |

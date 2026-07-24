@@ -23,7 +23,7 @@ description: "MUST BE USED when user asks to: review code, review PR, check my c
 
    `AGENTS.md` is how the code should be **written**; `REVIEW.md` is how it should be **reviewed**. When they conflict on a review decision, `REVIEW.md` wins.
 
-   Legacy repos may still keep conventions in `CLAUDE.md` or the obsolete `.github/copilot-instructions.md`. Read those only if the canonical files are missing, and suggest running `fx-dev:setup` to migrate.
+   Legacy repos may still keep conventions in `CLAUDE.md` or the obsolete `.github/copilot-instructions.md`. Read those only if the canonical files are missing, and suggest running `fx-dev:upgrade` to migrate.
 
 2. **Apply project rules as BLOCKING issues.** These files define project-specific requirements that override general best practices. Violations are BLOCKING, not suggestions.
 

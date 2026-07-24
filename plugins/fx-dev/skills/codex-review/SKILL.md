@@ -24,13 +24,14 @@ Before the first run in a repo, check the pointer exists:
 ```bash
 grep -q "## Code Review Rules" AGENTS.md 2>/dev/null \
   && echo "Codex pointer present" \
-  || echo "MISSING - run fx-dev:setup"
+  || echo "MISSING - run fx-dev:setup (new repo) or fx-dev:upgrade (legacy layout)"
 ```
 
 If it is missing, **report it and continue reviewing on defaults** — do NOT run
-`fx-dev:setup` from here. Setup scaffolds `docs/`, migrates instruction files,
-and touches CodeRabbit config; running it mid-review would pollute the branch
-with changes unrelated to the PR. Tell the user to run `fx-dev:setup` separately.
+`fx-dev:setup` or `fx-dev:upgrade` from here. Setup scaffolds `docs/` and touches
+CodeRabbit config, and upgrade rewrites instruction files outright; running
+either mid-review would pollute the branch with changes unrelated to the PR.
+Tell the user to run it separately.
 
 If Codex flags something that `REVIEW.md` explicitly permits, the pointer is not
 landing — say so rather than silently applying the finding.
@@ -113,6 +114,7 @@ unresolved actionable Codex findings.
 ## Notes
 
 - This skill is self-contained: it does not load other skills, and it never runs
-  `fx-dev:setup` — a missing `AGENTS.md` pointer is reported, not fixed here.
+  `fx-dev:setup` or `fx-dev:upgrade` — a missing `AGENTS.md` pointer is reported,
+  not fixed here.
 - `codex review` reviews local changes and never modifies your working tree.
 - Keep findings resolved before opening the PR.
