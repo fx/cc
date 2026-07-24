@@ -127,10 +127,30 @@ Handle these cases in order — **check `test -L CLAUDE.md` before anything else
   ```bash
   test -L CLAUDE.md && rm CLAUDE.md
   ```
-  If the symlink pointed somewhere **other** than `AGENTS.md`, read its target first and merge that content into `AGENTS.md` before deleting the link.
+  If the symlink pointed somewhere **other** than `AGENTS.md`, apply the escape check below before merging anything.
 - **`AGENTS.md` missing, `CLAUDE.md` is a regular file with real content** → move it, then create the `CLAUDE.md` pointer in Step 7. Use `git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md` — the file may be untracked, and `git mv` aborts on untracked paths.
 - **Both exist as regular files with content** → merge `CLAUDE.md`'s content into `AGENTS.md`, keeping any genuinely Claude-only rules aside for the pointer file. Never delete convention content — move it.
 - **Neither exists** → create `AGENTS.md` with just the block from 6.3.
+
+##### ⛔ Never copy content from a symlink that escapes the repo
+
+A legacy `CLAUDE.md` or `.github/copilot-instructions.md` may point **outside** the checkout — typically at `~/.claude/CLAUDE.md`, which holds the user's private, machine-wide instructions. Copying that into a tracked `AGENTS.md` would commit private user or company conventions to a repo, possibly a public one.
+
+**Before merging any symlink target, canonicalize it and confirm it is inside the repo:**
+
+```bash
+link_target=$(readlink -f .github/copilot-instructions.md)   # or CLAUDE.md
+repo_root=$(git rev-parse --show-toplevel)
+case "$link_target" in
+  "$repo_root"/*) echo "in-repo: safe to merge" ;;
+  *) echo "ESCAPES REPO: $link_target — do NOT copy its contents" ;;
+esac
+```
+
+- **In-repo target** → merge its content as described above.
+- **Target escapes the repo, or `readlink -f` cannot resolve it** → **do NOT read or copy the contents.** Replace the link with the standard pointer, and report to the user: name the path the link pointed at and tell them to copy over anything they still want, themselves. Never inline it for them.
+
+This is a privacy boundary, not a style preference. When in doubt, do not copy.
 
 #### 6.2 Check for CURRENT language
 
@@ -206,7 +226,7 @@ readlink .github/copilot-instructions.md
 ```
 
 - Target resolves to `REVIEW.md` → already correct, skip to 8.2.
-- Target is anything else → read that file, merge its rules into `REVIEW.md`, and only then remove the link and recreate it in 8.3.
+- Target is anything else → apply the **escape check from 6.1** first. Merge its rules into `REVIEW.md` only if the target is inside the repo; if it escapes the checkout, do not read or copy it — replace the link and report the path to the user.
 
 **It is a regular file** with review rules and `REVIEW.md` does not exist → move its content. The file may be untracked (first-time setup of a local project), in which case `git mv` fails with "not under version control" — fall back to a plain move:
 
