@@ -121,7 +121,7 @@ test -f AGENTS.md && echo "AGENTS.md exists" || echo "AGENTS.md missing"
 test -L CLAUDE.md && echo "CLAUDE.md is a symlink" || { test -f CLAUDE.md && echo "CLAUDE.md is a regular file" || echo "CLAUDE.md missing"; }
 ```
 
-- **`AGENTS.md` missing, `CLAUDE.md` has real content** → `git mv CLAUDE.md AGENTS.md`, then create the `CLAUDE.md` pointer in Step 7.
+- **`AGENTS.md` missing, `CLAUDE.md` has real content** → move it, then create the `CLAUDE.md` pointer in Step 7. Use `git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md` — the file may be untracked, and `git mv` aborts on untracked paths.
 - **Both exist with content** → merge `CLAUDE.md`'s content into `AGENTS.md`, keeping any genuinely Claude-only rules aside for the pointer file. Never delete convention content — move it.
 - **Neither exists** → create `AGENTS.md` with just the block from 6.3.
 
@@ -190,11 +190,12 @@ test -f REVIEW.md && echo "REVIEW.md exists" || echo "REVIEW.md missing"
 test -L .github/copilot-instructions.md && echo "already a symlink" || { test -f .github/copilot-instructions.md && echo "regular file" || echo "missing"; }
 ```
 
-If `.github/copilot-instructions.md` is a **regular file** with review rules and `REVIEW.md` does not exist, move its content:
+If `.github/copilot-instructions.md` is a **regular file** with review rules and `REVIEW.md` does not exist, move its content. The file may be untracked (first-time setup of a local project), in which case `git mv` fails with "not under version control" — fall back to a plain move:
 
 ```bash
 mkdir -p .github
-git mv .github/copilot-instructions.md REVIEW.md
+git mv .github/copilot-instructions.md REVIEW.md 2>/dev/null \
+  || mv .github/copilot-instructions.md REVIEW.md
 ```
 
 If both exist as regular files, merge copilot-instructions content into `REVIEW.md`, then delete the original. Never drop review rules.

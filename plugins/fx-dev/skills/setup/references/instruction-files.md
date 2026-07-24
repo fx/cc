@@ -64,7 +64,7 @@ review rule.
 
 ## Creating the symlink
 
-Move the content to `REVIEW.md` **first** (`git mv .github/copilot-instructions.md REVIEW.md`), then put the pointer in its place:
+Move the content to `REVIEW.md` **first** — `git mv .github/copilot-instructions.md REVIEW.md 2>/dev/null || mv .github/copilot-instructions.md REVIEW.md`, since the file may be untracked — then put the pointer in its place:
 
 ```bash
 mkdir -p .github
@@ -80,18 +80,49 @@ git ls-files -s .github/copilot-instructions.md
 # 120000 <sha> 0	.github/copilot-instructions.md
 ```
 
+### Fallback: generated mirror
+
 If the repo has `core.symlinks=false` (some Windows checkouts), the symlink
 becomes a plain text file containing the path and Copilot will read garbage. In
 that case fall back to a generated mirror at
-`.github/instructions/review.instructions.md` with `applyTo: "**"` frontmatter
-and a `<!-- GENERATED from REVIEW.md — DO NOT EDIT -->` header, re-synced
-whenever `REVIEW.md` changes.
+`.github/instructions/review.instructions.md`:
+
+```markdown
+---
+applyTo: "**"
+---
+<!-- GENERATED from REVIEW.md — DO NOT EDIT. Regenerate after any REVIEW.md change. -->
+
+<verbatim copy of REVIEW.md>
+```
+
+**A mirror is a standing obligation, not a one-time copy.** It goes stale the
+moment `REVIEW.md` changes, and a stale mirror is worse than none — Copilot keeps
+enforcing rules the project has already retracted.
+
+**Anything that writes `REVIEW.md` MUST regenerate the mirror in the same
+change.** That includes every feedback resolver and every manual edit:
+
+```bash
+# Run this immediately after any write to REVIEW.md
+if [ -f .github/instructions/review.instructions.md ] \
+   && ! [ -L .github/copilot-instructions.md ]; then
+  { printf -- '---\napplyTo: "**"\n---\n'
+    printf -- '<!-- GENERATED from REVIEW.md — DO NOT EDIT. Regenerate after any REVIEW.md change. -->\n\n'
+    cat REVIEW.md
+  } > .github/instructions/review.instructions.md
+  echo "Mirror regenerated"
+fi
+```
+
+Prefer the symlink and use the mirror only when the symlink genuinely cannot be
+stored. Tell the user when you fall back, so the sync obligation is visible.
 
 ## Migration from a pre-existing repo
 
 | Found | Do |
 |-------|-----|
-| `CLAUDE.md` with project conventions, no `AGENTS.md` | `git mv CLAUDE.md AGENTS.md`, create `CLAUDE.md` containing `@AGENTS.md` |
+| `CLAUDE.md` with project conventions, no `AGENTS.md` | Move it to `AGENTS.md`, create `CLAUDE.md` containing `@AGENTS.md` |
 | `CLAUDE.md` and `AGENTS.md` both with content | Merge into `AGENTS.md`, reduce `CLAUDE.md` to `@AGENTS.md` plus any genuinely Claude-only rules |
 | `.github/copilot-instructions.md` with review rules, no `REVIEW.md` | Move its content to `REVIEW.md`, replace the file with the symlink |
 | Neither `REVIEW.md` nor `.github/copilot-instructions.md` | Create `REVIEW.md`, then the symlink |

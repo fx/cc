@@ -32,7 +32,17 @@ Every resolver invoked here follows the same rule: when a reviewer's feedback is
 
 If `REVIEW.md` does not exist, run `fx-dev:setup` — it creates the file and all the pointers. The full standard is in `fx-dev:setup` → `references/instruction-files.md`.
 
-**Consequence for parallel runs:** when the Copilot and CodeRabbit resolvers run as concurrent sub-agents (Step 4), both may append to `REVIEW.md`. Instruct each to make its edit as a small, targeted append and to re-read the file immediately before writing, so a concurrent edit is not clobbered.
+### Parallel runs MUST NOT write `REVIEW.md` concurrently
+
+When the Copilot and CodeRabbit resolvers run as concurrent sub-agents (Step 4), both can produce INCORRECT findings targeting the same file. Re-reading before writing is **not** locking — two agents can read the same revision and the second write silently discards the first agent's rule.
+
+**Therefore, when dispatching resolvers in parallel:**
+
+1. Instruct each sub-agent to **collect** its proposed `REVIEW.md` rules and return them in its final report **instead of editing the file**. Everything else (code fixes, thread replies, thread resolution) proceeds normally in parallel — those touch disjoint resources.
+2. After **all** parallel resolvers have returned, the root session applies the collected rules to `REVIEW.md` in a single serialized edit, then commits and pushes.
+3. Verify no rule was dropped: the count of INCORRECT findings across the sub-agent reports must equal the count of rules present in `REVIEW.md`.
+
+When resolvers run **sequentially** (one reviewer only, or Mode B), the resolver edits `REVIEW.md` directly as its own skill describes — no aggregation needed.
 
 ## Prerequisites
 

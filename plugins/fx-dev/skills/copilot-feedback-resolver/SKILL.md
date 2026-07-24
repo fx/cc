@@ -72,6 +72,8 @@ One file means suppressing a false positive here also suppresses it for CodeRabb
 
 **If `.github/copilot-instructions.md` is still a regular file** (not yet migrated), run `fx-dev:setup` to migrate it rather than editing it in place.
 
+**If the repo uses the generated-mirror fallback** (no symlink; a `.github/instructions/review.instructions.md` exists), you MUST regenerate that mirror in the same change after writing `REVIEW.md`, or Copilot keeps reading the stale copy. The regeneration snippet is in `fx-dev:setup` → `references/instruction-files.md` → "Fallback: generated mirror".
+
 #### CRITICAL: File Structure Requirements
 
 **Copilot only reads roughly the first 4000 characters when reviewing.** `REVIEW.md` is also pasted verbatim into Claude Code Review's prompt, where length dilutes the rules that matter. Therefore:

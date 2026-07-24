@@ -26,10 +26,13 @@ grep -q "## Code Review Rules" AGENTS.md 2>/dev/null \
   || echo "MISSING - run fx-dev:setup"
 ```
 
-If it is missing, run `fx-dev:setup` so Codex picks up the project's review
-conventions instead of reviewing on defaults alone. If Codex flags something that
-`REVIEW.md` explicitly permits, the pointer is not landing — say so rather than
-silently applying the finding.
+If it is missing, **report it and continue reviewing on defaults** — do NOT run
+`fx-dev:setup` from here. Setup scaffolds `docs/`, migrates instruction files,
+and touches CodeRabbit config; running it mid-review would pollute the branch
+with changes unrelated to the PR. Tell the user to run `fx-dev:setup` separately.
+
+If Codex flags something that `REVIEW.md` explicitly permits, the pointer is not
+landing — say so rather than silently applying the finding.
 
 ## How to Run (one-shot, branch vs main)
 
@@ -108,7 +111,7 @@ unresolved actionable Codex findings.
 
 ## Notes
 
-- This skill is self-contained for the review loop itself; the only skill it may
-  invoke is `fx-dev:setup`, and only to create a missing `AGENTS.md` pointer.
+- This skill is self-contained: it does not load other skills, and it never runs
+  `fx-dev:setup` — a missing `AGENTS.md` pointer is reported, not fixed here.
 - `codex review` reviews local changes and never modifies your working tree.
 - Keep findings resolved before opening the PR.

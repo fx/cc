@@ -134,6 +134,8 @@ If CodeRabbit feedback conflicts with project conventions (INCORRECT category), 
 
 **Never edit `.github/copilot-instructions.md` directly** — it is a symlink to `../REVIEW.md`.
 
+**If the repo uses the generated-mirror fallback** (no symlink; a `.github/instructions/review.instructions.md` exists), regenerate that mirror in the same change after writing `REVIEW.md`, or Copilot keeps reading the stale copy. See `fx-dev:setup` → `references/instruction-files.md` → "Fallback: generated mirror".
+
 ### 1. Fetch Unresolved CodeRabbit Threads
 
 Query review threads using GraphQL.
