@@ -27,7 +27,7 @@ test -f docs/index.yml && echo "index.yml exists" || echo "index.yml missing"
 test -f docs/index.md && echo "index.md exists" || echo "index.md missing"
 ```
 
-**If all docs/ files exist**, skip to Step 6 (instruction files check). Do not overwrite existing docs/ files.
+**If all docs/ files exist**, skip to Step 5.5 (instruction files). Do not overwrite existing docs/ files.
 
 **Instruction files are checked on every run**, even when `docs/` is already complete.
 
