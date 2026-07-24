@@ -91,19 +91,21 @@ If `REVIEW.md` is missing, run the `fx-dev:setup` skill to create it before cont
 
 | State | Action |
 |-------|--------|
-| No `.coderabbit.yaml` exists | **Create it** with the config below. Nothing in CodeRabbit's defaults reaches root `REVIEW.md`, so without this it reviews with no knowledge of the project's conventions |
-| Config exists with `knowledge_base.code_guidelines.enabled: false` | **Update** to `enabled: true` |
-| Config exists with custom `filePatterns` | **Add** `"**/REVIEW.md"` and `"**/AGENTS.md"` |
-| Config exists, `enabled: true`, no custom `filePatterns` | No action needed |
+| No `.coderabbit.yaml` exists | **Create it** with the config below |
+| Exists, `knowledge_base.code_guidelines.enabled: false` | **Set** `enabled: true` **and** add `"**/REVIEW.md"` |
+| Exists, `enabled: true`, no `**/REVIEW.md` in `filePatterns` | **Add** `"**/REVIEW.md"` — including when `filePatterns` is absent entirely, since the defaults do not cover it |
+| Exists, `enabled: true`, `**/REVIEW.md` already present | No action needed |
+
+**The only state needing no action is the last one.** `enabled: true` by itself is not sufficient: CodeRabbit's defaults cover `**/AGENTS.md` and `**/CLAUDE.md` but never root `REVIEW.md`, so without the explicit pattern it reviews with no knowledge of the review conventions.
 
 #### Create/Update Configuration
 
-If configuration needs updating, create or modify `.coderabbit.yaml`:
+Create or modify `.coderabbit.yaml`:
 
 ```yaml
 # .coderabbit.yaml
-# Ensures CodeRabbit reads review conventions from REVIEW.md
-# and project conventions from AGENTS.md
+# Ensures CodeRabbit reads review conventions from REVIEW.md.
+# AGENTS.md is already covered by CodeRabbit's default patterns.
 
 knowledge_base:
   code_guidelines:
@@ -112,20 +114,9 @@ knowledge_base:
     # REVIEW.md is not in CodeRabbit's defaults, so list it explicitly.
     filePatterns:
       - "**/REVIEW.md"
-      - "**/AGENTS.md"
 ```
 
 Patterns are **case-sensitive**: `review.md` does not match `**/REVIEW.md`.
-
-**Minimal config when you have no custom `filePatterns`:**
-
-```yaml
-knowledge_base:
-  code_guidelines:
-    enabled: true
-```
-
-Note this alone is **not** sufficient: the defaults do not include `**/REVIEW.md`, so the explicit pattern above is still required.
 
 #### When to Update REVIEW.md
 
