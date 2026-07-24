@@ -185,9 +185,9 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 
 | # | Gate | How to verify | Blocking? |
 |---|------|--------------|-----------|
-| 1 | **CI checks ALL green** | `gh pr checks <NUMBER>` — every check must show `pass` (includes the `CodeRabbit` check) | YES |
+| 1 | **Required CI checks green** | `gh pr checks <NUMBER>` — every required non-CodeRabbit check must pass | YES |
 | 2 | **Copilot review RECEIVED and feedback RESOLVED** | Invoke `fx-dev:copilot-review` skill — confirm 0 unresolved Copilot threads | YES |
-| 2b | **CodeRabbit check terminal-passing AND feedback RESOLVED** | Invoke `fx-dev:coderabbit-review` skill — confirm `CodeRabbit` check is `success` AND 0 unresolved CodeRabbit threads. CodeRabbit re-reviews on every push, so loop until convergence | YES (when configured) |
+| 2b | **CodeRabbit reviewed or correctly degraded** | Invoke `fx-dev:coderabbit-review`: prefer a passing check with received feedback resolved; if CodeRabbit rate-limits, report once and record `skipped (rate-limited)` without blocking | NO when rate-limited |
 | 3 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
 | 4 | **Spec task marked complete** | Check via project-management skill | YES |
 | 5 | **PR description is clear** | Read PR body | YES |
@@ -196,7 +196,7 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 
 ### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
 
-> **CodeRabbit and Codex run LOCALLY first.** Implementing sub-agents MUST run a local CodeRabbit review via the `cr` CLI AND a local Codex review via `codex review --base main` during pre-PR self-review (`fx-dev:dev` Step 4.5 / `fx-dev:coderabbit-review` Mode 1 / `fx-dev:codex-review`) and open the PR only once both are clean. Gate 2b below is the **fallback** PR-level CodeRabbit gate — it applies only when the repo's CodeRabbit GitHub App also auto-reviews PRs. If a clean local `cr` review ran and no `CodeRabbit` check appears, Gate 2b is already satisfied.
+> **CodeRabbit and Codex run LOCALLY first.** Implementing sub-agents attempt local CodeRabbit via `cr` and run local Codex via `codex review --base main` during pre-PR self-review. Prefer both clean. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown. Gate 2b is the fallback PR-level CodeRabbit review when the GitHub App is configured, with the same rate-limit exception.
 
 **As coordinator, YOU handle reviewer waits directly. Do NOT spawn sub-agents for reviewer waits — sub-agents in this team context cannot spawn their own sub-agents, and `fx-dev:dev` mode A would fail. You ARE the root agent for the team; invoke each reviewer skill in the foreground sequentially, OR launch the slow waiter (CodeRabbit) as a background `Bash` process while you handle Copilot in the foreground.**
 
@@ -212,9 +212,9 @@ Skill tool: skill="fx-dev:coderabbit-review",  args="<PR_NUMBER>"
 # 3. When Bash task completes: Skill fx-dev:rabbit-feedback-resolver
 ```
 
-Both reviewers MUST converge: the loop is "wait → resolve → if anyone pushed, wait again". CodeRabbit specifically re-runs on every push and may post new threads on the new SHA. Cap at 4 outer iterations and escalate to user if not converged. Only proceed to merge after BOTH reviewers report terminal-passing checks AND 0 unresolved threads.
+When available, both reviewers converge through "wait → resolve → if anyone pushed, wait again". CodeRabbit re-runs on every push and may post new threads on the new SHA. Cap at 4 outer iterations. **If CodeRabbit reports a rate/quota limit or cooldown at any point, stop its loop immediately, report once, record `skipped (rate-limited)`, and continue without waiting or escalating.** Copilot must still converge normally.
 
-If CodeRabbit isn't configured for the repo (no `CodeRabbit` check ever appears, the wait script exits 2), report this to the user once and proceed without that gate. Do not silently skip when it IS configured.
+If CodeRabbit is not configured (wait script exits 2), report once and proceed. Do not silently skip ordinary failures; the optional exception is specifically for CodeRabbit throttling.
 
 ### Browser Verification Gate (Gate 6)
 
@@ -298,7 +298,7 @@ When all tasks are complete and all PRs merged:
 - **NEVER skip PR inspection** — every PR gets reviewed before marking ready
 - **NEVER merge without completing the MERGE GATE CHECKLIST** — every gate must pass, every time, for every PR
 - **NEVER merge without Copilot review** — always invoke `fx-dev:copilot-review` yourself. No exceptions.
-- **NEVER merge without CodeRabbit review when CodeRabbit is configured** — always invoke `fx-dev:coderabbit-review` yourself; cycle until its check is `success` and 0 threads. No exceptions.
+- **ALWAYS attempt CodeRabbit when configured, but never block on its rate limits** — invoke `fx-dev:coderabbit-review`; resolve feedback already received, then record `skipped (rate-limited)` and continue immediately if throttled.
 - **NEVER spawn sub-agents to handle reviewer waits** in the team-coordinator context — sub-agents can't spawn sub-agents. Run reviewer skills in the foreground (or background-Bash for the slow ones).
 - **NEVER mark a teammate's PR as ready** until you've inspected it
 - **ALWAYS handle Copilot review and CI monitoring directly** — these are coordinator responsibilities, not sub-agent responsibilities

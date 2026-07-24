@@ -1,18 +1,20 @@
 ---
 name: coderabbit-review
-description: "Run CodeRabbit's AI review. PRIMARY path: run it LOCALLY via the `cr` CLI BEFORE opening a PR (part of pre-PR self-review) and only open the PR once the review comes back clean. FALLBACK path: wait for + resolve CodeRabbit's automated review on an already-open PR via its `CodeRabbit` GitHub check. Use during pre-PR self-review, and as a merge gate alongside fx-dev:copilot-review."
+description: "Run CodeRabbit's optional AI review. PRIMARY path: run it LOCALLY via the `cr` CLI before opening a PR and resolve actionable findings. FALLBACK path: wait for + resolve its automated PR review when available. Rate limits degrade gracefully: report once, skip CodeRabbit, and continue the SDLC."
 ---
 
 # CodeRabbit Review
 
-CodeRabbit reviews code with AI. The **primary** way to use it is **locally, via the `cr` CLI, BEFORE opening a PR** — as part of pre-PR self-review, alongside `/review` and `/simplify`. Only open the PR once the local review comes back clean. A **fallback** path handles CodeRabbit's PR-level review for repos where its GitHub App is configured to auto-review PRs.
+CodeRabbit reviews code with AI. The **primary** way to use it is **locally, via the `cr` CLI, BEFORE opening a PR** — as part of pre-PR self-review, alongside `/review` and `/simplify`. Prefer a clean local result when the service is available. A **fallback** path handles CodeRabbit's PR-level review for repos where its GitHub App is configured to auto-review PRs.
+
+**IMPORTANT — CodeRabbit is optional when rate-limited.** If the CLI, API, GitHub check, or wait script reports a CodeRabbit quota/rate limit, report it once and continue without CodeRabbit. Do not sleep, poll, retry after a cooldown, ask the user to wait, or block PR creation/merge solely on CodeRabbit throttling. Resolve actionable findings already received before the limit, then mark the CodeRabbit pass as `skipped (rate-limited)`. This exception applies only to CodeRabbit; it does not relax Copilot, CI, tests, or other merge gates.
 
 ## ⛔ Local-First: Run CodeRabbit BEFORE Opening the PR
 
 Catch CodeRabbit's feedback **before** a PR exists, using the `cr` CLI on your local changes:
 
 - Run `cr` during pre-PR self-review (alongside `/simplify` and `/review`), fix everything it flags, and re-run until clean.
-- **Only open the PR once the local CodeRabbit review is clean.** This avoids review churn on the PR and the slow push → re-review → resolve loop.
+- Open the PR after the local review is clean **or correctly degraded as `skipped (rate-limited)`**. Resolve all actionable findings already received before proceeding.
 - A clean local review does NOT remove the merge gates — but it usually means CodeRabbit's PR-level review (when the GitHub App is configured) lands clean on the first pass, and often there is nothing left to resolve on the PR at all.
 
 ## The `cr` CLI
@@ -56,6 +58,7 @@ Use `cr review --agent --base main` to scope to the branch's diff against `main`
 
 - If `cr` reports it is **not authenticated**, **STOP and report to the user** — the workspace is expected to be authed. **Do NOT run `cr auth login`** (it is interactive). Do not work around it.
 - If `cr` is **not installed / unavailable**, skip to Mode 2 (resolve at the PR level after opening) and report this to the user once.
+- If `cr` reports a **rate limit, quota limit, or cooldown**, stop the CodeRabbit loop immediately. Report the skip once, resolve any actionable findings already returned, and continue to PR creation without requiring a clean rerun.
 
 ### Step 2: Resolve every actionable finding
 
@@ -70,10 +73,11 @@ Treat findings like self-review feedback:
 Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until the review reports no actionable findings.**
 
 - **Cap at 4 iterations.** If CodeRabbit keeps flagging the same design decision after 4 passes, that is a human call, not more code edits — escalate to the user.
+- **Rate-limit exception:** stop immediately on throttling; do not consume iterations waiting for cooldowns.
 
-### Step 4: Open the PR only when clean
+### Step 4: Open the PR when clean or correctly degraded
 
-A clean local CodeRabbit review is the gate to PR creation in the SDLC (`fx-dev:dev` Step 4.5 → Step 5). Do not open the PR with unresolved local CodeRabbit findings.
+A clean local CodeRabbit review is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once all findings already received are addressed. Do not open the PR with known unresolved actionable findings.
 
 ---
 
@@ -85,7 +89,7 @@ Use this only when the repo's CodeRabbit GitHub App auto-reviews PRs (it exposes
 
 - CodeRabbit's PR review is **completely independent of CI**. CI passing has NOTHING to do with CodeRabbit.
 - CodeRabbit **re-reviews on every push** that changes the PR's head SHA. After you push fixes, the `CodeRabbit` check goes pending again until the new review completes.
-- You MUST NOT merge until CodeRabbit's check is terminal AND every CodeRabbit thread is resolved (when the App is configured for the repo).
+- When CodeRabbit is available, wait until its check is terminal and resolve every CodeRabbit thread. If CodeRabbit itself reports rate limiting, report once and skip this optional gate; do not block merge solely on the throttled reviewer.
 - **NEVER use raw `gh api repos/.../reviews` or `gh pr view --json reviews` to make merge decisions about CodeRabbit.** Use this skill's bundled script.
 
 ### Step 1: Wait for the CodeRabbit Check
@@ -100,9 +104,9 @@ bash [SKILL_BASE_DIR]/skills/coderabbit-review/scripts/wait-for-coderabbit-revie
 
 Script exit codes:
 - **Exit 0**: CodeRabbit check reached a terminal state. Output also reports the unresolved-thread count → proceed to Step 2.
-- **Exit 1**: Timeout (default 20 min) waiting for the check to settle → STOP. Report: "CodeRabbit check did not settle within 20 min on PR #N." Do not merge.
-- **Exit 2**: No CodeRabbit check present after a one-cycle grace period → the CodeRabbit GitHub App is not configured for this repo. If you already ran a clean local `cr` review (Mode 1), the gate is satisfied — proceed. Otherwise report once and proceed without the PR-level gate.
-- **Exit 3**: Invalid arguments or gh error → report error to user.
+- **Exit 1**: Timeout (default 20 min) waiting for the check to settle → STOP. Report: "CodeRabbit check did not settle within 20 min on PR #N." Do not merge unless the output identifies CodeRabbit rate limiting; throttling uses the optional-review exception and may be skipped immediately.
+- **Exit 2**: No CodeRabbit check present after a one-cycle grace period → the CodeRabbit GitHub App is not configured for this repo. Report once and proceed without the PR-level gate.
+- **Exit 3**: Invalid arguments or gh error → report error to user. If the error specifically identifies a CodeRabbit rate/quota limit, report once and proceed without CodeRabbit.
 
 ### Step 2: Resolve Feedback
 
@@ -160,11 +164,11 @@ Never call the Agent tool from inside a sub-agent context.
 ## Success Criteria
 
 **Mode 1 (local, primary):**
-- ✅ `cr review --agent` reports no actionable findings (after fixes)
-- ✅ All fixes committed
-- ✅ The loop converged (no new findings after the last fix) — PR is now safe to open
+- ✅ `cr review --agent` reports no actionable findings after fixes, **or** the service rate-limited and the pass is recorded as `skipped (rate-limited)`
+- ✅ All actionable findings received before any limit are resolved and committed
+- ✅ No cooldown waits or retries remain when the rate-limit exception applies
 
-**Mode 2 (PR-level, fallback / merge gate):**
-- ✅ CodeRabbit check is terminal with a passing conclusion (`success`, or `skipped`/`neutral` per repo config)
-- ✅ All CodeRabbit threads resolved (0 unresolved)
-- ✅ Any valid concerns fixed and pushed; the loop has converged
+**Mode 2 (PR-level, fallback / optional merge gate):**
+- ✅ CodeRabbit check is terminal with a passing conclusion and all threads are resolved, **or** CodeRabbit rate-limited and the gate is recorded as `skipped (rate-limited)`
+- ✅ Any valid concerns already received are fixed and pushed
+- ✅ CodeRabbit throttling alone does not block merge

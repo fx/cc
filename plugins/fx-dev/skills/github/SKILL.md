@@ -86,11 +86,11 @@ This skill triggers automatically when:
 | CI checks ALL green | `gh pr checks <NUMBER>` — every check must show `pass` | ⛔ YES |
 | Copilot review RECEIVED | `gh api repos/{owner}/{repo}/pulls/<NUMBER>/reviews --jq '.[] \| select(.user.login == "copilot-pull-request-reviewer[bot]")'` — must return a review | ⛔ YES |
 | Copilot comments RESOLVED | All Copilot review threads resolved (0 unresolved) | ⛔ YES |
-| CodeRabbit review received (if GitHub App configured) | Check reviews for `coderabbitai[bot]` | ⛔ YES |
-| CodeRabbit comments resolved (if GitHub App configured) | All threads resolved | ⛔ YES |
+| CodeRabbit review attempted (if GitHub App configured) | Prefer a received review; explicit `skipped (rate-limited)` is acceptable | Optional when rate-limited |
+| CodeRabbit comments resolved (if received) | Resolve all threads received before any rate limit | Optional when rate-limited |
 | Codecov passing | `codecov/patch` and `codecov/project` checks pass | ⛔ YES |
 
-> **CodeRabbit is run primarily LOCALLY (via the `cr` CLI) BEFORE the PR is opened** — see `fx-dev:coderabbit-review` (Mode 1) and `fx-dev:dev` Step 4.5. The PR-level CodeRabbit gate above applies only when the repo's CodeRabbit GitHub App also auto-reviews PRs (a `CodeRabbit` check appears). If a clean local `cr` review ran and the App is not configured, the CodeRabbit gate is already satisfied.
+> **CodeRabbit is run primarily LOCALLY (via the `cr` CLI) BEFORE the PR is opened** — see `fx-dev:coderabbit-review` (Mode 1) and `fx-dev:dev` Step 4.5. The PR-level review applies only when the GitHub App auto-reviews PRs. **CodeRabbit is optional when it reports a rate/quota limit or cooldown:** report once, resolve findings already received, record `skipped (rate-limited)`, and continue without waiting or retrying. Other merge gates remain mandatory.
 
 **If Copilot review has NOT been received:** WAIT. Poll every 60 seconds for up to 15 minutes. Do NOT merge without it.
 

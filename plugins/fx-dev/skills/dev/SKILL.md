@@ -214,7 +214,7 @@ Skill tool: skill="code-review"
 Skill tool: skill="fx-dev:coderabbit-review"
 ```
 
-The skill runs `cr review --agent` against the working tree (Mode 1), resolves every actionable finding, and re-runs until clean. If `cr` is **unavailable**, fall back to the PR-level CodeRabbit gate in Step 6.3. If `cr` reports it is **not authenticated**, STOP and report to the user — NEVER run `cr auth login` (it is interactive; the workspace should already be authed).
+The skill runs `cr review --agent` against the working tree (Mode 1), resolves every actionable finding, and re-runs until clean. If `cr` is **unavailable**, fall back to the PR-level CodeRabbit review in Step 6.3. If `cr` reports it is **not authenticated**, STOP and report to the user — NEVER run `cr auth login` (it is interactive; the workspace should already be authed). **If CodeRabbit reports a rate/quota limit or cooldown, report it once, resolve findings already received, mark the pass `skipped (rate-limited)`, and continue immediately. Never wait or retry solely for a CodeRabbit cooldown.**
 
 **4. Codex (local, via `codex`)** — run OpenAI Codex's AI review one-shot on the branch BEFORE the PR exists. Codex and CodeRabbit are independent reviewers; each catches issues the other misses:
 
@@ -228,10 +228,10 @@ Fix any issues found in each pass and commit the fixes. **Whenever a later pass 
 
 **⛔ DO NOT PROCEED to Step 5 until simplify and review have run and all findings are addressed, AND each local AI reviewer has been resolved or correctly degraded:**
 
-- **CodeRabbit** clean, OR — if `cr` is **not installed** — fall back to the PR-level gate in Step 6.3. If `cr` is installed but **not authenticated**, STOP and report to the user; do NOT treat an auth failure as a skip.
+- **CodeRabbit** clean, unavailable, or explicitly `skipped (rate-limited)`. If rate-limited, report once and do not wait or retry. If `cr` is installed but **not authenticated**, STOP and report to the user; do NOT treat an auth failure as a skip.
 - **Codex** clean, OR — if the `codex` CLI is **unavailable or not authenticated** — report once and skip this pass.
 
-Opening the PR with unresolved findings from an *available, working* local reviewer is FORBIDDEN — the whole point is to open clean. A genuinely missing CLI degrades to the documented fallback above; it does NOT block PR creation.
+Opening the PR with known unresolved actionable findings from an available reviewer is forbidden. A missing or rate-limited CodeRabbit service is a documented optional-review degradation and does not block PR creation.
 
 ---
 
@@ -468,7 +468,7 @@ Agent tool:
 
 **MANDATORY: Wait for and resolve EVERY automated reviewer configured on the repo.** Copilot and CodeRabbit are the two we know about today; future integrations slot in here. Reviewers are **independent feedback channels** with different latencies (Copilot ≈30–90 s; CodeRabbit 2–10+ min and re-runs after every push).
 
-> **CodeRabbit was already run LOCALLY in Step 4.5** (`cr review --agent`), so the PR should open clean. The CodeRabbit handling here is a **fallback merge gate** for repos whose CodeRabbit GitHub App also auto-reviews PRs: clear its `CodeRabbit` check and any threads it posts. If a clean local `cr` review ran and the App is not configured (no `CodeRabbit` check appears), this gate is already satisfied — don't block on it.
+> **CodeRabbit was attempted LOCALLY in Step 4.5** (`cr review --agent`). The PR-level handling here is a fallback for repos whose GitHub App auto-reviews PRs. Prefer a passing check and resolve received feedback; if either local or PR-level CodeRabbit rate-limits, record `skipped (rate-limited)` and continue without blocking.
 
 ##### Reviewer-by-reviewer skills
 
@@ -544,12 +544,13 @@ Either reviewer's resolver may push commits to fix feedback. Pushed commits rest
 
 **Cap at 4 outer iterations.** If reviewers keep producing new feedback after 4 cycles, escalate to the user — this usually indicates a design disagreement, not more code edits.
 
-##### Skip rules (use sparingly)
+##### Skip rules
 
-- If a reviewer is **not configured** for the repo (e.g. `wait-for-coderabbit-review.sh` exits 2 because no `CodeRabbit` check ever appears), report this to the user once and proceed without that reviewer.
-- Never silently skip a reviewer that IS configured. If it's slow or stuck, prefer raising the timeout to skipping it.
+- If a reviewer is **not configured** for the repo (e.g. `wait-for-coderabbit-review.sh` exits 2 because no `CodeRabbit` check ever appears), report this once and proceed without that reviewer.
+- If **CodeRabbit reports a rate/quota limit or cooldown**, report it once, mark CodeRabbit `skipped (rate-limited)`, and proceed immediately. Do not raise timeouts, sleep, poll, or retry for CodeRabbit throttling.
+- Do not apply this exception to Copilot or other reviewers. A merely slow CodeRabbit check with no rate-limit signal still follows the normal timeout behavior.
 
-**⛔ DO NOT PROCEED until every configured reviewer has a terminal-passing check AND 0 unresolved threads.**
+**⛔ DO NOT PROCEED until every required reviewer has settled. CodeRabbit is satisfied by a passing result or an explicit `skipped (rate-limited)` degradation.**
 
 ---
 
@@ -638,7 +639,7 @@ gh pr checks [NUMBER]  # verify codecov/patch and codecov/project
 - [ ] **PR title is a conventional-commit subject** (`type(scope): description`) — verify `gh pr view [NUMBER] --json title -q .title | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+'`; a plain prose title FAILS — rename with `gh pr edit [NUMBER] --title "type(scope): …"` BEFORE merging (squash bakes the title into `main`). Also no stray `#<number>`/wave/phase wording.
 - [ ] ALL CI checks green
 - [ ] Copilot review RECEIVED and ALL threads resolved (via `fx-dev:copilot-review` skill — NEVER raw `gh api`)
-- [ ] CodeRabbit check is in a terminal passing state AND ALL CodeRabbit threads resolved (via `fx-dev:coderabbit-review` skill). If CodeRabbit is not configured for the repo, this gate is satisfied by an exit-code-2 from `wait-for-coderabbit-review.sh` — confirm with the user.
+- [ ] CodeRabbit is passing with all received threads resolved, not configured, or explicitly recorded as `skipped (rate-limited)`. CodeRabbit throttling is optional and never blocks merge.
 - [ ] No reviewer has posted new feedback since the last fix push (the wait-and-resolve loop has converged)
 - [ ] Codecov coverage passing with 0 missing lines
 - [ ] No unresolved review threads from any reviewer (Copilot, CodeRabbit, human, or future automated reviewer)
