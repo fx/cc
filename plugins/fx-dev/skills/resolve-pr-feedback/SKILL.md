@@ -30,7 +30,7 @@ Every resolver invoked here follows the same rule: when a reviewer's feedback is
 
 `REVIEW.md` is read natively by Copilot and Claude Code Review, by CodeRabbit via `.coderabbit.yaml`, and by Codex via a `## Code Review Rules` pointer in `AGENTS.md`. One entry suppresses the false positive everywhere.
 
-If `REVIEW.md` does not exist, run `fx-dev:setup` — it creates the file and all the pointers. The full standard is in `fx-dev:setup` → `references/instruction-files.md`.
+If `REVIEW.md` does not exist, create it directly — just the file, with a `# PR Review` heading and the rule under it. **Do not run `fx-dev:setup` or `fx-dev:upgrade` from here:** both add unrelated files (`docs/`, `AGENTS.md`, `.coderabbit.yaml`), and this runs mid-PR, so they would land in the same diff as the review fix. Note in the summary that `/fx-dev:setup` completes the layout later. The full standard is in `fx-dev:setup` → `references/instruction-files.md`.
 
 ### Parallel runs MUST NOT write `REVIEW.md` concurrently
 

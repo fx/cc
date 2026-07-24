@@ -44,7 +44,7 @@ nothing. Add new migrations here as conventions change.
 
 | ID | Migration | Detect (any one is enough) |
 |----|-----------|--------|
-| **M1** | Instruction files → `AGENTS.md` / `REVIEW.md` | `AGENTS.md` or `REVIEW.md` missing; `CLAUDE.md` has non-pointer content; `.github/copilot-instructions.md` exists; any canonical path is a symlink; `AGENTS.md` lacks the Codex pointer; `.coderabbit.yaml` lacks `**/REVIEW.md` or has `code_guidelines.enabled: false` |
+| **M1** | Instruction files → `AGENTS.md` / `REVIEW.md` | `AGENTS.md` or `REVIEW.md` missing; `CLAUDE.md` has non-pointer content; `.github/copilot-instructions.md` exists; any canonical path is a symlink; `AGENTS.md` lacks the Codex pointer; `AGENTS.md` still holds stale task-tracking language (M1.6); `.coderabbit.yaml` lacks `**/REVIEW.md` or has `code_guidelines.enabled: false` |
 
 ## Workflow
 
@@ -94,6 +94,15 @@ if is_plain AGENTS.md; then
   grep -q '## Code Review Rules' AGENTS.md && echo "AGENTS.md: Codex pointer present" || echo "AGENTS.md: Codex pointer MISSING  [MIGRATE]"
 else
   echo "AGENTS.md: skipped (symlink or missing — already classified above)"
+fi
+
+echo "--- stale task language (M1.6) ---"
+if is_plain AGENTS.md; then
+  grep -nEi 'PROJECT\.md|- \[x\]|mark.*(done|complete)' AGENTS.md \
+    && echo "  ^ review these: obsolete task rules may survive alongside the current marker  [MIGRATE]" \
+    || echo "AGENTS.md: no stale task language"
+else
+  echo "AGENTS.md: skipped (symlink or missing)"
 fi
 
 echo "--- coderabbit config ---"
@@ -171,17 +180,20 @@ the file and the old rules are gone" is a failed upgrade.
 Do not `git add` or commit. Leave everything in the working tree so the user
 reviews it with `git diff` and commits it themselves.
 
-### Step 5: Seed anything still missing
+### Step 5: Seed missing instruction files — instruction files only
 
-Run `fx-dev:setup` to create whatever the migration left absent — the `docs/`
-structure, a missing canonical file, a missing marker block:
+Create whatever the migration left absent, **limited to the instruction-file
+layout**: `AGENTS.md`, `REVIEW.md`, the `CLAUDE.md` pointer, the `## Code Review
+Rules` section, `.coderabbit.yaml`. Use the exact seed blocks from
+`fx-dev:setup` Steps 6.3, 7, 8.2, 8.3 and 9.
 
-```
-Skill tool: skill="fx-dev:setup"
-```
+**Do NOT invoke `fx-dev:setup` here.** It also scaffolds `docs/specs`,
+`docs/changes`, `tasks.md`, and the index files. This skill migrates instruction
+files; silently adding a documentation system the user never asked for is a
+different change, and it would land in the same diff.
 
-Migration moves what exists; setup creates what doesn't. Running setup second
-means it sees the post-migration layout and correctly does nothing destructive.
+If the repo has no `docs/` structure and looks like it wants one, say so in the
+Step 6 report and let the user run `/fx-dev:setup` themselves.
 
 ### Step 6: Verify and report
 
@@ -313,14 +325,21 @@ Patterns are case-sensitive: `review.md` does not match `**/REVIEW.md`.
 
 ### M1.6 Stale task-tracking language
 
-Legacy instruction files often carry task rules that predate
-`/project-management`. In `AGENTS.md`, remove any section referencing
-`PROJECT.md`, `docs/specs/` for tasks, `- [x]` conventions, or task rules that do
-not mention `/project-management`, and let `fx-dev:setup` (Step 5) insert the
-current block.
+Legacy instruction files often carry task rules that predate `/project-management`.
 
-This removal is the reason it lives here and not in setup: deleting a section
-from a user's file is exactly the kind of change that must be reviewed.
+**Remove the obsolete task-tracking clauses, never the enclosing section.** A heading like `## Conventions` may hold a `- [x]` task rule *alongside* security, testing, and deployment rules that are still perfectly valid. Deleting the section to get at the task rule destroys all of them.
+
+| Remove | Keep |
+|---|---|
+| Sentences and bullets describing how to mark tasks done (`- [x]`, "mark complete", PR-number conventions) | Every rule in the same section that is not about task tracking |
+| References to `PROJECT.md` or `docs/specs/` **as the place tasks live** | References to `docs/specs/` as the place specs live |
+| A heading whose body is *entirely* obsolete task rules | A heading with any surviving content |
+
+If a section is mixed, edit the lines and leave the heading. If you cannot tell whether a rule is task-tracking, **keep it** and mention it in the Step 6 report — a stale rule is recoverable, a deleted one is not.
+
+Then let Step 5 insert the current `/project-management` block.
+
+Section deletion is the reason this lives here and not in setup: removing anything from a user's file must be reviewed.
 
 ## Rules
 
