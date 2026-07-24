@@ -218,8 +218,14 @@ The dangerous case is `AGENTS.md` missing while `CLAUDE.md` holds real conventio
 
 Search `AGENTS.md` for the exact string `/project-management`. This is the only valid marker.
 
-- **If `/project-management` is found** → current. Skip to Step 7.
-- **If NOT found** → missing or stale. Proceed to 6.3.
+- **If `/project-management` is found** → the current marker is present. Before skipping to Step 7, check for obsolete rules surviving *alongside* it:
+
+  ```bash
+  grep -nEi 'PROJECT\.md|- \[x\]|mark.*(done|complete)|tasks?.*(in|under|go).*docs/specs' AGENTS.md
+  ```
+
+  Any hit means the file carries both the current rule and a conflicting older one. **Do not remove it** — report it as a legacy finding recommending `/fx-dev:upgrade` (M1.6), then continue to Step 7.
+- **If NOT found** → missing. Proceed to 6.3.
 
 #### 6.3 Handle stale or missing language
 
@@ -250,6 +256,10 @@ The `/project-management` skill contains all the rules. AGENTS.md just says "loa
 ### Step 7: Ensure the `CLAUDE.md` Pointer Exists
 
 Claude Code does **not** read `AGENTS.md`. A `CLAUDE.md` that imports it keeps the two in sync without duplicating content.
+
+**If `legacy_agents=1`, skip this entire step.** That flag is set when `CLAUDE.md` is a symlink, and *any* inspection here — including checking whether it contains `@AGENTS.md` — follows the link. For a `CLAUDE.md -> ~/.claude/CLAUDE.md` that means reading the user's private machine-wide instructions during an unattended run. Never inspect a path the preflight already condemned.
+
+Otherwise `CLAUDE.md` is a plain in-repo file or absent:
 
 - **If `CLAUDE.md` does not exist** → create it with the block below.
 - **If `CLAUDE.md` already contains `@AGENTS.md`** → current, skip to Step 8.
@@ -312,7 +322,9 @@ Feedback resolvers add convention rules to `REVIEW.md` later — setup only seed
 
 #### 8.3 Point Codex at `REVIEW.md`
 
-**If `legacy_agents=1`, skip this step.** It writes `AGENTS.md`, and appending here when `AGENTS.md` does not yet exist would create a stub holding only review rules while the project's real conventions sit in `CLAUDE.md` — every non-Claude agent would then read that stub as the whole truth. Report it instead; `/fx-dev:upgrade` adds this pointer as M1.4, after the content is moved.
+**Skip this step if `legacy_agents=1` OR `REVIEW.md` does not exist** (which includes `legacy_review=1`, since that blocks Step 8 from creating it). The pointer's whole content is "read `REVIEW.md`" — writing it while that file is absent hands Codex a dangling instruction, and unattended setup would leave it there until someone runs upgrade.
+
+It writes `AGENTS.md`, and appending here when `AGENTS.md` does not yet exist would create a stub holding only review rules while the project's real conventions sit in `CLAUDE.md` — every non-Claude agent would then read that stub as the whole truth. Report it instead; `/fx-dev:upgrade` adds this pointer as M1.4, after the content is moved.
 
 Codex reads only `AGENTS.md` — never `REVIEW.md`. Its convention is a `## Code Review Rules` section, so `AGENTS.md` needs a pointer.
 
