@@ -110,11 +110,76 @@ Only if it doesn't exist. **Use these exact column names — table schema is str
 
 ---
 
+### Step 5.5: Instruction-File Preflight (run BEFORE Steps 6-8)
+
+Every instruction path may be a symlink, and writing "through" a symlink edits its **target**, not the link. Two failure modes follow, and they apply identically to all four paths:
+
+- A link pointing **outside the checkout** (classically `~/.claude/CLAUDE.md`) means setup would edit the user's private machine-wide file, or copy its private contents into a tracked — possibly public — repo.
+- A link materialized as **plain text** (`core.symlinks=false` checkouts) looks like a regular file whose entire content is a path like `../REVIEW.md`. Merging that as if it were a rule pollutes the canonical file.
+
+**Run this classification once, up front, for `AGENTS.md`, `CLAUDE.md`, `REVIEW.md`, and `.github/copilot-instructions.md`.** Steps 6-8 assume it has already happened and that every surviving path is a regular in-repo file or absent.
+
+```bash
+canonicalize() {
+  # Portable: GNU realpath -> GNU readlink -f -> Python fallback (macOS has no readlink -f)
+  realpath "$1" 2>/dev/null \
+    || readlink -f "$1" 2>/dev/null \
+    || python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null
+}
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+classify() {
+  local p="$1"
+  [ -e "$p" ] || [ -L "$p" ] || { echo "$p: MISSING"; return; }
+
+  # Real symlink
+  if [ -L "$p" ]; then
+    local t; t=$(canonicalize "$p")
+    if [ -z "$t" ]; then echo "$p: SYMLINK -> UNRESOLVABLE (treat as escaping)"
+    else case "$t" in
+      "$repo_root"/*) echo "$p: SYMLINK -> in-repo: $t" ;;
+      *)              echo "$p: SYMLINK -> ESCAPES REPO: $t" ;;
+    esac; fi
+    return
+  fi
+
+  # Materialized pointer: a one-line regular file whose whole content is a path
+  # to another instruction file (what core.symlinks=false produces).
+  if [ "$(wc -l < "$p")" -le 1 ] \
+     && grep -Eq '^\.{0,2}[/A-Za-z0-9_.-]*(REVIEW|AGENTS|CLAUDE)\.md$' "$p" 2>/dev/null; then
+    echo "$p: MATERIALIZED POINTER -> $(tr -d '\n' < "$p")"
+    return
+  fi
+
+  echo "$p: regular file"
+}
+
+for p in AGENTS.md CLAUDE.md REVIEW.md .github/copilot-instructions.md; do classify "$p"; done
+```
+
+Act on each result **before** Steps 6-8 touch the path:
+
+| Classification | Action |
+|---|---|
+| `regular file` / `MISSING` | Nothing to do — Steps 6-8 handle it |
+| `SYMLINK -> in-repo` | Replace the link with a regular file holding the target's content, so later writes land in the repo |
+| `SYMLINK -> ESCAPES REPO` or `UNRESOLVABLE` | **Do NOT read or copy the contents.** Delete the link, leave the path absent for Steps 6-8 to seed fresh, and report the path to the user so they can port anything they still want. Never inline it for them |
+| `MATERIALIZED POINTER` | It is a broken symlink, not content. **Delete it — never merge it.** Its text is a path, not a rule |
+
+This is a privacy boundary, not a style preference. **When in doubt, do not copy.**
+
+`CLAUDE.md` is the one special case: an in-repo `CLAUDE.md` symlink pointing at `AGENTS.md` has nothing to merge — just delete it, and Step 7 writes the regular pointer file in its place.
+
+---
+
 ### Step 6: Ensure `AGENTS.md` Defers to /project-management
 
 `AGENTS.md` at the repo root is the canonical project-conventions file. Codex, Copilot, and CodeRabbit all read it natively.
 
 #### 6.1 Migrate a legacy `CLAUDE.md` first
+
+**Step 5.5 has already run.** Every path below is a regular in-repo file or absent.
 
 ##### 6.1.0 Already migrated? Stop here (idempotency guard)
 
@@ -128,68 +193,18 @@ test -f AGENTS.md && ! test -L AGENTS.md && grep -q '^@AGENTS\.md' CLAUDE.md 2>/
 
 If already migrated, **skip the rest of 6.1 entirely** and go to 6.2. Treating the `@AGENTS.md` pointer as "content to merge" would append the import into `AGENTS.md` and make it import itself — and it would happen on every single run.
 
-##### 6.1.1 Classify what is actually on disk
+##### 6.1.1 Handle what remains
 
 ```bash
-test -L AGENTS.md && echo "AGENTS.md is a symlink" || { test -f AGENTS.md && echo "AGENTS.md is a regular file" || echo "AGENTS.md missing"; }
-test -L CLAUDE.md && echo "CLAUDE.md is a symlink" || { test -f CLAUDE.md && echo "CLAUDE.md is a regular file" || echo "CLAUDE.md missing"; }
+test -f AGENTS.md && echo "AGENTS.md exists" || echo "AGENTS.md missing"
+test -f CLAUDE.md && echo "CLAUDE.md exists" || echo "CLAUDE.md missing"
 ```
 
-**If `AGENTS.md` is itself a symlink**, do not write through it — every merge and append below would edit its target instead of creating the canonical in-repo file, and a target outside the checkout would pull private content into the repo. Canonicalize it with the helper in the escape-check section:
-- In-repo target → replace the link with a regular `AGENTS.md` holding that target's content, then continue.
-- Escapes the repo → do **not** copy. Remove the link, start a fresh `AGENTS.md`, and report the path to the user.
-
-Handle the remaining cases in order — **check `test -L CLAUDE.md` before anything else**, because writing "through" a symlink edits its target, not the link:
-
-- **`CLAUDE.md` is a symlink** (a common `ln -s AGENTS.md CLAUDE.md` setup) → it has no content of its own. Never append to it — that would edit its target and produce an `AGENTS.md` that imports itself. Step 7 writes a regular pointer file in its place.
-
-  **Resolve the target BEFORE unlinking** — once the link is gone you cannot tell what it pointed at, so its conventions would be silently dropped:
-
-  ```bash
-  claude_target=$(canonicalize CLAUDE.md)   # see the helper below
-  echo "CLAUDE.md -> $claude_target"
-  ```
-
-  - Target is `AGENTS.md` → nothing to merge. `rm CLAUDE.md`.
-  - Target is another **in-repo** file → merge that file's content into `AGENTS.md` first, then `rm CLAUDE.md`.
-  - Target **escapes the repo** → apply the escape rule below: do not copy, `rm CLAUDE.md`, and report the path.
-- **`AGENTS.md` missing, `CLAUDE.md` is a regular file with real content** → move it, then create the `CLAUDE.md` pointer in Step 7. Use `git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md` — the file may be untracked, and `git mv` aborts on untracked paths.
+- **`AGENTS.md` missing, `CLAUDE.md` has real content** → move it, then create the `CLAUDE.md` pointer in Step 7. Use `git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md` — the file may be untracked, and `git mv` aborts on untracked paths.
 
   **Then split out any genuinely Claude-only rules**, exactly as the both-files path does. A wholesale move publishes rules written for Claude Code alone to Codex, Copilot, and CodeRabbit. Rules that name Claude Code mechanics — `/`-commands, skills, plan mode, `@`-imports, thinking budgets, hooks, MCP servers — belong under the `@AGENTS.md` line in `CLAUDE.md`, not in `AGENTS.md`. When it is ambiguous, leave it in `AGENTS.md`; cross-agent conventions are the common case.
 - **Both exist as regular files with content** → merge `CLAUDE.md`'s content into `AGENTS.md`, keeping any genuinely Claude-only rules aside for the pointer file. Never delete convention content — move it.
 - **Neither exists** → create `AGENTS.md` with just the block from 6.3.
-
-##### ⛔ Never copy content from a symlink that escapes the repo
-
-A legacy `CLAUDE.md` or `.github/copilot-instructions.md` may point **outside** the checkout — typically at `~/.claude/CLAUDE.md`, which holds the user's private, machine-wide instructions. Copying that into a tracked `AGENTS.md` would commit private user or company conventions to a repo, possibly a public one.
-
-**Before merging any symlink target, canonicalize it and confirm it is inside the repo.** Use this portable helper — macOS's system `readlink` has no `-f`, and BSD `realpath` differs from GNU's, so a bare `readlink -f` would misreport every target on a Mac as unresolvable and silently decline to migrate in-repo conventions:
-
-```bash
-canonicalize() {
-  # Portable: GNU realpath -> GNU readlink -f -> Python fallback (macOS-safe)
-  realpath "$1" 2>/dev/null \
-    || readlink -f "$1" 2>/dev/null \
-    || python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null
-}
-
-link_target=$(canonicalize .github/copilot-instructions.md)   # or CLAUDE.md
-repo_root=$(git rev-parse --show-toplevel)
-
-if [ -z "$link_target" ]; then
-  echo "UNRESOLVED — treat as escaping; do NOT copy"
-else
-  case "$link_target" in
-    "$repo_root"/*) echo "in-repo: safe to merge" ;;
-    *) echo "ESCAPES REPO: $link_target — do NOT copy its contents" ;;
-  esac
-fi
-```
-
-- **In-repo target** → merge its content as described above.
-- **Target escapes the repo, or cannot be resolved** → **do NOT read or copy the contents.** Replace the link with the standard pointer, and report to the user: name the path the link pointed at and tell them to copy over anything they still want, themselves. Never inline it for them.
-
-This is a privacy boundary, not a style preference. When in doubt, do not copy.
 
 #### 6.2 Check for CURRENT language
 
@@ -251,23 +266,14 @@ That single line is the whole file. Claude Code expands the import at load time,
 
 #### 8.1 Migrate a legacy `.github/copilot-instructions.md`
 
+**Step 5.5 has already run**, so `REVIEW.md` and `.github/copilot-instructions.md` are each a regular in-repo file or absent — every symlink, escaping target, and materialized pointer was resolved there. One exception survives on purpose: a `.github/copilot-instructions.md` symlink that already resolves to `REVIEW.md` is correct, so skip to 8.2.
+
 ```bash
 test -f REVIEW.md && echo "REVIEW.md exists" || echo "REVIEW.md missing"
-test -L .github/copilot-instructions.md && echo "already a symlink" || { test -f .github/copilot-instructions.md && echo "regular file" || echo "missing"; }
+test -f .github/copilot-instructions.md && echo "copilot-instructions is a regular file" || echo "copilot-instructions absent"
 ```
 
-Handle by what the path actually is:
-
-**It is a symlink already** (`test -L`). Resolve the target before touching it — an existing symlink may point at a legacy instruction file, and unlinking it blind would orphan those rules:
-
-```bash
-readlink .github/copilot-instructions.md
-```
-
-- Target resolves to `REVIEW.md` → already correct, skip to 8.2.
-- Target is anything else → apply the **escape check from 6.1** first. Merge its rules into `REVIEW.md` only if the target is inside the repo; if it escapes the checkout, do not read or copy it — replace the link and report the path to the user.
-
-**It is a regular file** with review rules and `REVIEW.md` does not exist → move its content. The file may be untracked (first-time setup of a local project), in which case `git mv` fails with "not under version control" — fall back to a plain move:
+**`.github/copilot-instructions.md` is a regular file** with review rules and `REVIEW.md` does not exist → move its content. The file may be untracked (first-time setup of a local project), in which case `git mv` fails with "not under version control" — fall back to a plain move:
 
 ```bash
 mkdir -p .github

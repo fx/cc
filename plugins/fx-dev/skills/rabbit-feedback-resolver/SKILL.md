@@ -92,7 +92,8 @@ If `REVIEW.md` is missing, run the `fx-dev:setup` skill to create it and the `.g
 
 | State | Action |
 |-------|--------|
-| No `.coderabbit.yaml` exists | Defaults apply — `.github/copilot-instructions.md` is read, and because it symlinks to `../REVIEW.md`, CodeRabbit gets `REVIEW.md`. No action needed |
+| No `.coderabbit.yaml`, **and** `.github/copilot-instructions.md` is a symlink | Defaults apply — the symlink is read, and it resolves to `../REVIEW.md`, so CodeRabbit gets `REVIEW.md`. No action needed |
+| No `.coderabbit.yaml`, **and no symlink** (generated-mirror fallback) | **Create `.coderabbit.yaml`** with the config below. Nothing in CodeRabbit's defaults reaches root `REVIEW.md` without the symlink, so it would review with no knowledge of the project's conventions |
 | Config exists with `knowledge_base.code_guidelines.enabled: false` | **Update** to `enabled: true` |
 | Config exists with custom `filePatterns` | **Add** `"**/REVIEW.md"` and `"**/AGENTS.md"` |
 | Config exists, `enabled: true`, no custom `filePatterns` | No action needed |
