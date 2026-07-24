@@ -129,25 +129,57 @@ Only if it doesn't exist. **Use these exact column names — table schema is str
 **setup creates defaults. It never moves, merges, overwrites, or deletes anything.** It runs automatically on every `/spec-writer` and `/project-management` invocation, so it must never make a change a user would want to review first. Migration is `fx-dev:upgrade`'s job.
 
 ```bash
-legacy=0
-for p in AGENTS.md CLAUDE.md REVIEW.md; do
-  [ -L "$p" ] && { echo "LEGACY: $p is a symlink"; legacy=1; }
+# -e follows symlinks, so a DANGLING link reads as absent. Always pair it with -L.
+exists() { [ -e "$1" ] || [ -L "$1" ]; }
+# A plain file is safe to inspect or append to; a symlink is not (writing goes to its target).
+is_plain() { [ -f "$1" ] && [ ! -L "$1" ]; }
+
+legacy_agents=0   # blocks Step 6 AND Step 8.3 (both write AGENTS.md)
+legacy_review=0   # blocks Step 8
+legacy_rabbit=0   # blocks Step 9
+
+for p in AGENTS.md CLAUDE.md; do
+  [ -L "$p" ] && { echo "LEGACY: $p is a symlink"; legacy_agents=1; }
 done
-[ -e .github/copilot-instructions.md ] && { echo "LEGACY: .github/copilot-instructions.md exists (obsolete)"; legacy=1; }
-if [ -f CLAUDE.md ] && ! [ -L CLAUDE.md ] && ! grep -q '^@AGENTS\.md' CLAUDE.md 2>/dev/null; then
-  echo "LEGACY: CLAUDE.md holds content that belongs in AGENTS.md"; legacy=1
+[ -L REVIEW.md ] && { echo "LEGACY: REVIEW.md is a symlink"; legacy_review=1; }
+[ -L .coderabbit.yaml ] && { echo "LEGACY: .coderabbit.yaml is a symlink"; legacy_rabbit=1; }
+
+exists .github/copilot-instructions.md && {
+  echo "LEGACY: .github/copilot-instructions.md exists (obsolete$( [ -L .github/copilot-instructions.md ] && echo ", symlink" ))"
+  legacy_review=1
+}
+
+if is_plain CLAUDE.md && ! grep -q '^@AGENTS\.md' CLAUDE.md; then
+  echo "LEGACY: CLAUDE.md holds content that belongs in AGENTS.md"; legacy_agents=1
 fi
-[ "$legacy" = "0" ] && echo "Layout is current — proceed" || echo "Run /fx-dev:upgrade"
+
+if is_plain .coderabbit.yaml && grep -Eq 'enabled:[[:space:]]*false' .coderabbit.yaml; then
+  echo "LEGACY: .coderabbit.yaml has code_guidelines disabled — setup will not flip it"; legacy_rabbit=1
+fi
+
+echo "flags: agents=$legacy_agents review=$legacy_review rabbit=$legacy_rabbit"
 ```
 
-**If any LEGACY line printed**, do NOT create or modify the affected files. Finish the steps that are unaffected, then report:
+Each flag gates the steps that would **write** the affected file:
+
+| Flag | Skip | Why |
+|---|---|---|
+| `legacy_agents` | **Step 6 and Step 8.3** | Both write `AGENTS.md`. 8.3 appends the Codex pointer — on its own that would create a stub `AGENTS.md` holding only review rules while the real conventions sit in `CLAUDE.md`, which is worse than not creating it at all |
+| `legacy_review` | **Step 8** | `REVIEW.md` must absorb the obsolete file's rules first, and that is a merge |
+| `legacy_rabbit` | **Step 9** | Writing through a symlink edits its target, possibly outside the repo; and an explicit `enabled: false` is not setup's to reverse |
+
+Steps not listed still run — a legacy `CLAUDE.md` does not stop `docs/` from being scaffolded.
+
+**Never inspect or write a path that is a symlink.** `grep`, `>>`, and `cat >` all follow links, so a `CLAUDE.md -> ~/.claude/CLAUDE.md` would be read or written despite the create-only contract. That is why every content check above is guarded by `is_plain`.
+
+**If any LEGACY line printed**, report:
 
 ```
 Legacy instruction-file layout detected:
   - <the specific findings>
 
 setup does not migrate — run /fx-dev:upgrade to move this content
-into AGENTS.md / REVIEW.md. Skipped: <files not created>.
+into AGENTS.md / REVIEW.md. Skipped: <steps not run>.
 ```
 
 The dangerous case is `AGENTS.md` missing while `CLAUDE.md` holds real conventions. **Do not seed an `AGENTS.md`** — that splits the project's conventions across two files and the user is left with neither complete. Skip Step 6 entirely and report.
@@ -160,7 +192,7 @@ The dangerous case is `AGENTS.md` missing while `CLAUDE.md` holds real conventio
 
 #### 6.1 Preconditions
 
-Step 5.5 reported no legacy findings for `AGENTS.md` / `CLAUDE.md`. If it did, skip this entire step and report instead.
+**If `legacy_agents=1`, skip this entire step** and report instead.
 
 - **`AGENTS.md` exists** → go to 6.2.
 - **`AGENTS.md` missing, and no `CLAUDE.md` with content** → create it containing only the block from 6.3.
@@ -223,6 +255,8 @@ That single line is the whole file. Claude Code expands the import at load time,
 
 #### 8.1 Preconditions
 
+**If `legacy_review=1`, skip 8.1 and 8.2** — `REVIEW.md` needs a merge, which is `/fx-dev:upgrade`'s job. Step 8.3 is gated separately on `legacy_agents`.
+
 `.github/copilot-instructions.md` is obsolete — Copilot reads `REVIEW.md` directly ([changelog, 2026-07-17](https://github.blog/changelog/2026-07-17-copilot-code-review-customization-and-configurability-improvements/)). **Never create one, and never symlink it to `REVIEW.md`.**
 
 If Step 5.5 found one, do not touch it and do not create `REVIEW.md` from it — report and defer to `/fx-dev:upgrade`, which folds its rules into `REVIEW.md`.
@@ -262,6 +296,8 @@ Feedback resolvers add convention rules to `REVIEW.md` later — setup only seed
 
 #### 8.3 Point Codex at `REVIEW.md`
 
+**If `legacy_agents=1`, skip this step.** It writes `AGENTS.md`, and appending here when `AGENTS.md` does not yet exist would create a stub holding only review rules while the project's real conventions sit in `CLAUDE.md` — every non-Claude agent would then read that stub as the whole truth. Report it instead; `/fx-dev:upgrade` adds this pointer as M1.4, after the content is moved.
+
 Codex reads only `AGENTS.md` — never `REVIEW.md`. Its convention is a `## Code Review Rules` section, so `AGENTS.md` needs a pointer.
 
 Search `AGENTS.md` for `## Code Review Rules`. If absent, append **exactly** this:
@@ -278,6 +314,8 @@ This is the one review-related section allowed in `AGENTS.md`, and it is a point
 ---
 
 ### Step 9: Ensure CodeRabbit Reads `REVIEW.md`
+
+**If `legacy_rabbit=1`, skip this step** and report — the config is a symlink (writing would edit its target) or has `code_guidelines` explicitly disabled.
 
 CodeRabbit's default `filePatterns` cover `**/AGENTS.md` and `**/CLAUDE.md` but **not** `**/REVIEW.md`. **This step is mandatory** — it is the only thing that gets the review conventions to CodeRabbit.
 
