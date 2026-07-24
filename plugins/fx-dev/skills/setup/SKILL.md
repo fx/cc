@@ -14,6 +14,7 @@ This skill scaffolds the `docs/` folder structure required for spec-driven devel
 | setup MAY | setup MUST NOT |
 |---|---|
 | Create a missing file or directory | Move or rename a file |
+| Add a missing key to a config | Change a config value that is already set |
 | Append or prepend a missing marker block | Delete or overwrite existing content |
 | Report a legacy layout it found | Merge two files together |
 | | Resolve or delete a symlink |
@@ -281,8 +282,8 @@ This is the one review-related section allowed in `AGENTS.md`, and it is a point
 CodeRabbit's default `filePatterns` cover `**/AGENTS.md` and `**/CLAUDE.md` but **not** `**/REVIEW.md`. **This step is mandatory** — it is the only thing that gets the review conventions to CodeRabbit.
 
 - **No `.coderabbit.yaml`** → create it with the config below.
-- **Exists with `knowledge_base.code_guidelines.enabled: false`** → set it to `true` and add the pattern.
-- **Exists with `enabled: true`** → add `"**/REVIEW.md"` to `filePatterns`. Custom patterns append to the defaults; they do not replace them.
+- **Exists with `knowledge_base.code_guidelines.enabled: false`** → **do not change it.** Someone disabled this deliberately, and setup runs unattended during unrelated spec and task work — silently opting the project back into CodeRabbit guidelines is exactly the kind of change that needs a human. Report it and defer to `/fx-dev:upgrade`.
+- **Exists with `enabled` true or absent** → add `"**/REVIEW.md"` to `filePatterns` if missing. Custom patterns append to the defaults; they do not replace them. This is additive, so it stays within setup's contract.
 
 ```yaml
 knowledge_base:
@@ -324,6 +325,7 @@ If Step 5.5 found a legacy layout, always end the report with the specific findi
 
 - **Never overwrite** existing files — only create what's missing
 - **Never migrate** — no moves, merges, deletions, or symlink resolution. Detect and defer to `/fx-dev:upgrade`
+- **Never flip an existing config value** — an explicit `enabled: false` is someone's decision. Adding a missing key is creation; changing a set one is not
 - **Never delete convention content** — setup deletes nothing, ever
 - **Offer migration** if PROJECT.md exists
 - **Keep it minimal** — bare templates, not example content

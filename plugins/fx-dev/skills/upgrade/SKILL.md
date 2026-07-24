@@ -40,17 +40,17 @@ Each migration is independent, self-detecting, and idempotent — running
 `upgrade` on an already-current repo must report "nothing to do" and change
 nothing. Add new migrations here as conventions change.
 
-| ID | Migration | Detect |
+| ID | Migration | Detect (any one is enough) |
 |----|-----------|--------|
-| **M1** | Instruction files → `AGENTS.md` / `REVIEW.md` | `CLAUDE.md` has non-pointer content, or `.github/copilot-instructions.md` exists, or any canonical path is a symlink, or `.coderabbit.yaml` lacks `**/REVIEW.md`, or `AGENTS.md` lacks the Codex pointer |
+| **M1** | Instruction files → `AGENTS.md` / `REVIEW.md` | `AGENTS.md` or `REVIEW.md` missing; `CLAUDE.md` has non-pointer content; `.github/copilot-instructions.md` exists; any canonical path is a symlink; `AGENTS.md` lacks the Codex pointer; `.coderabbit.yaml` lacks `**/REVIEW.md` or has `code_guidelines.enabled: false` |
 
 ## Workflow
 
 ### Step 1: Detect
 
-Run every migration's detector. Collect the ones that apply. **Read nothing into
-memory that you might copy** until Step 2 has classified it — see M1's escape
-rule.
+Run every migration's detector. Collect the ones that apply.
+
+**Never read through a symlink during detection.** A `CLAUDE.md -> ~/.claude/CLAUDE.md` link means a bare `grep CLAUDE.md` reads the user's private, machine-wide instructions — before the user has approved anything. Classify a path first; only content-inspect it once it is known to be a regular in-repo file.
 
 ```bash
 canonicalize() {
@@ -61,29 +61,48 @@ canonicalize() {
 }
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 
+# is_plain <path> -> true only for a regular file that is NOT a symlink
+is_plain() { [ -f "$1" ] && [ ! -L "$1" ]; }
+
 echo "--- canonical paths ---"
 for p in AGENTS.md CLAUDE.md REVIEW.md; do
   if [ -L "$p" ]; then
     t=$(canonicalize "$p")
     case "${t:-UNRESOLVED}" in
-      "$repo_root"/*) echo "$p: SYMLINK -> in-repo: $t" ;;
-      *)              echo "$p: SYMLINK -> ESCAPES REPO: ${t:-unresolvable}" ;;
+      "$repo_root"/*) echo "$p: SYMLINK -> in-repo: $t  [MIGRATE]" ;;
+      *)              echo "$p: SYMLINK -> ESCAPES REPO: ${t:-unresolvable}  [MIGRATE, do not read]" ;;
     esac
   elif [ -f "$p" ]; then
     echo "$p: regular file ($(wc -l < "$p") lines)"
   else
-    echo "$p: missing"
+    echo "$p: MISSING  [MIGRATE]"
   fi
 done
 
 echo "--- legacy paths ---"
-ls -l .github/copilot-instructions.md 2>/dev/null || echo "copilot-instructions: absent"
+ls -l .github/copilot-instructions.md 2>/dev/null && echo "  [MIGRATE]" || echo "copilot-instructions: absent"
 
-echo "--- pointers ---"
-grep -q '^@AGENTS\.md' CLAUDE.md 2>/dev/null && echo "CLAUDE.md: pointer present" || echo "CLAUDE.md: NOT a pointer"
-grep -q '## Code Review Rules' AGENTS.md 2>/dev/null && echo "AGENTS.md: Codex pointer present" || echo "AGENTS.md: Codex pointer MISSING"
-grep -q 'REVIEW\.md' .coderabbit.yaml 2>/dev/null && echo ".coderabbit.yaml: REVIEW.md listed" || echo ".coderabbit.yaml: REVIEW.md NOT listed"
+echo "--- pointers (only inspected when the path is a plain in-repo file) ---"
+if is_plain CLAUDE.md; then
+  grep -q '^@AGENTS\.md' CLAUDE.md && echo "CLAUDE.md: pointer present" || echo "CLAUDE.md: NOT a pointer  [MIGRATE]"
+else
+  echo "CLAUDE.md: skipped (symlink or missing — already classified above)"
+fi
+if is_plain AGENTS.md; then
+  grep -q '## Code Review Rules' AGENTS.md && echo "AGENTS.md: Codex pointer present" || echo "AGENTS.md: Codex pointer MISSING  [MIGRATE]"
+else
+  echo "AGENTS.md: skipped (symlink or missing — already classified above)"
+fi
+
+echo "--- coderabbit config ---"
+if is_plain .coderabbit.yaml; then
+  cat .coderabbit.yaml
+else
+  echo ".coderabbit.yaml: absent or a symlink  [MIGRATE]"
+fi
 ```
+
+`.coderabbit.yaml` is printed rather than grepped because both halves matter and a filename match proves neither. **M1.5 applies unless both are true:** `knowledge_base.code_guidelines.enabled` is `true` (or absent, which defaults to enabled) **and** `**/REVIEW.md` appears in `filePatterns`. A config that lists the pattern under `enabled: false` still needs migrating.
 
 **If no migration applies**, report "Already current — nothing to migrate" and stop. Do not proceed to Step 2.
 
@@ -203,6 +222,10 @@ CLAUDE.md         -> a single `@AGENTS.md` line
 .coderabbit.yaml  -> lists **/REVIEW.md
 ```
 
+### M1.0 Missing canonical files
+
+If `AGENTS.md` or `REVIEW.md` is simply absent — no legacy file to migrate from — there is nothing to move, but the repo is still not current. Do not report "already current": let the migration apply so Step 5 runs `fx-dev:setup`, which creates the missing file with its seed block.
+
 ### M1.1 `CLAUDE.md` → `AGENTS.md`
 
 | Found | Apply |
@@ -271,9 +294,9 @@ CodeRabbit's defaults cover `**/AGENTS.md` and `**/CLAUDE.md` but **not**
 | Found | Apply |
 |-------|-------|
 | No `.coderabbit.yaml` | Create it with the block below |
-| Exists, `code_guidelines.enabled: false` | Set `enabled: true` and add the pattern |
+| Exists, `code_guidelines.enabled: false` | Set `enabled: true` and add the pattern — but **call this out explicitly in the Step 3 plan**. Someone disabled it deliberately, and flipping it back changes review behaviour beyond instruction-file plumbing. If the user declines this one, leave the file alone and report that CodeRabbit will not see `REVIEW.md` |
 | Exists, `**/REVIEW.md` not in `filePatterns` | Add it — including when `filePatterns` is absent, since the defaults do not cover it |
-| Exists, `**/REVIEW.md` present | Nothing to do |
+| Exists, `enabled` true/absent **and** `**/REVIEW.md` present | Nothing to do |
 
 ```yaml
 knowledge_base:
