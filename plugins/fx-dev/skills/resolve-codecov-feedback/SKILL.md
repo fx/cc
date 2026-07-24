@@ -87,7 +87,7 @@ Read the codecov[bot] PR comment from Step 2b. Extract:
 
 **Step 3b: Determine the project's coverage requirement**
 
-Check the project's `CLAUDE.md` for coverage requirements. Look for patch coverage targets. If not specified, **default to 100% patch coverage** — all new/changed lines must be covered.
+Check the project's `AGENTS.md` for coverage requirements. Look for patch coverage targets. If not specified, **default to 100% patch coverage** — all new/changed lines must be covered.
 
 **Step 3c: Decide action**
 

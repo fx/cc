@@ -67,13 +67,17 @@ _🧹 Nitpick_ | _🔵 Trivial_    <- Severity indicator (optional)
 
 ### 0. Verify CodeRabbit Configuration (First Run Only)
 
-**Before processing feedback, ensure CodeRabbit is configured to read `.github/copilot-instructions.md`.**
+**Before processing feedback, ensure CodeRabbit is configured to read `REVIEW.md` and `AGENTS.md`.**
 
-CodeRabbit's `knowledge_base.code_guidelines` feature reads instruction files to understand project conventions. By default, it includes `.github/copilot-instructions.md`, but this may be disabled or overridden.
+`REVIEW.md` (repo root) is the canonical review-conventions file for every automated reviewer; `AGENTS.md` holds project conventions. CodeRabbit's `knowledge_base.code_guidelines` feature reads instruction files to understand both. Its defaults cover `**/AGENTS.md`, `**/CLAUDE.md`, and `.github/copilot-instructions.md` — but **not** `**/REVIEW.md`. See `fx-dev:setup` → `references/instruction-files.md` for the full standard.
 
 #### Check Configuration
 
 ```bash
+# Canonical files present?
+test -f REVIEW.md && echo "REVIEW.md exists" || echo "REVIEW.md MISSING - run fx-dev:setup"
+test -L .github/copilot-instructions.md && echo "copilot-instructions is a symlink (good)" || echo "copilot-instructions not a symlink"
+
 # Check if .coderabbit.yaml exists
 if [ -f ".coderabbit.yaml" ]; then
   cat .coderabbit.yaml
@@ -82,14 +86,16 @@ else
 fi
 ```
 
+If `REVIEW.md` is missing, run the `fx-dev:setup` skill to create it and the `.github/copilot-instructions.md` symlink before continuing.
+
 #### Configuration States
 
 | State | Action |
 |-------|--------|
-| No `.coderabbit.yaml` exists | Defaults apply - `.github/copilot-instructions.md` IS read automatically |
+| No `.coderabbit.yaml` exists | Defaults apply — `.github/copilot-instructions.md` is read, and because it symlinks to `../REVIEW.md`, CodeRabbit gets `REVIEW.md`. No action needed |
 | Config exists with `knowledge_base.code_guidelines.enabled: false` | **Update** to `enabled: true` |
-| Config exists with custom `filePatterns` missing copilot-instructions.md | **Add** `.github/copilot-instructions.md` to `filePatterns` |
-| Config exists with defaults or explicit copilot-instructions.md | No action needed |
+| Config exists with custom `filePatterns` | **Add** `"**/REVIEW.md"` and `"**/AGENTS.md"` |
+| Config exists, `enabled: true`, no custom `filePatterns` | No action needed |
 
 #### Create/Update Configuration
 
@@ -97,19 +103,22 @@ If configuration needs updating, create or modify `.coderabbit.yaml`:
 
 ```yaml
 # .coderabbit.yaml
-# Ensures CodeRabbit reads project conventions from copilot-instructions.md
+# Ensures CodeRabbit reads review conventions from REVIEW.md
+# and project conventions from AGENTS.md
 
 knowledge_base:
   code_guidelines:
     enabled: true
-    # Default patterns include .github/copilot-instructions.md
-    # Add explicit pattern if using custom filePatterns:
-    # filePatterns:
-    #   - .github/copilot-instructions.md
-    #   - CLAUDE.md
+    # Custom patterns APPEND to the defaults, they do not replace them.
+    # REVIEW.md is not in CodeRabbit's defaults, so list it explicitly.
+    filePatterns:
+      - "**/REVIEW.md"
+      - "**/AGENTS.md"
 ```
 
-**Minimal config to ensure copilot-instructions.md is read:**
+Patterns are **case-sensitive**: `review.md` does not match `**/REVIEW.md`.
+
+**Minimal config when you have no custom `filePatterns`:**
 
 ```yaml
 knowledge_base:
@@ -117,11 +126,13 @@ knowledge_base:
     enabled: true
 ```
 
-This enables the default file patterns which include `.github/copilot-instructions.md`.
+This enables the default patterns, which reach `REVIEW.md` through the `.github/copilot-instructions.md` symlink.
 
-#### When to Update copilot-instructions.md
+#### When to Update REVIEW.md
 
-If CodeRabbit feedback conflicts with project conventions (INCORRECT category), update `.github/copilot-instructions.md` with the correct pattern. Since CodeRabbit reads this file, future reviews will respect the documented conventions.
+If CodeRabbit feedback conflicts with project conventions (INCORRECT category), document the correct pattern in `REVIEW.md`. Since every reviewer reads it, one entry stops Copilot, CodeRabbit, Codex, and Claude Code Review from flagging it again.
+
+**Never edit `.github/copilot-instructions.md` directly** — it is a symlink to `../REVIEW.md`.
 
 ### 1. Fetch Unresolved CodeRabbit Threads
 
@@ -203,8 +214,8 @@ values...
 3. If valid: Delegate to coder sub-agent with context
 4. If conflicts with project conventions (INCORRECT):
    - Reply with explanation and resolve
-   - **Update `.github/copilot-instructions.md`** to document the correct pattern
-   - This prevents both Copilot AND CodeRabbit from flagging it again (CodeRabbit reads this file via `knowledge_base.code_guidelines`)
+   - **Update `REVIEW.md`** to document the correct pattern
+   - This prevents Copilot, CodeRabbit, Codex, AND Claude Code Review from flagging it again — they all resolve to the same file
 
 #### Deferred (Out of Scope)
 
@@ -269,10 +280,10 @@ echo "$COMMENT_BODY" | sed -n '/🤖 Prompt for AI Agents/,/<\/details>/p' | sed
 
 **Task is INCOMPLETE until ALL of these are done:**
 
-1. CodeRabbit config verified/updated to read `.github/copilot-instructions.md`
+1. CodeRabbit config verified/updated to read `REVIEW.md` and `AGENTS.md`
 2. All code changes pushed to the PR branch
 3. **EVERY addressed thread resolved via GraphQL mutation**
-4. **For INCORRECT feedback:** `.github/copilot-instructions.md` updated to prevent recurrence
+4. **For INCORRECT feedback:** `REVIEW.md` updated to prevent recurrence
 5. **For DEFERRED feedback:** Task added to `docs/PROJECT.md` via project-management skill
 6. Re-query confirms `isResolved: true` for all processed threads
 7. Output summary table

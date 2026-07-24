@@ -128,8 +128,8 @@ When given a GitHub issue (either by URL or by finding the next logical issue):
 Understand the project's structure and conventions:
 
 1. **Review Project Files**: Examine:
-   - CLAUDE.md files (global and project-specific)
-   - copilot-instructions.md or similar AI instruction files
+   - AGENTS.md files (project conventions) and CLAUDE.md (global user-level, plus any Claude-only additions)
+   - REVIEW.md (review conventions) or similar AI instruction files
    - .github/CONTRIBUTING.md
    - Architecture decision records (ADRs)
    - Style guides and coding standards

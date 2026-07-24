@@ -24,6 +24,16 @@ Meta-skill that checks a PR for unresolved automated review feedback and invokes
 | CodeRabbit | `coderabbitai[bot]` | `fx-dev:rabbit-feedback-resolver` |
 | Codecov | `codecov[bot]` / `codecov-commenter` | `fx-dev:resolve-codecov-feedback` |
 
+## Shared Convention: All Resolvers Write to `REVIEW.md`
+
+Every resolver invoked here follows the same rule: when a reviewer's feedback is **INCORRECT** — it conflicts with a deliberate project convention — the recurrence-prevention rule goes in **`REVIEW.md`** at the repo root. Never in `.github/copilot-instructions.md` (a symlink to `../REVIEW.md`), and never in a reviewer-specific file.
+
+`REVIEW.md` is read by Claude Code Review natively, by Copilot through the symlink, by CodeRabbit via `.coderabbit.yaml`, and by Codex via a `## Code Review Rules` pointer in `AGENTS.md`. One entry suppresses the false positive everywhere.
+
+If `REVIEW.md` does not exist, run `fx-dev:setup` — it creates the file and all the pointers. The full standard is in `fx-dev:setup` → `references/instruction-files.md`.
+
+**Consequence for parallel runs:** when the Copilot and CodeRabbit resolvers run as concurrent sub-agents (Step 4), both may append to `REVIEW.md`. Instruct each to make its edit as a small, targeted append and to re-read the file immediately before writing, so a concurrent edit is not clobbered.
+
 ## Prerequisites
 
 **CRITICAL: Load the `fx-dev:github` skill FIRST** before running any GitHub API operations.

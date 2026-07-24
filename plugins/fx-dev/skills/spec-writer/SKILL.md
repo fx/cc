@@ -52,8 +52,8 @@ Skill tool: skill="fx-dev:setup"
 
 This is fast and idempotent — it checks what exists and only creates/modifies what's missing. It handles:
 - `docs/` folder structure (specs/, changes/, tasks.md, index.yml, index.md)
-- `CLAUDE.md` task-tracking instructions
-- `.github/copilot-instructions.md` PR review instructions
+- `AGENTS.md` task-tracking instructions (+ the `CLAUDE.md` → `@AGENTS.md` pointer)
+- `REVIEW.md` PR review instructions (+ the `.github/copilot-instructions.md` symlink)
 
 Wait for setup to complete before proceeding.
 
@@ -294,7 +294,7 @@ Every change document MUST include a `### Testing Requirements` subsection as th
    - The architecture spec's Testing / Development Conventions section (e.g., `docs/specs/architecture/index.md#testing`)
    - A dedicated `docs/specs/<testing-or-quality-spec>/`
    - `CONTRIBUTING.md` or `docs/contributing.md`
-   - `.github/copilot-instructions.md` or `CLAUDE.md` at the repo root
+   - `AGENTS.md` or `REVIEW.md` at the repo root
 2. **Extract the actual project rules.** These will differ per project. Examples of the kinds of rules you might find:
    - Coverage thresholds (total, per-diff, or none)
    - Required frameworks (e.g., `pytest`, `go test`, `vitest`)

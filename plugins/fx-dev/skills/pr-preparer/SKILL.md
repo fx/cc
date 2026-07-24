@@ -55,7 +55,7 @@ Then, your primary responsibilities:
    Keep descriptions short. A few sentences is often enough.
 
 5. **Check Compliance**: Verify adherence to:
-   - Project-specific guidelines from CLAUDE.md files
+   - Project-specific guidelines from AGENTS.md files
    - Global coding standards and architectural decisions
    - Any custom requirements or patterns established in the codebase
 

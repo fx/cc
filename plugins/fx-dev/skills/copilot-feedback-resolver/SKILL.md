@@ -52,32 +52,42 @@ mutation {
 
 **You MUST call this mutation for EVERY thread you address.**
 
-### YOU MUST UPDATE COPILOT-INSTRUCTIONS.MD FOR INCORRECT FEEDBACK
+### YOU MUST UPDATE REVIEW.MD FOR INCORRECT FEEDBACK
 
 **When Copilot feedback is categorized as INCORRECT (conflicts with project conventions/patterns), you MUST:**
 
-1. **Update `.github/copilot-instructions.md`** to document the correct pattern
+1. **Update `REVIEW.md` at the repo root** to document the correct pattern
 2. This prevents Copilot from flagging the same or similar things in future PRs
 3. The update should be concise and explain why the pattern is intentional
 
-**Failure to update copilot-instructions.md = INCOMPLETE WORK for Incorrect category feedback.**
+**Failure to update `REVIEW.md` = INCOMPLETE WORK for Incorrect category feedback.**
+
+#### Write to REVIEW.md, never to copilot-instructions.md
+
+`REVIEW.md` is the single canonical review-conventions file for **every** automated reviewer. `.github/copilot-instructions.md` is a symlink to `../REVIEW.md` — editing it edits `REVIEW.md` anyway, so address the real path.
+
+One file means suppressing a false positive here also suppresses it for CodeRabbit, Codex, and Claude Code Review.
+
+**If `REVIEW.md` does not exist**, run the `fx-dev:setup` skill first — it creates `REVIEW.md` and the symlink. See `fx-dev:setup` → `references/instruction-files.md` for the full standard.
+
+**If `.github/copilot-instructions.md` is still a regular file** (not yet migrated), run `fx-dev:setup` to migrate it rather than editing it in place.
 
 #### CRITICAL: File Structure Requirements
 
-**Copilot only reads the first ~4000 characters for PR reviews.** Therefore:
+**Copilot only reads roughly the first 4000 characters when reviewing.** `REVIEW.md` is also pasted verbatim into Claude Code Review's prompt, where length dilutes the rules that matter. Therefore:
 
-1. **Review instructions MUST go at the TOP** of the file, in a dedicated section
-2. **Use a specific review-targeted section** like `## PR Review Checklist (CRITICAL)` as the first section
-3. **Keep the review section under 4000 characters** - measure with `head -c 4000 .github/copilot-instructions.md | wc -c`
+1. **The most important rules MUST go at the TOP** of the file, in a dedicated section
+2. **Use a specific review-targeted first section** like `## PR Review Checklist (CRITICAL)`
+3. **Keep that section under 4000 characters** — measure with `head -c 4000 REVIEW.md | wc -c`
 4. **If exceeding 4000 chars, COMPRESS the section:**
    - Remove redundant words
    - Use terse bullet points
    - Combine related items
-   - Move non-review guidance below the 4000 char threshold
+   - Move lower-priority guidance below the 4000 char threshold
 
 Example structure:
 ```markdown
-# GitHub Copilot Instructions
+# PR Review
 
 ## PR Review Checklist (CRITICAL)
 <!-- KEEP THIS SECTION UNDER 4000 CHARS - Copilot only reads first ~4000 -->
@@ -85,11 +95,13 @@ Example structure:
 - **Pattern X**: Intentional, do not flag
 - **Pattern Y**: Required for Z reason
 
-## Code Style
+## Lower-priority conventions
 <!-- Less critical sections go below -->
 ```
 
-**After updating, verify:** `head -c 4000 .github/copilot-instructions.md | tail -5` should show content from the review section, not unrelated sections.
+**After updating, verify:** `head -c 4000 REVIEW.md | tail -5` should show content from the checklist section, not unrelated sections.
+
+**`REVIEW.md` is pasted verbatim** — `@` imports are not expanded and referenced files are not read. Write the rule out in full; never write `See docs/conventions.md`.
 
 ---
 
@@ -155,7 +167,7 @@ For each unresolved Copilot comment:
 |----------|-----------|--------|
 | **Nitpick** | Contains `[nitpick]` prefix | Auto-resolve immediately |
 | **Outdated** | Refers to code that no longer exists | Reply with explanation, resolve |
-| **Incorrect** | Misunderstands project conventions | Reply with explanation, resolve, update copilot-instructions.md |
+| **Incorrect** | Misunderstands project conventions | Reply with explanation, resolve, update `REVIEW.md` |
 | **Valid** | Current, actionable concern | Delegate to coder sub-agent to fix |
 | **Deferred** | Valid but out of scope for this PR | Track in PROJECT.md, reply, resolve |
 
@@ -209,12 +221,12 @@ mutation {
 
 1. Reply to the thread with professional explanation:
    - Outdated: "This comment refers to code refactored in commit abc123. The issue is no longer applicable."
-   - Incorrect: "This conflicts with our [convention name] convention. [Brief explanation]. See [reference file] for project guidelines."
+   - Incorrect: "This conflicts with our [convention name] convention. [Brief explanation]. Documented in REVIEW.md so future reviews pick it up."
 2. Resolve the thread using the mutation from section 3
-3. **Update `.github/copilot-instructions.md`** to prevent recurrence:
-   - Add to "## Code Reviews" section
+3. **Update `REVIEW.md`** to prevent recurrence:
+   - Add to the top review checklist section
    - Example: "- Do not suggest removing `.sr-only` classes - required accessibility utilities"
-   - **If symlink:** Follow it and edit target file
+   - **Never edit `.github/copilot-instructions.md`** — it is a symlink to `../REVIEW.md`
 
 #### Valid Concerns
 1. Delegate to coder sub-agent with:
@@ -254,7 +266,7 @@ This comment refers to code that has been refactored in commit [hash]. The issue
 
 **For incorrect/convention conflicts:**
 ```
-This suggestion conflicts with our [convention name] convention. [Brief explanation of why]. See [reference file] for project guidelines.
+This suggestion conflicts with our [convention name] convention. [Brief explanation of why]. Documented in REVIEW.md so future reviews pick it up.
 ```
 
 ## Success Criteria
@@ -263,7 +275,7 @@ This suggestion conflicts with our [convention name] convention. [Brief explanat
 
 1. ✅ All code changes pushed to the PR branch
 2. ✅ **EVERY addressed thread resolved via GraphQL mutation** (not just code fixed!)
-3. ✅ **For INCORRECT feedback: `.github/copilot-instructions.md` updated** to prevent recurrence
+3. ✅ **For INCORRECT feedback: `REVIEW.md` updated** to prevent recurrence
 4. ✅ **For DEFERRED feedback: Task added to `docs/PROJECT.md`** via project-management skill
 5. ✅ Re-query confirms `isResolved: true` for all processed threads
 6. ✅ Output summary table (see format below)

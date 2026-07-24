@@ -32,4 +32,4 @@ Catch-all task list for work not tracked in a specific [change document](changes
 - **Mark completion**: `- [x] Task name (PR #N)` — always include the PR number
 - **Link issues**: `- [ ] Task (#123)` when linked to GitHub issue
 - **Move completed items** to `## Completed` section for reference
-- **External tracking**: Projects MAY define in CLAUDE.md a preference for GitHub Issues or Jira instead of this file. When configured, the project-management skill will use those mechanisms and this file becomes a lightweight reference
+- **External tracking**: Projects MAY define in AGENTS.md a preference for GitHub Issues or Jira instead of this file. When configured, the project-management skill will use those mechanisms and this file becomes a lightweight reference

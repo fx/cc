@@ -9,14 +9,21 @@ description: "MUST BE USED when user asks to: review code, review PR, check my c
 
 **BEFORE reviewing any code, you MUST:**
 
-1. **Read project instruction files:**
+1. **Read the project instruction files:**
    ```bash
-   # Check for CLAUDE.md in repo root
-   cat CLAUDE.md 2>/dev/null || echo "No CLAUDE.md found"
+   # Project conventions (canonical)
+   cat AGENTS.md 2>/dev/null || echo "No AGENTS.md found"
 
-   # Check for copilot-instructions.md
-   cat .github/copilot-instructions.md 2>/dev/null || echo "No copilot-instructions.md found"
+   # Review conventions (canonical) — highest priority for review decisions
+   cat REVIEW.md 2>/dev/null || echo "No REVIEW.md found"
+
+   # Claude-only additions, if any beyond the @AGENTS.md import
+   cat CLAUDE.md 2>/dev/null || echo "No CLAUDE.md found"
    ```
+
+   `AGENTS.md` is how the code should be **written**; `REVIEW.md` is how it should be **reviewed**. When they conflict on a review decision, `REVIEW.md` wins.
+
+   Legacy repos may still have conventions in `CLAUDE.md` or `.github/copilot-instructions.md`. Read those if the canonical files are missing, and suggest running `fx-dev:setup` to migrate.
 
 2. **Apply project rules as BLOCKING issues.** These files define project-specific requirements that override general best practices. Violations are BLOCKING, not suggestions.
 
@@ -33,7 +40,7 @@ For projects with vendor submodules (e.g., `vendor/` directory):
 2. **Flag as BLOCKING** if:
    - New file matches a vendor filename that could be imported
    - Code has "Ported from vendor" comment but vendor file has no Deno/Preact APIs
-   - Vendor code uses dependencies that ARE available (check CLAUDE.md "Available Vendor Dependencies" table)
+   - Vendor code uses dependencies that ARE available (check the AGENTS.md "Available Vendor Dependencies" table)
 
 3. **Space-Lua is AVAILABLE** - If vendor code uses `LuaEnv`, `luaQuery`, `evalExpression`, etc., check if project already has Space-Lua aliases. If yes, the code should be imported, NOT ported.
 
@@ -43,7 +50,7 @@ For projects with vendor submodules (e.g., `vendor/` directory):
    - What specific error prevents import?
 
 ## Review Priority
-1. **Project instruction compliance** (CLAUDE.md, copilot-instructions.md)
+1. **Project instruction compliance** (AGENTS.md, REVIEW.md)
    - Vendor reuse violations are BLOCKING
 2. **Automated review check** (Copilot/CodeRabbit)
    - If found: use the `fx-dev:resolve-pr-feedback` skill to handle all automated feedback
