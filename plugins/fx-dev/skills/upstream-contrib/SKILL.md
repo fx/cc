@@ -91,7 +91,9 @@ Read the consumer repo's local component to understand what needs to be upstream
 #### 2.2 Read fx/ui AGENTS.md
 
 ```bash
-cat "$UI_DIR/AGENTS.md" 2>/dev/null || cat "$UI_DIR/CLAUDE.md"
+cat "$UI_DIR/AGENTS.md" 2>/dev/null \
+  || cat "$UI_DIR/CLAUDE.md" 2>/dev/null \
+  || echo "No AGENTS.md or CLAUDE.md in $UI_DIR — proceed with the conventions below"
 ```
 
 Follow all conventions documented there. Key rules:
