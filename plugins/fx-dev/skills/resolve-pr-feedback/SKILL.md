@@ -26,9 +26,9 @@ Meta-skill that checks a PR for unresolved automated review feedback and invokes
 
 ## Shared Convention: All Resolvers Write to `REVIEW.md`
 
-Every resolver invoked here follows the same rule: when a reviewer's feedback is **INCORRECT** — it conflicts with a deliberate project convention — the recurrence-prevention rule goes in **`REVIEW.md`** at the repo root. Never in `.github/copilot-instructions.md` (a symlink to `../REVIEW.md`), and never in a reviewer-specific file.
+Every resolver invoked here follows the same rule: when a reviewer's feedback is **INCORRECT** — it conflicts with a deliberate project convention — the recurrence-prevention rule goes in **`REVIEW.md`** at the repo root — never in a reviewer-specific file, and never in the obsolete `.github/copilot-instructions.md`.
 
-`REVIEW.md` is read by Claude Code Review natively, by Copilot through the symlink, by CodeRabbit via `.coderabbit.yaml`, and by Codex via a `## Code Review Rules` pointer in `AGENTS.md`. One entry suppresses the false positive everywhere.
+`REVIEW.md` is read natively by Copilot and Claude Code Review, by CodeRabbit via `.coderabbit.yaml`, and by Codex via a `## Code Review Rules` pointer in `AGENTS.md`. One entry suppresses the false positive everywhere.
 
 If `REVIEW.md` does not exist, run `fx-dev:setup` — it creates the file and all the pointers. The full standard is in `fx-dev:setup` → `references/instruction-files.md`.
 
@@ -40,8 +40,6 @@ When the Copilot and CodeRabbit resolvers run as concurrent sub-agents (Step 4),
 
 1. Instruct each sub-agent to **collect** its proposed `REVIEW.md` rules and return them in its final report **instead of editing the file**. Everything else (code fixes, thread replies, thread resolution) proceeds normally in parallel — those touch disjoint resources.
 2. After **all** parallel resolvers have returned, the root session applies the collected rules to `REVIEW.md` in a single serialized edit, then commits and pushes.
-
-   Because the root session performs this write, the resolvers' own mirror-regeneration steps never run. If the repo uses the generated-mirror fallback (no symlink; a `.github/instructions/review.instructions.md` exists), **the root session must regenerate the mirror** before committing — see `fx-dev:setup` → `references/instruction-files.md` → "Fallback: generated mirror".
 3. Verify no rule was dropped by diffing, not by counting the whole file — an established `REVIEW.md` already contains unrelated rules, so a total-count check always fails:
 
    ```bash

@@ -168,7 +168,7 @@ Meta-skill that detects all unresolved automated feedback (Copilot, CodeRabbit, 
 The skills respect project conventions from two canonical files:
 
 - **`AGENTS.md`** — project conventions: how code is written. Read natively by Codex, Copilot, and CodeRabbit; reached by Claude Code through a `CLAUDE.md` containing `@AGENTS.md`.
-- **`REVIEW.md`** — review conventions: what reviewers should and should not flag. Read natively by Claude Code Review; reached by Copilot through the `.github/copilot-instructions.md` symlink, by CodeRabbit via `.coderabbit.yaml`, and by Codex via a `## Code Review Rules` pointer in `AGENTS.md`.
+- **`REVIEW.md`** — review conventions: what reviewers should and should not flag. Read natively by Copilot code review and Claude Code Review; reached by CodeRabbit via `.coderabbit.yaml`, and by Codex via a `## Code Review Rules` pointer in `AGENTS.md`.
 
 Plus:
 - Git commit and branch conventions

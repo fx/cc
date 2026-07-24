@@ -53,7 +53,7 @@ Skill tool: skill="fx-dev:setup"
 This is fast and idempotent — it checks what exists and only creates/modifies what's missing. It handles:
 - `docs/` folder structure (specs/, changes/, tasks.md, index.yml, index.md)
 - `AGENTS.md` task-tracking instructions (+ the `CLAUDE.md` → `@AGENTS.md` pointer)
-- `REVIEW.md` PR review instructions (+ the `.github/copilot-instructions.md` symlink)
+- `REVIEW.md` PR review instructions (+ `.coderabbit.yaml` pointing CodeRabbit at it)
 
 Wait for setup to complete before proceeding.
 

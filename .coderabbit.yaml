@@ -1,0 +1,14 @@
+# CodeRabbit configuration
+#
+# REVIEW.md holds this repo's canonical review conventions. CodeRabbit's default
+# code_guidelines patterns cover **/AGENTS.md and **/CLAUDE.md but NOT
+# **/REVIEW.md, so it must be listed explicitly. Custom patterns append to the
+# defaults rather than replacing them.
+#
+# Patterns are case-sensitive: review.md does not match **/REVIEW.md.
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/REVIEW.md"

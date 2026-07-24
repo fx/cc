@@ -1,9 +1,9 @@
 # PR Review
 
 Canonical review conventions for this repository. Every automated reviewer reads
-this file: Claude Code Review natively, GitHub Copilot through the
-`.github/copilot-instructions.md` symlink, CodeRabbit via its default file
-patterns, and Codex via the `## Code Review Rules` pointer in `AGENTS.md`.
+this file: GitHub Copilot and Claude Code Review natively, CodeRabbit via
+`.coderabbit.yaml`, and Codex via the `## Code Review Rules` pointer in
+`AGENTS.md`.
 
 Rules here improve review quality and suppress known false positives. This file
 is pasted verbatim into reviewer prompts — write rules out in full, never
@@ -42,7 +42,7 @@ reference another file.
 
 - `AGENTS.md` holds project conventions; `REVIEW.md` holds review conventions. Do not suggest moving rules between them or reviving `CLAUDE.md` as a conventions file.
 - `CLAUDE.md` is intentionally a one-line `@AGENTS.md` import. Do not flag it as empty or incomplete.
-- `.github/copilot-instructions.md` is intentionally a symlink to `../REVIEW.md`. Do not flag it as a broken or duplicated file, and do not suggest replacing it with a copy.
+- There is intentionally **no** `.github/copilot-instructions.md`. Copilot code review reads `REVIEW.md` directly, so a second copy would only drift. Do not suggest adding one.
 
 ## Repository Context
 

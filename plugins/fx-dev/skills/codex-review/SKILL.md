@@ -14,9 +14,10 @@ independent reviewers and each catches issues the other misses.
 
 ## Project Conventions
 
-Codex reads `AGENTS.md` — it does **not** read `REVIEW.md`, `CLAUDE.md`, or
-`.github/copilot-instructions.md`. The bridge is a `## Code Review Rules` section
-in `AGENTS.md` pointing at `REVIEW.md`, which the `fx-dev:setup` skill creates.
+Codex reads `AGENTS.md` — it does **not** read `REVIEW.md` or `CLAUDE.md`. Every
+other reviewer reaches `REVIEW.md` on its own; Codex is the exception. The bridge
+is a `## Code Review Rules` section in `AGENTS.md` pointing at `REVIEW.md`, which
+the `fx-dev:setup` skill creates.
 
 Before the first run in a repo, check the pointer exists:
 
@@ -88,12 +89,7 @@ expected to be authed already).
   convention, document it in `REVIEW.md` at the repo root, the same as the PR
   feedback resolvers do. One entry stops Codex, Copilot, CodeRabbit, and Claude
   Code Review from raising it again. Never write it into
-  `.github/copilot-instructions.md` (a symlink to `../REVIEW.md`).
-  If the repo uses the generated-mirror fallback (no symlink; a
-  `.github/instructions/review.instructions.md` exists), regenerate that mirror in
-  the same change — otherwise Copilot keeps enforcing the rule you just retracted.
-  The snippet is in `fx-dev:setup` → `references/instruction-files.md` →
-  "Fallback: generated mirror".
+  the obsolete `.github/copilot-instructions.md`.
 
 ### Step 3: Re-run until clean (REQUIRED)
 

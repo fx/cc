@@ -62,17 +62,17 @@ mutation {
 
 **Failure to update `REVIEW.md` = INCOMPLETE WORK for Incorrect category feedback.**
 
-#### Write to REVIEW.md, never to copilot-instructions.md
+#### Write to REVIEW.md
 
-`REVIEW.md` is the single canonical review-conventions file for **every** automated reviewer. `.github/copilot-instructions.md` is a symlink to `../REVIEW.md` — editing it edits `REVIEW.md` anyway, so address the real path.
+`REVIEW.md` at the repo root is the single canonical review-conventions file for **every** automated reviewer. **Copilot reads it directly** ([changelog, 2026-07-17](https://github.blog/changelog/2026-07-17-copilot-code-review-customization-and-configurability-improvements/)), so there is no bridge file to maintain.
 
 One file means suppressing a false positive here also suppresses it for CodeRabbit, Codex, and Claude Code Review.
 
-**If `REVIEW.md` does not exist**, run the `fx-dev:setup` skill first — it creates `REVIEW.md` and the symlink. See `fx-dev:setup` → `references/instruction-files.md` for the full standard.
+**If `REVIEW.md` does not exist**, run the `fx-dev:setup` skill first. See `fx-dev:setup` → `references/instruction-files.md` for the full standard.
 
-**If `.github/copilot-instructions.md` is still a regular file** (not yet migrated), run `fx-dev:setup` to migrate it rather than editing it in place.
+**Never create or edit `.github/copilot-instructions.md`.** It is obsolete. If the repo still has one, run `fx-dev:setup` to fold it into `REVIEW.md`.
 
-**If the repo uses the generated-mirror fallback** (no symlink; a `.github/instructions/review.instructions.md` exists), you MUST regenerate that mirror in the same change after writing `REVIEW.md`, or Copilot keeps reading the stale copy. The regeneration snippet is in `fx-dev:setup` → `references/instruction-files.md` → "Fallback: generated mirror".
+Copilot reads instructions from the **head branch**, so a rule you add here takes effect on this same PR's next review.
 
 #### CRITICAL: File Structure Requirements
 
@@ -228,7 +228,7 @@ mutation {
 3. **Update `REVIEW.md`** to prevent recurrence:
    - Add to the top review checklist section
    - Example: "- Do not suggest removing `.sr-only` classes - required accessibility utilities"
-   - **Never edit `.github/copilot-instructions.md`** — it is a symlink to `../REVIEW.md`
+   - **Never create or edit `.github/copilot-instructions.md`** — obsolete; Copilot reads `REVIEW.md` directly
 
 #### Valid Concerns
 1. Delegate to coder sub-agent with:

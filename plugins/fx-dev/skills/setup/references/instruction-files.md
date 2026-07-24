@@ -11,34 +11,48 @@ alternatives.
 | `AGENTS.md` (repo root) | **Project conventions** — how the code is built, what patterns are intentional, stack, commands, task tracking | Every coding agent |
 | `REVIEW.md` (repo root) | **PR review conventions** — what reviewers should flag, at what severity, what NOT to flag | Every automated reviewer |
 
-Everything else is a **pointer** that exists only because some tool cannot read
-the canonical file natively.
+Both are **regular files**. Never symlink them, and never generate one from the
+other — they are what everything else points at.
+
+Only two pointers exist, one per tool that genuinely cannot read a canonical
+file:
 
 ```
-AGENTS.md                        <- canonical project conventions
-REVIEW.md                        <- canonical review conventions
-CLAUDE.md                        -> pointer: `@AGENTS.md` + Claude-only extras
-.github/copilot-instructions.md  -> symlink to ../REVIEW.md
-.coderabbit.yaml                 -> lists **/REVIEW.md in filePatterns
+AGENTS.md    <- canonical project conventions
+REVIEW.md    <- canonical review conventions
+CLAUDE.md    -> `@AGENTS.md` import (Claude Code does not read AGENTS.md)
+.coderabbit.yaml -> lists **/REVIEW.md (not in CodeRabbit's defaults)
 ```
 
-## Who reads what (verified 2026-07)
+`AGENTS.md` also carries a `## Code Review Rules` section pointing at
+`REVIEW.md`, because Codex reads only `AGENTS.md`.
 
-| Tool | Reads natively | Bridge needed |
-|------|----------------|---------------|
-| **Codex** (CLI + PR review) | `AGENTS.md` | `## Code Review Rules` section in `AGENTS.md` pointing at `REVIEW.md` |
-| **Copilot code review** | `.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md`, `AGENTS.md` | `.github/copilot-instructions.md` is a **symlink** to `../REVIEW.md` |
-| **CodeRabbit** | defaults include `**/AGENTS.md`, `**/CLAUDE.md`, `.github/copilot-instructions.md` | add `**/REVIEW.md` to `knowledge_base.code_guidelines.filePatterns` |
-| **Claude Code Review** (GitHub App) | `CLAUDE.md` (as nits) + `REVIEW.md` (root, verbatim, highest priority) | none — reads `REVIEW.md` natively |
-| **Claude Code** (CLI) | `CLAUDE.md` only | `CLAUDE.md` imports `@AGENTS.md` |
+## Who reads what (verified 2026-07-24)
 
-Two constraints drive the design:
+| Tool | Reads `AGENTS.md` | Reads `REVIEW.md` | Bridge needed |
+|------|---|---|---|
+| **Copilot code review** | yes | **yes, natively** | none |
+| **Claude Code Review** (GitHub App) | no (reads `CLAUDE.md` as nits) | **yes, natively** | none |
+| **Codex** (CLI + PR review) | yes | no | `## Code Review Rules` section in `AGENTS.md` |
+| **CodeRabbit** | yes (default pattern) | no | add `**/REVIEW.md` to `knowledge_base.code_guidelines.filePatterns` |
+| **Claude Code** (CLI) | no | no | `CLAUDE.md` containing `@AGENTS.md` |
 
-1. **Claude Code CLI does not read `AGENTS.md`.** Hence `CLAUDE.md` exists as a
-   one-line `@AGENTS.md` import.
-2. **Copilot code review does not follow file references** — GitHub's docs say to
-   copy content in rather than link to it. A symlink sidesteps this without
-   duplicating content: the path Copilot looks for resolves to `REVIEW.md`.
+**Copilot code review reads `REVIEW.md`, `CLAUDE.md`, and `GEMINI.md` directly**
+as of the [2026-07-17 changelog](https://github.blog/changelog/2026-07-17-copilot-code-review-customization-and-configurability-improvements/):
+*"Copilot code review now reads `REVIEW.md`, `GEMINI.md`, and `CLAUDE.md` files
+from your repository, so your customizations are understood regardless of where
+they live."* It also reads instructions from the **head branch**, so instruction
+changes are testable in the same PR that makes them.
+
+> **Do not build a `.github/copilot-instructions.md` bridge.** Earlier versions
+> of this standard symlinked that path to `../REVIEW.md` because Copilot could
+> not follow file references. That is obsolete, and it actively misleads: a
+> symlink there is a second path to the same rules that some tooling reports as
+> a missing file. If a repo still has one, delete it and move any unique content
+> into `REVIEW.md`.
+
+Only one real constraint remains: **Claude Code CLI does not read `AGENTS.md`**,
+so `CLAUDE.md` exists as a one-line `@AGENTS.md` import.
 
 ## `REVIEW.md` is pasted verbatim
 
@@ -46,7 +60,9 @@ Claude Code Review injects `REVIEW.md` into the review system prompt as-is.
 `@` imports are **not** expanded and referenced files are **not** read. Write the
 rules directly in the file — never `See docs/conventions.md`.
 
-Keep it focused. A long `REVIEW.md` dilutes the rules that matter.
+Keep it focused. A long `REVIEW.md` dilutes the rules that matter. Put the
+highest-value rules first: Copilot weights roughly the first 4000 characters
+most heavily.
 
 ## Where feedback resolvers write
 
@@ -55,73 +71,25 @@ deliberate project convention), the fix goes in **`REVIEW.md`** — always, for
 every reviewer. One file, so suppressing a false positive suppresses it for
 Copilot, CodeRabbit, Codex, and Claude Code Review at once.
 
-Do not write recurrence rules into `.github/copilot-instructions.md`: it is a
-symlink, and editing it edits `REVIEW.md` anyway. Address the real path.
-
 `AGENTS.md` is for how the code is *written*. `REVIEW.md` is for how the code is
 *reviewed*. When a rule is "this pattern is intentional, don't flag it", it is a
 review rule.
 
-## Creating the symlink
+## CodeRabbit needs explicit configuration
 
-Move the content to `REVIEW.md` **first** — `git mv .github/copilot-instructions.md REVIEW.md 2>/dev/null || mv .github/copilot-instructions.md REVIEW.md`, since the file may be untracked — then put the pointer in its place:
+CodeRabbit's default `filePatterns` cover `**/AGENTS.md` and `**/CLAUDE.md` but
+**not** `**/REVIEW.md`. Without this config it never sees the review conventions:
 
-If the path is **already** a symlink, `readlink` it first — if it points at a legacy instruction file rather than `REVIEW.md`, merge that file's rules into `REVIEW.md` before replacing the link.
-
-```bash
-mkdir -p .github
-rm -f .github/copilot-instructions.md
-ln -s ../REVIEW.md .github/copilot-instructions.md
+```yaml
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    # Custom patterns APPEND to the defaults, they do not replace them.
+    filePatterns:
+      - "**/REVIEW.md"
 ```
 
-Verify without staging — `git add` here mutates the caller's index and risks a commit that contains the symlink but not its target:
-
-```bash
-test -L .github/copilot-instructions.md && echo "symlink OK" || echo "NOT a symlink"
-git config --get core.symlinks   # "false" means fall back to the mirror below
-```
-
-Stage the migration as one unit when you commit it: `AGENTS.md`, `REVIEW.md`,
-`CLAUDE.md`, and `.github/copilot-instructions.md` in the same commit. Landing
-the symlink without its target leaves a dangling pointer.
-
-### Fallback: generated mirror
-
-If the repo has `core.symlinks=false` (some Windows checkouts), the symlink
-becomes a plain text file containing the path and Copilot will read garbage. In
-that case fall back to a generated mirror at
-`.github/instructions/review.instructions.md`:
-
-```markdown
----
-applyTo: "**"
----
-<!-- GENERATED from REVIEW.md — DO NOT EDIT. Regenerate after any REVIEW.md change. -->
-
-<verbatim copy of REVIEW.md>
-```
-
-**A mirror is a standing obligation, not a one-time copy.** It goes stale the
-moment `REVIEW.md` changes, and a stale mirror is worse than none — Copilot keeps
-enforcing rules the project has already retracted.
-
-**Anything that writes `REVIEW.md` MUST regenerate the mirror in the same
-change.** That includes every feedback resolver and every manual edit:
-
-```bash
-# Run this immediately after any write to REVIEW.md
-if [ -f .github/instructions/review.instructions.md ] \
-   && ! [ -L .github/copilot-instructions.md ]; then
-  { printf -- '---\napplyTo: "**"\n---\n'
-    printf -- '<!-- GENERATED from REVIEW.md — DO NOT EDIT. Regenerate after any REVIEW.md change. -->\n\n'
-    cat REVIEW.md
-  } > .github/instructions/review.instructions.md
-  echo "Mirror regenerated"
-fi
-```
-
-Prefer the symlink and use the mirror only when the symlink genuinely cannot be
-stored. Tell the user when you fall back, so the sync obligation is visible.
+Patterns are **case-sensitive**: `review.md` does not match `**/REVIEW.md`.
 
 ## Migration from a pre-existing repo
 
@@ -129,7 +97,49 @@ stored. Tell the user when you fall back, so the sync obligation is visible.
 |-------|-----|
 | `CLAUDE.md` with project conventions, no `AGENTS.md` | Move it to `AGENTS.md`, create `CLAUDE.md` containing `@AGENTS.md` |
 | `CLAUDE.md` and `AGENTS.md` both with content | Merge into `AGENTS.md`, reduce `CLAUDE.md` to `@AGENTS.md` plus any genuinely Claude-only rules |
-| `.github/copilot-instructions.md` with review rules, no `REVIEW.md` | Move its content to `REVIEW.md`, replace the file with the symlink |
-| Neither `REVIEW.md` nor `.github/copilot-instructions.md` | Create `REVIEW.md`, then the symlink |
+| `.github/copilot-instructions.md` with review rules, no `REVIEW.md` | Move its content to `REVIEW.md` and delete the original |
+| `.github/copilot-instructions.md` **symlinked** to `REVIEW.md` (old layout) | Delete the symlink; `REVIEW.md` is read directly now |
+| Neither `REVIEW.md` nor `.github/copilot-instructions.md` | Create `REVIEW.md` |
 
 Never delete convention content during migration — move it.
+
+Use `git mv <src> <dst> 2>/dev/null || mv <src> <dst>`: the source may be
+untracked during first-time setup, and `git mv` aborts on untracked paths.
+
+## Symlinks in legacy repos
+
+The canonical paths must end up as **regular files**. A legacy repo may have
+symlinked one of them — most commonly `CLAUDE.md -> AGENTS.md`, and occasionally
+`CLAUDE.md -> ~/.claude/CLAUDE.md`. Writing "through" a symlink edits its target,
+so classify before writing:
+
+```bash
+canonicalize() {
+  # Portable: GNU realpath -> GNU readlink -f -> Python (macOS has no readlink -f)
+  realpath "$1" 2>/dev/null \
+    || readlink -f "$1" 2>/dev/null \
+    || python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null
+}
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+for p in AGENTS.md CLAUDE.md REVIEW.md; do
+  [ -L "$p" ] || continue
+  t=$(canonicalize "$p")
+  case "${t:-UNRESOLVED}" in
+    "$repo_root"/*) echo "$p: symlink -> in-repo: $t" ;;
+    *)              echo "$p: symlink -> ESCAPES REPO: ${t:-unresolvable}" ;;
+  esac
+done
+```
+
+- **In-repo target** → replace the link with a regular file holding the target's
+  content, so later writes land in the repo. A `CLAUDE.md -> AGENTS.md` link has
+  nothing to merge: just delete it and write the `@AGENTS.md` pointer.
+- **Target escapes the repo, or is unresolvable** → **do NOT read or copy the
+  contents.** `~/.claude/CLAUDE.md` holds private, machine-wide instructions;
+  inlining it into a tracked, possibly public, `AGENTS.md` leaks them. Delete the
+  link, seed the file fresh, and report the path so the user can port anything
+  they still want. Never inline it for them.
+
+This is a privacy boundary, not a style preference. **When in doubt, do not
+copy.**

@@ -69,14 +69,13 @@ _🧹 Nitpick_ | _🔵 Trivial_    <- Severity indicator (optional)
 
 **Before processing feedback, ensure CodeRabbit is configured to read `REVIEW.md` and `AGENTS.md`.**
 
-`REVIEW.md` (repo root) is the canonical review-conventions file for every automated reviewer; `AGENTS.md` holds project conventions. CodeRabbit's `knowledge_base.code_guidelines` feature reads instruction files to understand both. Its defaults cover `**/AGENTS.md`, `**/CLAUDE.md`, and `.github/copilot-instructions.md` — but **not** `**/REVIEW.md`. See `fx-dev:setup` → `references/instruction-files.md` for the full standard.
+`REVIEW.md` (repo root) is the canonical review-conventions file for every automated reviewer; `AGENTS.md` holds project conventions. CodeRabbit's `knowledge_base.code_guidelines` feature reads instruction files to understand both. Its defaults cover `**/AGENTS.md` and `**/CLAUDE.md` — but **not** `**/REVIEW.md`, so the config below is what gets the review conventions to CodeRabbit. See `fx-dev:setup` → `references/instruction-files.md` for the full standard.
 
 #### Check Configuration
 
 ```bash
 # Canonical files present?
 test -f REVIEW.md && echo "REVIEW.md exists" || echo "REVIEW.md MISSING - run fx-dev:setup"
-test -L .github/copilot-instructions.md && echo "copilot-instructions is a symlink (good)" || echo "copilot-instructions not a symlink"
 
 # Check if .coderabbit.yaml exists
 if [ -f ".coderabbit.yaml" ]; then
@@ -86,14 +85,13 @@ else
 fi
 ```
 
-If `REVIEW.md` is missing, run the `fx-dev:setup` skill to create it and the `.github/copilot-instructions.md` symlink before continuing.
+If `REVIEW.md` is missing, run the `fx-dev:setup` skill to create it before continuing.
 
 #### Configuration States
 
 | State | Action |
 |-------|--------|
-| No `.coderabbit.yaml`, **and** `.github/copilot-instructions.md` is a symlink | Defaults apply — the symlink is read, and it resolves to `../REVIEW.md`, so CodeRabbit gets `REVIEW.md`. No action needed |
-| No `.coderabbit.yaml`, **and no symlink** (generated-mirror fallback) | **Create `.coderabbit.yaml`** with the config below. Nothing in CodeRabbit's defaults reaches root `REVIEW.md` without the symlink, so it would review with no knowledge of the project's conventions |
+| No `.coderabbit.yaml` exists | **Create it** with the config below. Nothing in CodeRabbit's defaults reaches root `REVIEW.md`, so without this it reviews with no knowledge of the project's conventions |
 | Config exists with `knowledge_base.code_guidelines.enabled: false` | **Update** to `enabled: true` |
 | Config exists with custom `filePatterns` | **Add** `"**/REVIEW.md"` and `"**/AGENTS.md"` |
 | Config exists, `enabled: true`, no custom `filePatterns` | No action needed |
@@ -127,15 +125,13 @@ knowledge_base:
     enabled: true
 ```
 
-This enables the default patterns, which reach `REVIEW.md` through the `.github/copilot-instructions.md` symlink.
+Note this alone is **not** sufficient: the defaults do not include `**/REVIEW.md`, so the explicit pattern above is still required.
 
 #### When to Update REVIEW.md
 
 If CodeRabbit feedback conflicts with project conventions (INCORRECT category), document the correct pattern in `REVIEW.md`. Since every reviewer reads it, one entry stops Copilot, CodeRabbit, Codex, and Claude Code Review from flagging it again.
 
-**Never edit `.github/copilot-instructions.md` directly** — it is a symlink to `../REVIEW.md`.
-
-**If the repo uses the generated-mirror fallback** (no symlink; a `.github/instructions/review.instructions.md` exists), regenerate that mirror in the same change after writing `REVIEW.md`, or Copilot keeps reading the stale copy. See `fx-dev:setup` → `references/instruction-files.md` → "Fallback: generated mirror".
+**Never create or edit `.github/copilot-instructions.md`** — it is obsolete; Copilot reads `REVIEW.md` directly.
 
 ### 1. Fetch Unresolved CodeRabbit Threads
 

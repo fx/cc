@@ -9,11 +9,13 @@ This repo uses the standard layout that `fx-dev:setup` scaffolds — two canonic
 | Path | Role |
 |------|------|
 | `AGENTS.md` | **This file.** Project conventions: how code is written. Read natively by Codex, Copilot, and CodeRabbit |
-| `REVIEW.md` | Review conventions: what reviewers should and should not flag. Read natively by Claude Code Review |
+| `REVIEW.md` | Review conventions: what reviewers should and should not flag. Read natively by Copilot code review and Claude Code Review |
 | `CLAUDE.md` | Pointer — a single `@AGENTS.md` import, because Claude Code does not read `AGENTS.md` |
-| `.github/copilot-instructions.md` | Symlink to `../REVIEW.md`, because Copilot code review does not follow file references |
+| `.coderabbit.yaml` | Lists `**/REVIEW.md`, which is not in CodeRabbit's default patterns |
 
-Put a rule about **writing** code here. Put a rule about **reviewing** code in `REVIEW.md`. Never edit `CLAUDE.md` or `.github/copilot-instructions.md` to add content — edit the file they point at.
+Put a rule about **writing** code here. Put a rule about **reviewing** code in `REVIEW.md`. Never edit `CLAUDE.md` to add content — edit `AGENTS.md`, which it imports.
+
+There is deliberately **no** `.github/copilot-instructions.md`: Copilot code review reads `REVIEW.md` directly ([changelog, 2026-07-17](https://github.blog/changelog/2026-07-17-copilot-code-review-customization-and-configurability-improvements/)), so a second copy would only drift.
 
 The full standard, including the migration path for other repos, is in `plugins/fx-dev/skills/setup/references/instruction-files.md`.
 
