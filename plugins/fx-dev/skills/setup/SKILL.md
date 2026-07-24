@@ -123,11 +123,18 @@ test -L CLAUDE.md && echo "CLAUDE.md is a symlink" || { test -f CLAUDE.md && ech
 
 Handle these cases in order — **check `test -L CLAUDE.md` before anything else**, because writing "through" a symlink edits its target, not the link:
 
-- **`CLAUDE.md` is a symlink** (a common `ln -s AGENTS.md CLAUDE.md` setup) → it has no content of its own. Delete the link now; Step 7 writes a regular pointer file in its place. Do **not** treat it as content to merge, and never append to it — that would edit `AGENTS.md` and produce an `AGENTS.md` that imports itself.
+- **`CLAUDE.md` is a symlink** (a common `ln -s AGENTS.md CLAUDE.md` setup) → it has no content of its own. Never append to it — that would edit its target and produce an `AGENTS.md` that imports itself. Step 7 writes a regular pointer file in its place.
+
+  **Resolve the target BEFORE unlinking** — once the link is gone you cannot tell what it pointed at, so its conventions would be silently dropped:
+
   ```bash
-  test -L CLAUDE.md && rm CLAUDE.md
+  claude_target=$(canonicalize CLAUDE.md)   # see the helper below
+  echo "CLAUDE.md -> $claude_target"
   ```
-  If the symlink pointed somewhere **other** than `AGENTS.md`, apply the escape check below before merging anything.
+
+  - Target is `AGENTS.md` → nothing to merge. `rm CLAUDE.md`.
+  - Target is another **in-repo** file → merge that file's content into `AGENTS.md` first, then `rm CLAUDE.md`.
+  - Target **escapes the repo** → apply the escape rule below: do not copy, `rm CLAUDE.md`, and report the path.
 - **`AGENTS.md` missing, `CLAUDE.md` is a regular file with real content** → move it, then create the `CLAUDE.md` pointer in Step 7. Use `git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md` — the file may be untracked, and `git mv` aborts on untracked paths.
 - **Both exist as regular files with content** → merge `CLAUDE.md`'s content into `AGENTS.md`, keeping any genuinely Claude-only rules aside for the pointer file. Never delete convention content — move it.
 - **Neither exists** → create `AGENTS.md` with just the block from 6.3.
@@ -136,19 +143,31 @@ Handle these cases in order — **check `test -L CLAUDE.md` before anything else
 
 A legacy `CLAUDE.md` or `.github/copilot-instructions.md` may point **outside** the checkout — typically at `~/.claude/CLAUDE.md`, which holds the user's private, machine-wide instructions. Copying that into a tracked `AGENTS.md` would commit private user or company conventions to a repo, possibly a public one.
 
-**Before merging any symlink target, canonicalize it and confirm it is inside the repo:**
+**Before merging any symlink target, canonicalize it and confirm it is inside the repo.** Use this portable helper — macOS's system `readlink` has no `-f`, and BSD `realpath` differs from GNU's, so a bare `readlink -f` would misreport every target on a Mac as unresolvable and silently decline to migrate in-repo conventions:
 
 ```bash
-link_target=$(readlink -f .github/copilot-instructions.md)   # or CLAUDE.md
+canonicalize() {
+  # Portable: GNU realpath -> GNU readlink -f -> Python fallback (macOS-safe)
+  realpath "$1" 2>/dev/null \
+    || readlink -f "$1" 2>/dev/null \
+    || python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null
+}
+
+link_target=$(canonicalize .github/copilot-instructions.md)   # or CLAUDE.md
 repo_root=$(git rev-parse --show-toplevel)
-case "$link_target" in
-  "$repo_root"/*) echo "in-repo: safe to merge" ;;
-  *) echo "ESCAPES REPO: $link_target — do NOT copy its contents" ;;
-esac
+
+if [ -z "$link_target" ]; then
+  echo "UNRESOLVED — treat as escaping; do NOT copy"
+else
+  case "$link_target" in
+    "$repo_root"/*) echo "in-repo: safe to merge" ;;
+    *) echo "ESCAPES REPO: $link_target — do NOT copy its contents" ;;
+  esac
+fi
 ```
 
 - **In-repo target** → merge its content as described above.
-- **Target escapes the repo, or `readlink -f` cannot resolve it** → **do NOT read or copy the contents.** Replace the link with the standard pointer, and report to the user: name the path the link pointed at and tell them to copy over anything they still want, themselves. Never inline it for them.
+- **Target escapes the repo, or cannot be resolved** → **do NOT read or copy the contents.** Replace the link with the standard pointer, and report to the user: name the path the link pointed at and tell them to copy over anything they still want, themselves. Never inline it for them.
 
 This is a privacy boundary, not a style preference. When in doubt, do not copy.
 
@@ -309,7 +328,8 @@ This is the one review-related section allowed in `AGENTS.md`, and it is a point
 
 CodeRabbit's default `filePatterns` cover `**/AGENTS.md` and `.github/copilot-instructions.md` but **not** `**/REVIEW.md`.
 
-- **No `.coderabbit.yaml`** → defaults apply. The symlink from Step 8.3 already routes CodeRabbit to `REVIEW.md`, so no action is needed.
+- **No `.coderabbit.yaml`, and Step 8.3 created the symlink** → defaults apply. The symlink routes CodeRabbit to `REVIEW.md`, so no action is needed.
+- **No `.coderabbit.yaml`, but Step 8.3 fell back to the generated mirror** → defaults are **not** enough. Without the symlink, nothing in CodeRabbit's defaults reaches root `REVIEW.md`. Create `.coderabbit.yaml` with the config below so CodeRabbit still sees the review conventions.
 - **`.coderabbit.yaml` exists with `knowledge_base.code_guidelines.enabled: false`** → set it to `true`.
 - **`.coderabbit.yaml` exists with custom `filePatterns`** → add `"**/REVIEW.md"` and `"**/AGENTS.md"`. Custom patterns append to the defaults; they do not replace them.
 
