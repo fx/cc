@@ -98,7 +98,7 @@ fi
 
 echo "--- stale task language (M1.6) ---"
 if is_plain AGENTS.md; then
-  grep -nEi 'PROJECT\.md|- \[x\]|mark.*(done|complete)' AGENTS.md \
+  grep -nEi 'PROJECT\.md|- \[x\]|mark.*(done|complete)|tasks?.*(in|under|go).*docs/specs' AGENTS.md \
     && echo "  ^ review these: obsolete task rules may survive alongside the current marker  [MIGRATE]" \
     || echo "AGENTS.md: no stale task language"
 else
@@ -238,7 +238,7 @@ CLAUDE.md         -> a single `@AGENTS.md` line
 
 ### M1.0 Missing canonical files
 
-If `AGENTS.md` or `REVIEW.md` is simply absent — no legacy file to migrate from — there is nothing to move, but the repo is still not current. Do not report "already current": let the migration apply so Step 5 runs `fx-dev:setup`, which creates the missing file with its seed block.
+If `AGENTS.md` or `REVIEW.md` is simply absent — no legacy file to migrate from — there is nothing to move, but the repo is still not current. Do not report "already current": let the migration apply so **Step 5 seeds the missing file** from the seed blocks. Step 5 does this directly and must not invoke `fx-dev:setup`, which would also scaffold `docs/`.
 
 ### M1.1 `CLAUDE.md` → `AGENTS.md`
 
