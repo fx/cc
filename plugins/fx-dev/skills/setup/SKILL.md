@@ -116,12 +116,30 @@ Only if it doesn't exist. **Use these exact column names — table schema is str
 
 #### 6.1 Migrate a legacy `CLAUDE.md` first
 
+##### 6.1.0 Already migrated? Stop here (idempotency guard)
+
+**This runs on every `/spec-writer` and `/project-management` invocation, so it MUST be a no-op once the layout is in place.** Check first:
+
 ```bash
-test -f AGENTS.md && echo "AGENTS.md exists" || echo "AGENTS.md missing"
+test -f AGENTS.md && ! test -L AGENTS.md && grep -q '^@AGENTS\.md' CLAUDE.md 2>/dev/null \
+  && echo "ALREADY MIGRATED — skip all of 6.1" \
+  || echo "needs migration checks"
+```
+
+If already migrated, **skip the rest of 6.1 entirely** and go to 6.2. Treating the `@AGENTS.md` pointer as "content to merge" would append the import into `AGENTS.md` and make it import itself — and it would happen on every single run.
+
+##### 6.1.1 Classify what is actually on disk
+
+```bash
+test -L AGENTS.md && echo "AGENTS.md is a symlink" || { test -f AGENTS.md && echo "AGENTS.md is a regular file" || echo "AGENTS.md missing"; }
 test -L CLAUDE.md && echo "CLAUDE.md is a symlink" || { test -f CLAUDE.md && echo "CLAUDE.md is a regular file" || echo "CLAUDE.md missing"; }
 ```
 
-Handle these cases in order — **check `test -L CLAUDE.md` before anything else**, because writing "through" a symlink edits its target, not the link:
+**If `AGENTS.md` is itself a symlink**, do not write through it — every merge and append below would edit its target instead of creating the canonical in-repo file, and a target outside the checkout would pull private content into the repo. Canonicalize it with the helper in the escape-check section:
+- In-repo target → replace the link with a regular `AGENTS.md` holding that target's content, then continue.
+- Escapes the repo → do **not** copy. Remove the link, start a fresh `AGENTS.md`, and report the path to the user.
+
+Handle the remaining cases in order — **check `test -L CLAUDE.md` before anything else**, because writing "through" a symlink edits its target, not the link:
 
 - **`CLAUDE.md` is a symlink** (a common `ln -s AGENTS.md CLAUDE.md` setup) → it has no content of its own. Never append to it — that would edit its target and produce an `AGENTS.md` that imports itself. Step 7 writes a regular pointer file in its place.
 
@@ -136,6 +154,8 @@ Handle these cases in order — **check `test -L CLAUDE.md` before anything else
   - Target is another **in-repo** file → merge that file's content into `AGENTS.md` first, then `rm CLAUDE.md`.
   - Target **escapes the repo** → apply the escape rule below: do not copy, `rm CLAUDE.md`, and report the path.
 - **`AGENTS.md` missing, `CLAUDE.md` is a regular file with real content** → move it, then create the `CLAUDE.md` pointer in Step 7. Use `git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md` — the file may be untracked, and `git mv` aborts on untracked paths.
+
+  **Then split out any genuinely Claude-only rules**, exactly as the both-files path does. A wholesale move publishes rules written for Claude Code alone to Codex, Copilot, and CodeRabbit. Rules that name Claude Code mechanics — `/`-commands, skills, plan mode, `@`-imports, thinking budgets, hooks, MCP servers — belong under the `@AGENTS.md` line in `CLAUDE.md`, not in `AGENTS.md`. When it is ambiguous, leave it in `AGENTS.md`; cross-agent conventions are the common case.
 - **Both exist as regular files with content** → merge `CLAUDE.md`'s content into `AGENTS.md`, keeping any genuinely Claude-only rules aside for the pointer file. Never delete convention content — move it.
 - **Neither exists** → create `AGENTS.md` with just the block from 6.3.
 
@@ -303,7 +323,15 @@ test -L .github/copilot-instructions.md && echo "symlink OK" || echo "NOT a syml
 git config --get core.symlinks   # empty or "true" is fine; "false" is the problem case
 ```
 
-If the path is not a symlink, or `core.symlinks` is `false`, fall back to the generated mirror described in `references/instruction-files.md` and tell the user.
+If the path is not a symlink, **or** `core.symlinks` is `false`, fall back to the generated mirror described in `references/instruction-files.md` and tell the user.
+
+**When falling back, delete the symlink you just created:**
+
+```bash
+rm -f .github/copilot-instructions.md
+```
+
+`core.symlinks=false` with a filesystem that still allows `ln -s` is the trap: the link exists locally but other checkouts materialize it as a plain text file containing `../REVIEW.md`, which Copilot reads as garbage. Worse, the mirror-regeneration snippet is guarded on `! -L .github/copilot-instructions.md`, so leaving the link in place silently disables every future mirror refresh. Pick one mechanism — symlink **or** mirror — never both.
 
 **Staging is the caller's job, and it is all-or-nothing.** Setup does not run `git add`. When the caller commits this migration, every file it touched must go in the same commit — `AGENTS.md`, `REVIEW.md`, `CLAUDE.md`, and `.github/copilot-instructions.md` — otherwise the symlink can land pointing at a file that does not exist yet.
 
