@@ -40,7 +40,13 @@ When the Copilot and CodeRabbit resolvers run as concurrent sub-agents (Step 4),
 
 1. Instruct each sub-agent to **collect** its proposed `REVIEW.md` rules and return them in its final report **instead of editing the file**. Everything else (code fixes, thread replies, thread resolution) proceeds normally in parallel — those touch disjoint resources.
 2. After **all** parallel resolvers have returned, the root session applies the collected rules to `REVIEW.md` in a single serialized edit, then commits and pushes.
-3. Verify no rule was dropped: the count of INCORRECT findings across the sub-agent reports must equal the count of rules present in `REVIEW.md`.
+3. Verify no rule was dropped by diffing, not by counting the whole file — an established `REVIEW.md` already contains unrelated rules, so a total-count check always fails:
+
+   ```bash
+   git diff -- REVIEW.md
+   ```
+
+   Every rule proposed by a sub-agent must appear as an added line. Pre-existing rules must be untouched.
 
 When resolvers run **sequentially** (one reviewer only, or Mode B), the resolver edits `REVIEW.md` directly as its own skill describes — no aggregation needed.
 

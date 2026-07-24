@@ -66,19 +66,24 @@ review rule.
 
 Move the content to `REVIEW.md` **first** — `git mv .github/copilot-instructions.md REVIEW.md 2>/dev/null || mv .github/copilot-instructions.md REVIEW.md`, since the file may be untracked — then put the pointer in its place:
 
+If the path is **already** a symlink, `readlink` it first — if it points at a legacy instruction file rather than `REVIEW.md`, merge that file's rules into `REVIEW.md` before replacing the link.
+
 ```bash
 mkdir -p .github
 rm -f .github/copilot-instructions.md
 ln -s ../REVIEW.md .github/copilot-instructions.md
-git add .github/copilot-instructions.md
 ```
 
-Verify it is stored as a symlink in git (mode `120000`):
+Verify without staging — `git add` here mutates the caller's index and risks a commit that contains the symlink but not its target:
 
 ```bash
-git ls-files -s .github/copilot-instructions.md
-# 120000 <sha> 0	.github/copilot-instructions.md
+test -L .github/copilot-instructions.md && echo "symlink OK" || echo "NOT a symlink"
+git config --get core.symlinks   # "false" means fall back to the mirror below
 ```
+
+Stage the migration as one unit when you commit it: `AGENTS.md`, `REVIEW.md`,
+`CLAUDE.md`, and `.github/copilot-instructions.md` in the same commit. Landing
+the symlink without its target leaves a dangling pointer.
 
 ### Fallback: generated mirror
 

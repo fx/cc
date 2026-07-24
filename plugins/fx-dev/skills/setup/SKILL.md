@@ -121,8 +121,15 @@ test -f AGENTS.md && echo "AGENTS.md exists" || echo "AGENTS.md missing"
 test -L CLAUDE.md && echo "CLAUDE.md is a symlink" || { test -f CLAUDE.md && echo "CLAUDE.md is a regular file" || echo "CLAUDE.md missing"; }
 ```
 
-- **`AGENTS.md` missing, `CLAUDE.md` has real content** → move it, then create the `CLAUDE.md` pointer in Step 7. Use `git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md` — the file may be untracked, and `git mv` aborts on untracked paths.
-- **Both exist with content** → merge `CLAUDE.md`'s content into `AGENTS.md`, keeping any genuinely Claude-only rules aside for the pointer file. Never delete convention content — move it.
+Handle these cases in order — **check `test -L CLAUDE.md` before anything else**, because writing "through" a symlink edits its target, not the link:
+
+- **`CLAUDE.md` is a symlink** (a common `ln -s AGENTS.md CLAUDE.md` setup) → it has no content of its own. Delete the link now; Step 7 writes a regular pointer file in its place. Do **not** treat it as content to merge, and never append to it — that would edit `AGENTS.md` and produce an `AGENTS.md` that imports itself.
+  ```bash
+  test -L CLAUDE.md && rm CLAUDE.md
+  ```
+  If the symlink pointed somewhere **other** than `AGENTS.md`, read its target first and merge that content into `AGENTS.md` before deleting the link.
+- **`AGENTS.md` missing, `CLAUDE.md` is a regular file with real content** → move it, then create the `CLAUDE.md` pointer in Step 7. Use `git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md` — the file may be untracked, and `git mv` aborts on untracked paths.
+- **Both exist as regular files with content** → merge `CLAUDE.md`'s content into `AGENTS.md`, keeping any genuinely Claude-only rules aside for the pointer file. Never delete convention content — move it.
 - **Neither exists** → create `AGENTS.md` with just the block from 6.3.
 
 #### 6.2 Check for CURRENT language
@@ -190,7 +197,18 @@ test -f REVIEW.md && echo "REVIEW.md exists" || echo "REVIEW.md missing"
 test -L .github/copilot-instructions.md && echo "already a symlink" || { test -f .github/copilot-instructions.md && echo "regular file" || echo "missing"; }
 ```
 
-If `.github/copilot-instructions.md` is a **regular file** with review rules and `REVIEW.md` does not exist, move its content. The file may be untracked (first-time setup of a local project), in which case `git mv` fails with "not under version control" — fall back to a plain move:
+Handle by what the path actually is:
+
+**It is a symlink already** (`test -L`). Resolve the target before touching it — an existing symlink may point at a legacy instruction file, and unlinking it blind would orphan those rules:
+
+```bash
+readlink .github/copilot-instructions.md
+```
+
+- Target resolves to `REVIEW.md` → already correct, skip to 8.2.
+- Target is anything else → read that file, merge its rules into `REVIEW.md`, and only then remove the link and recreate it in 8.3.
+
+**It is a regular file** with review rules and `REVIEW.md` does not exist → move its content. The file may be untracked (first-time setup of a local project), in which case `git mv` fails with "not under version control" — fall back to a plain move:
 
 ```bash
 mkdir -p .github
@@ -198,7 +216,7 @@ git mv .github/copilot-instructions.md REVIEW.md 2>/dev/null \
   || mv .github/copilot-instructions.md REVIEW.md
 ```
 
-If both exist as regular files, merge copilot-instructions content into `REVIEW.md`, then delete the original. Never drop review rules.
+**Both exist as regular files** → merge copilot-instructions content into `REVIEW.md`, then delete the original. Never drop review rules.
 
 #### 8.2 Check for CURRENT language
 
@@ -239,15 +257,16 @@ rm -f .github/copilot-instructions.md
 ln -s ../REVIEW.md .github/copilot-instructions.md
 ```
 
-Verify git stored it as a symlink (mode `120000`):
+Verify the symlink survived **without staging anything** — `git add` would mutate the caller's index and could leave a commit containing only the symlink while `REVIEW.md` and `AGENTS.md` stay untracked, landing a dangling pointer:
 
 ```bash
-git add .github/copilot-instructions.md
-git ls-files -s .github/copilot-instructions.md
-# expect: 120000 <sha> 0	.github/copilot-instructions.md
+test -L .github/copilot-instructions.md && echo "symlink OK" || echo "NOT a symlink"
+git config --get core.symlinks   # empty or "true" is fine; "false" is the problem case
 ```
 
-If the mode is `100644` instead, the checkout has `core.symlinks=false` — fall back to the generated mirror described in `references/instruction-files.md` and tell the user.
+If the path is not a symlink, or `core.symlinks` is `false`, fall back to the generated mirror described in `references/instruction-files.md` and tell the user.
+
+**Staging is the caller's job, and it is all-or-nothing.** Setup does not run `git add`. When the caller commits this migration, every file it touched must go in the same commit — `AGENTS.md`, `REVIEW.md`, `CLAUDE.md`, and `.github/copilot-instructions.md` — otherwise the symlink can land pointing at a file that does not exist yet.
 
 #### 8.4 Point Codex at `REVIEW.md`
 
