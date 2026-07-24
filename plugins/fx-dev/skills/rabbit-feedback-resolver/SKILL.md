@@ -85,14 +85,14 @@ else
 fi
 ```
 
-If `REVIEW.md` is missing, run the `fx-dev:setup` skill to create it before continuing.
+If `REVIEW.md` is missing, create it directly — just the file, with a `# PR Review` heading. **Do NOT run `fx-dev:setup` or `fx-dev:upgrade` from here:** setup also scaffolds `docs/`, `AGENTS.md`, `CLAUDE.md`, and `.coderabbit.yaml`, and this skill pushes to an open PR, so that would bury one review rule in a large unrelated diff. Mention that `/fx-dev:setup` will complete the layout later.
 
 #### Configuration States
 
 | State | Action |
 |-------|--------|
 | No `.coderabbit.yaml` exists | **Create it** with the config below |
-| Exists, `knowledge_base.code_guidelines.enabled: false` | **Set** `enabled: true` **and** add `"**/REVIEW.md"` |
+| Exists, `knowledge_base.code_guidelines.enabled: false` | **Do not flip it.** Someone disabled code guidelines deliberately, and this skill is mid-PR — silently re-enabling it commits an unrelated behavioural change. Report it, note that CodeRabbit will keep reviewing without the project's conventions, and let the user decide (`/fx-dev:upgrade` handles it with confirmation) |
 | Exists, `enabled: true`, no `**/REVIEW.md` in `filePatterns` | **Add** `"**/REVIEW.md"` — including when `filePatterns` is absent entirely, since the defaults do not cover it |
 | Exists, `enabled: true`, `**/REVIEW.md` already present | No action needed |
 

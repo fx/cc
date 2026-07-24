@@ -68,7 +68,7 @@ mutation {
 
 One file means suppressing a false positive here also suppresses it for CodeRabbit, Codex, and Claude Code Review.
 
-**If `REVIEW.md` does not exist**, run the `fx-dev:setup` skill first. See `fx-dev:setup` → `references/instruction-files.md` for the full standard.
+**If `REVIEW.md` does not exist**, create it directly — just the file, with a `# PR Review` heading and your rule under it. **Do NOT run `fx-dev:setup` or `fx-dev:upgrade` from here.** Setup also scaffolds `docs/specs`, `docs/changes`, the task indexes, `AGENTS.md`, `CLAUDE.md`, and `.coderabbit.yaml` — this skill pushes to someone's open PR, and burying one review rule in a large unrelated scaffold is not an acceptable diff. Mention that `/fx-dev:setup` will complete the layout later. See `fx-dev:setup` → `references/instruction-files.md` for the standard.
 
 **Never create or edit `.github/copilot-instructions.md`.** It is obsolete. If the repo still has one, tell the user to run `/fx-dev:upgrade`, which folds it into `REVIEW.md`.
 

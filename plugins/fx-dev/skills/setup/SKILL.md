@@ -153,8 +153,24 @@ if is_plain CLAUDE.md && ! grep -q '^@AGENTS\.md' CLAUDE.md; then
   echo "LEGACY: CLAUDE.md holds content that belongs in AGENTS.md"; legacy_agents=1
 fi
 
-if is_plain .coderabbit.yaml && grep -Eq 'enabled:[[:space:]]*false' .coderabbit.yaml; then
-  echo "LEGACY: .coderabbit.yaml has code_guidelines disabled — setup will not flip it"; legacy_rabbit=1
+# Scoped to knowledge_base.code_guidelines.enabled ONLY. An unscoped grep for
+# "enabled: false" also matches reviews.auto_review.enabled and would wrongly
+# skip Step 9 on a config whose code_guidelines are perfectly fine.
+if is_plain .coderabbit.yaml; then
+  cg_disabled=$(python3 - <<'EOF' 2>/dev/null || echo unknown
+import re,sys
+txt=open('.coderabbit.yaml').read()
+m=re.search(r'(?m)^\s*code_guidelines:\s*$', txt)
+if not m: print('no'); sys.exit()
+indent=len(re.match(r'\s*', txt[m.start():]).group(0))
+for line in txt[m.end():].splitlines():
+    if line.strip() and not line.startswith(' '*(indent+1)): break   # left the block
+    if re.match(r'\s*enabled:\s*false\b', line): print('yes'); sys.exit()
+print('no')
+EOF
+)
+  [ "$cg_disabled" = "yes" ] && { echo "LEGACY: .coderabbit.yaml sets code_guidelines.enabled: false — setup will not flip it"; legacy_rabbit=1; }
+  [ "$cg_disabled" = "unknown" ] && { echo "LEGACY: could not parse .coderabbit.yaml — read it yourself before writing"; legacy_rabbit=1; }
 fi
 
 echo "flags: agents=$legacy_agents review=$legacy_review rabbit=$legacy_rabbit"

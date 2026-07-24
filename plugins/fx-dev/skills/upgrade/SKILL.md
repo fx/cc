@@ -1,6 +1,6 @@
 ---
 name: upgrade
-description: "Bring an existing repo up to current fx-dev conventions by migrating legacy files in place — moving CLAUDE.md content into AGENTS.md, folding .github/copilot-instructions.md into REVIEW.md, resolving instruction-file symlinks. Intentionally intrusive; rewrites and deletes files. Use when the user says 'upgrade', 'migrate conventions', 'update instruction files', or when fx-dev:setup reports a legacy layout."
+description: "Migrate a repo's AI INSTRUCTION FILES to current fx-dev conventions — moving CLAUDE.md content into AGENTS.md, folding .github/copilot-instructions.md into REVIEW.md, resolving instruction-file symlinks. Intentionally intrusive; rewrites and deletes those files. Use ONLY for instruction-file/convention migration: 'migrate conventions', 'update instruction files', 'upgrade fx-dev conventions', 'migrate to AGENTS.md', or when fx-dev:setup reports a legacy layout. NOT for upgrading dependencies, packages, frameworks, language versions, or databases — those are ordinary code work, use fx-dev:dev."
 ---
 
 # Upgrade
@@ -30,7 +30,9 @@ a legacy layout, it reports and recommends — it does not migrate.
 
 ## When to Use
 
-- User says "upgrade", "migrate conventions", "update instruction files", "bring this repo up to date"
+**This skill migrates instruction files only.** A bare "upgrade" is ambiguous — "upgrade React", "upgrade the database", "upgrade to Node 24" are ordinary code work and belong to `fx-dev:dev`. If the request does not clearly concern AI instruction files or fx-dev conventions, **ask before assuming**; this skill rewrites files.
+
+- User says "migrate conventions", "update instruction files", "upgrade fx-dev conventions", "migrate to AGENTS.md"
 - `fx-dev:setup` reported a legacy layout and told the user to run this
 - After pulling a new fx-dev version that changed a convention
 
