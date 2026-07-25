@@ -8,7 +8,7 @@
 #      must have a version bump compared to main.
 #   2. If any plugin version was bumped, .claude-plugin/marketplace.json must also
 #      have its metadata.version bumped.
-#   3. If top-level repo files changed (CLAUDE.md, README.md, index.html, .github/*, etc.),
+#   3. If top-level repo files changed (AGENTS.md, REVIEW.md, README.md, index.html, .github/*, etc.),
 #      .claude-plugin/marketplace.json must have its metadata.version bumped.
 #
 # Compares against the merge base with main so that multiple commits on a

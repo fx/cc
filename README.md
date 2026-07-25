@@ -51,7 +51,7 @@ After installing plugins:
 
 ## Development
 
-See [CLAUDE.md](CLAUDE.md) for plugin development guidelines.
+See [AGENTS.md](AGENTS.md) for plugin development guidelines, and [REVIEW.md](REVIEW.md) for the review conventions every automated reviewer applies to this repo.
 
 **Quick start**:
 1. Create plugin directory: `plugins/<plugin-name>/`

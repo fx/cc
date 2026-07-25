@@ -127,12 +127,15 @@ When given a GitHub issue (either by URL or by finding the next logical issue):
 
 Understand the project's structure and conventions:
 
-1. **Review Project Files**: Examine:
-   - CLAUDE.md files (global and project-specific)
-   - copilot-instructions.md or similar AI instruction files
-   - .github/CONTRIBUTING.md
+1. **Review Project Files**: Examine **repo-scoped files only**:
+   - `AGENTS.md` (project conventions), including nested ones in subdirectories
+   - `REVIEW.md` (review conventions) or similar in-repo AI instruction files
+   - The repo-root `CLAUDE.md` — normally just an `@AGENTS.md` import, plus any Claude-only additions
+   - `.github/CONTRIBUTING.md`
    - Architecture decision records (ADRs)
    - Style guides and coding standards
+
+   **⛔ Never read or quote the user's home-level instructions** (`~/.claude/CLAUDE.md` and anything it imports). Those are private, machine-wide, and frequently contain internal identifiers or credentials — pulling them into a spec, issue, or PR artifact leaks them. Stay inside the repository.
 
 2. **Analyze Existing Code Patterns**:
    - Find similar features already implemented

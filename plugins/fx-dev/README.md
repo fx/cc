@@ -8,7 +8,7 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 
 ## Components
 
-### Skills (23)
+### Skills (24)
 
 #### SDLC Skills
 - **dev** - Orchestrates the complete SDLC workflow including planning, implementation, review, and finalization
@@ -37,7 +37,8 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 - **github** - Comprehensive guidance for GitHub CLI operations, PRs, and API usage
 - **project-management** - Manages project tasks through docs/tasks.md and docs/changes/
 - **spec-writer** - Creates and maintains living specification documents
-- **setup** - Initializes docs/ folder structure for spec-driven development
+- **setup** - Creates the docs/ structure and standard instruction files if missing (create-only; never migrates)
+- **upgrade** - Migrates an existing repo to current fx-dev conventions; intentionally intrusive, plans and confirms before rewriting files
 - **upstream-contrib** - Contributes local UI component changes upstream to @fx/ui
 - **verify-web-change** - Verifies web application changes work in a real browser
 
@@ -165,11 +166,20 @@ Meta-skill that detects all unresolved automated feedback (Copilot, CodeRabbit, 
 
 ## Configuration
 
-The skills respect project conventions from:
-- `CLAUDE.md` - Project-specific guidelines
-- `.github/copilot-instructions.md` - AI coding guidelines
+The skills respect project conventions from two canonical files:
+
+- **`AGENTS.md`** — project conventions: how code is written. Read natively by Codex, Copilot, and CodeRabbit; reached by Claude Code through a `CLAUDE.md` containing `@AGENTS.md`.
+- **`REVIEW.md`** — review conventions: what reviewers should and should not flag. Read natively by Copilot code review and Claude Code Review; reached by CodeRabbit via `.coderabbit.yaml`, and by Codex via a `## Code Review Rules` pointer in `AGENTS.md`.
+
+Plus:
 - Git commit and branch conventions
 - GitHub Actions check configurations
+
+Every feedback resolver writes recurrence-prevention rules to `REVIEW.md` — one
+file, so suppressing a false positive suppresses it for every reviewer. Run
+`fx-dev:setup` to scaffold the layout in a new repo, or `fx-dev:upgrade` to
+migrate an existing one; the full standard is in
+`skills/setup/references/instruction-files.md`.
 
 ## Troubleshooting
 

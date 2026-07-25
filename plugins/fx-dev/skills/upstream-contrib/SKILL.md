@@ -88,10 +88,12 @@ Read the consumer repo's local component to understand what needs to be upstream
 - CSS variables or theme tokens required
 - Whether this extends an existing component or adds a new one
 
-#### 2.2 Read fx/ui CLAUDE.md
+#### 2.2 Read fx/ui AGENTS.md
 
 ```bash
-cat "$UI_DIR/CLAUDE.md"
+cat "$UI_DIR/AGENTS.md" 2>/dev/null \
+  || cat "$UI_DIR/CLAUDE.md" 2>/dev/null \
+  || echo "No AGENTS.md or CLAUDE.md in $UI_DIR — proceed with the conventions below"
 ```
 
 Follow all conventions documented there. Key rules:
@@ -119,7 +121,7 @@ Agent tool:
            story description, or code. Describe changes generically.
 
            Follow these conventions:
-           - [Include key rules from CLAUDE.md]
+           - [Include key rules from AGENTS.md]
            - Add/update the component in src/components/ui/
            - Add tests in src/components/ui/__tests__/
            - Add/update Storybook story

@@ -12,6 +12,30 @@ before opening the PR — fix everything it finds, and only then open the PR.
 It complements (does not replace) `coderabbit-review`: CodeRabbit and Codex are
 independent reviewers and each catches issues the other misses.
 
+## Project Conventions
+
+Codex reads `AGENTS.md` — it does **not** read `REVIEW.md` or `CLAUDE.md`. Every
+other reviewer reaches `REVIEW.md` on its own; Codex is the exception. The bridge
+is a `## Code Review Rules` section in `AGENTS.md` pointing at `REVIEW.md`, which
+the `fx-dev:setup` skill creates.
+
+Before the first run in a repo, check the pointer exists:
+
+```bash
+grep -q "## Code Review Rules" AGENTS.md 2>/dev/null \
+  && echo "Codex pointer present" \
+  || echo "MISSING - run fx-dev:setup (new repo) or fx-dev:upgrade (legacy layout)"
+```
+
+If it is missing, **report it and continue reviewing on defaults** — do NOT run
+`fx-dev:setup` or `fx-dev:upgrade` from here. Setup scaffolds `docs/` and touches
+CodeRabbit config, and upgrade rewrites instruction files outright; running
+either mid-review would pollute the branch with changes unrelated to the PR.
+Tell the user to run it separately.
+
+If Codex flags something that `REVIEW.md` explicitly permits, the pointer is not
+landing — say so rather than silently applying the finding.
+
 ## How to Run (one-shot, branch vs main)
 
 Codex has a dedicated non-interactive review subcommand. From the repo root, on
@@ -62,6 +86,11 @@ expected to be authed already).
   project doesn't care about. There are no PR threads to resolve here (this is
   local); resolution = the code is fixed (or the finding is a deliberate
   non-issue).
+- **Incorrect findings** — when Codex flags a pattern that is a deliberate project
+  convention, document it in `REVIEW.md` at the repo root, the same as the PR
+  feedback resolvers do. One entry stops Codex, Copilot, CodeRabbit, and Claude
+  Code Review from raising it again. Never write it into
+  the obsolete `.github/copilot-instructions.md`.
 
 ### Step 3: Re-run until clean (REQUIRED)
 
@@ -84,6 +113,8 @@ unresolved actionable Codex findings.
 
 ## Notes
 
-- This skill is self-contained: it does not load other skills.
+- This skill is self-contained: it does not load other skills, and it never runs
+  `fx-dev:setup` or `fx-dev:upgrade` — a missing `AGENTS.md` pointer is reported,
+  not fixed here.
 - `codex review` reviews local changes and never modifies your working tree.
 - Keep findings resolved before opening the PR.

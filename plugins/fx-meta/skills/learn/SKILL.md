@@ -17,9 +17,9 @@ cd ~/.claude/plugins/marketplaces/fx-cc && git remote -v && git status
 
 Verify the remote is accessible and the working directory is clean. If not accessible, inform the user and abort.
 
-### Read CLAUDE.md and respect it
+### Read AGENTS.md and respect it
 
-**CRITICAL:** Read `CLAUDE.md` at the root of the marketplace repo (`~/.claude/plugins/marketplaces/fx-cc/CLAUDE.md`) and follow every instruction it contains, especially the **Required First-Time Setup** section. CLAUDE.md is authoritative — its rules apply to every operation this skill performs in the repo.
+**CRITICAL:** Read `AGENTS.md` at the root of the marketplace repo (`~/.claude/plugins/marketplaces/fx-cc/AGENTS.md`) and follow every instruction it contains, especially the **Required First-Time Setup** section. AGENTS.md is authoritative — its rules apply to every operation this skill performs in the repo. (`CLAUDE.md` is just a `@AGENTS.md` import; `REVIEW.md` holds the review conventions.)
 
 ### Wire up the pre-commit hook (idempotent)
 
@@ -39,7 +39,7 @@ fi
 
 Run this at the very start of any learn invocation, not only when committing. It is idempotent and safe.
 
-**Never bypass the hook** with `--no-verify`. If the hook rejects a future commit, read its message and bump the indicated `plugin.json` / `marketplace.json` versions per the rules in CLAUDE.md.
+**Never bypass the hook** with `--no-verify`. If the hook rejects a future commit, read its message and bump the indicated `plugin.json` / `marketplace.json` versions per the rules in AGENTS.md.
 
 ## Workflow
 

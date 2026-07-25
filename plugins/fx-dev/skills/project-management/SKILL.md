@@ -8,7 +8,7 @@ description: "MUST BE LOADED BEFORE modifying docs/tasks.md, docs/changes/, or t
 This skill manages project tasks and documentation for AI-driven development. Work is tracked in:
 - **`docs/changes/NNNN-name.md`** — Feature-level task lists tied to specific change documents
 - **`docs/tasks.md`** — Catch-all task list for work not tied to a specific change
-- **External tools** — GitHub Issues or Jira when configured in the project's CLAUDE.md
+- **External tools** — GitHub Issues or Jira when configured in the project's AGENTS.md
 
 ## Core Principles
 
@@ -40,13 +40,13 @@ When looking for tasks, adding tasks, or marking completion, follow this strict 
 
 1. **Check `docs/changes/`** FIRST — Scan change documents for uncompleted `- [ ]` tasks. These are the primary work items. If work relates to an existing spec or change document, tasks MUST go here.
 2. **Check `docs/tasks.md`** ONLY for orphan work — Tasks that do not relate to any spec or change document. Before adding a task here, verify no relevant change document exists. If a relevant spec exists, create a change document for the work instead.
-3. **Check external tools** — If CLAUDE.md specifies GitHub Issues or Jira preference.
+3. **Check external tools** — If AGENTS.md specifies GitHub Issues or Jira preference.
 
 **Strong default to change documents:** When the user asks to add or track work that relates to any existing spec in `docs/specs/`, ALWAYS create or find a change document for it. NEVER put spec-related work in `docs/tasks.md`. If no change document exists yet, propose creating one.
 
 ## External Task Tracking
 
-Projects MAY define a preference for external task tracking in their CLAUDE.md. Look for patterns like:
+Projects MAY define a preference for external task tracking in their AGENTS.md. Look for patterns like:
 - `task-tracking: github-issues`
 - `task-tracking: jira`
 - "Use GitHub Issues for task tracking"
@@ -154,8 +154,8 @@ Skill tool: skill="fx-dev:setup"
 
 This is fast and idempotent — it checks what exists and only creates/modifies what's missing. It handles:
 - `docs/` folder structure (specs/, changes/, tasks.md, index.yml, index.md)
-- `CLAUDE.md` task-tracking instructions
-- `.github/copilot-instructions.md` PR review instructions
+- `AGENTS.md` task-tracking instructions (+ the `CLAUDE.md` → `@AGENTS.md` pointer)
+- `REVIEW.md` PR review instructions (+ `.coderabbit.yaml` pointing CodeRabbit at it)
 
 ---
 

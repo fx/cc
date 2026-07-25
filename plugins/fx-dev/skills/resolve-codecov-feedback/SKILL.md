@@ -87,7 +87,9 @@ Read the codecov[bot] PR comment from Step 2b. Extract:
 
 **Step 3b: Determine the project's coverage requirement**
 
-Check the project's `CLAUDE.md` for coverage requirements. Look for patch coverage targets. If not specified, **default to 100% patch coverage** — all new/changed lines must be covered.
+Check the project's `AGENTS.md` for coverage requirements, and **fall back to the repo-root `CLAUDE.md` when `AGENTS.md` is absent** — a repo that has not yet run `/fx-dev:upgrade` still keeps its conventions there. Look for patch coverage targets.
+
+Only if neither file specifies one, **default to 100% patch coverage**. Defaulting while a documented threshold sits unread in `CLAUDE.md` blocks the PR or generates tests the project never asked for.
 
 **Step 3c: Decide action**
 

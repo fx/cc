@@ -40,7 +40,7 @@ When invoked by the SDLC workflow (as a sub-agent), the coder is **implementatio
 - Shepherd each PR to completion before opening next
 
 ## Standards
-- Follow CLAUDE.md rules
+- Follow AGENTS.md rules
 - Test bug fixes first
 - Match code style
 - Security best practices

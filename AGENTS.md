@@ -1,0 +1,340 @@
+# fx/cc Marketplace Development Guidelines
+
+This document outlines principles and conventions for developing plugins in the fx/cc Claude Code marketplace.
+
+## Instruction Files
+
+This repo uses the standard layout that `fx-dev:setup` scaffolds — two canonical files, everything else a pointer:
+
+| Path | Role |
+|------|------|
+| `AGENTS.md` | **This file.** Project conventions: how code is written. Read natively by Codex, Copilot, and CodeRabbit |
+| `REVIEW.md` | Review conventions: what reviewers should and should not flag. Read natively by Copilot code review and Claude Code Review |
+| `CLAUDE.md` | Pointer — a single `@AGENTS.md` import, because Claude Code does not read `AGENTS.md` |
+| `.coderabbit.yaml` | Lists `**/REVIEW.md`, which is not in CodeRabbit's default patterns |
+
+Put a rule about **writing** code here. Put a rule about **reviewing** code in `REVIEW.md`. Never edit `CLAUDE.md` to add content — edit `AGENTS.md`, which it imports.
+
+There is deliberately **no** `.github/copilot-instructions.md`: Copilot code review reads `REVIEW.md` directly ([changelog, 2026-07-17](https://github.blog/changelog/2026-07-17-copilot-code-review-customization-and-configurability-improvements/)), so a second copy would only drift.
+
+The full standard, including the migration path for other repos, is in `plugins/fx-dev/skills/setup/references/instruction-files.md`.
+
+## Code Review Rules
+
+Read `REVIEW.md` at the repository root and apply it in full as the review rules for this repo. It is the canonical review-conventions file.
+
+## Required First-Time Setup (READ THIS FIRST)
+
+**MANDATORY before any commit in this repo.** Git does not allow a checked-in file to wire up hooks automatically (security feature), so every clone of this repo — including `~/.claude/plugins/marketplaces/fx-cc` — must run **once**:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Verify it stuck:
+
+```bash
+git config --get core.hooksPath   # must print: .githooks
+```
+
+**Why this matters:** the pre-commit hook in `.githooks/pre-commit` enforces version bumps in `plugin.json` and `marketplace.json` whenever their contents change. Without `core.hooksPath` set, the hook is dormant and bad commits land silently, breaking version signaling for Claude Code's plugin cache.
+
+**Instructions for any agent / skill / tool acting on this repo:**
+
+1. Before performing **any** `git commit` in this repo (or in a clone of it like `~/.claude/plugins/marketplaces/fx-cc`), check `git config --get core.hooksPath`.
+2. If it is unset or not `.githooks`, run `git config core.hooksPath .githooks` first.
+3. This is a one-time per-clone operation — idempotent and safe to re-run.
+4. After this is configured, **respect the hook's verdict**: if it rejects a commit, read the error and apply the requested version bump. Never bypass with `--no-verify`.
+
+## Security and Privacy
+
+### Do Not Leak Private Information
+
+**CRITICAL**: Never include private or sensitive information in code, documentation, or examples.
+
+**Prohibited content includes**:
+- Private repository names (use `owner/repo` placeholders instead)
+- Internal URLs or endpoints
+- API keys or credentials
+- Company-specific naming or identifiers
+- Private infrastructure details
+
+**Good examples** (generic placeholders):
+```bash
+gh api repos/owner/repo/pulls/13
+gh api graphql -f owner="owner" -f repo="repo"
+```
+
+**Bad examples** (leaking private info):
+```bash
+gh api repos/<real-org>/<real-private-repo>/pulls/13  # ❌ Private repo name
+gh api graphql -f owner="<real-company>" -f repo="<real-service>"  # ❌ Internal identifiers
+```
+
+Note the bad examples use angle-bracket placeholders rather than plausible-looking org or service names. An illustration of the mistake must not itself commit the mistake — a realistic-looking name in a "don't do this" block is still a realistic-looking name in the repo, and it gets copied.
+
+This applies to:
+- Documentation files (README.md, AGENTS.md, REVIEW.md)
+- Code examples and snippets
+- Skill references and patterns
+- Test cases and fixtures
+- Commit messages
+
+## Plugin Naming and Namespacing
+
+### Plugin Names
+
+Plugin names should be:
+- **Concise**: Short, memorable identifiers
+- **Descriptive**: Indicate purpose without being verbose
+- **Namespace-prefixed**: Use `fx-` prefix for consistency (e.g., `fx-test`, `fx-utils`)
+- **Kebab-case**: Use hyphens, not underscores or camelCase
+
+**Good examples**:
+- `fx-test` (testing utilities)
+- `fx-git` (git workflow helpers)
+- `fx-docs` (documentation generators)
+
+**Avoid**:
+- `test-utils` (missing namespace prefix)
+- `fx_test_utilities` (underscores, too verbose)
+- `fxTest` (camelCase not kebab-case)
+
+### Component Naming Within Plugins
+
+Skills are automatically namespaced by their plugin: `{plugin-name}:{skill-name}`.
+
+**Avoid redundancy**:
+- ❌ Plugin: `test-skill` → Skill: `test-skill:test-skill`
+- ✅ Plugin: `fx-test` → Skill: `fx-test:test-helper`
+
+Skill names should be clear, non-redundant, and descriptive of their purpose.
+
+## Grouping Components in Plugins
+
+### Single-Responsibility vs Multi-Component
+
+**Use a single plugin when components are related**:
+
+✅ **Good - Combined Plugin**:
+```
+fx-test/
+├── skills/hello/SKILL.md
+└── skills/test-helper/SKILL.md
+```
+Result: `fx-test:hello`, `fx-test:test-helper` — all scoped under one plugin
+
+❌ **Poor - Separate Plugins**:
+```
+test-skill/
+└── skills/hello/SKILL.md
+
+test-helper/
+└── skills/test-helper/SKILL.md
+```
+Result: Fragmented across multiple plugins for related functionality
+
+### When to Combine
+
+Combine components in one plugin when they:
+- Share a common purpose or domain
+- Are typically used together
+- Form a logical feature set
+
+**Examples**:
+
+**`fx-git` plugin** might include:
+- Skills: `commit-message`, `pr-review`, `merge-conflict-resolver`
+- Commands: `/git-flow`, `/git-status`
+
+**`fx-docs` plugin** might include:
+- Skills: `api-documentation`, `readme-generator`, `doc-writer`
+- Commands: `/generate-docs`
+
+### When to Separate
+
+Create separate plugins when components:
+- Serve completely different domains
+- Have different update/maintenance cycles
+- Should be installable independently
+
+**Example**: `fx-git` and `fx-aws` should be separate plugins, not combined.
+
+## Plugin Structure
+
+### Standard Layout
+
+```
+fx-plugin-name/
+├── .claude-plugin/
+│   └── plugin.json          # Required manifest
+├── skills/                   # Optional: Skills
+│   ├── skill-1/
+│   │   └── SKILL.md
+│   └── skill-2/
+│       └── SKILL.md
+├── commands/                 # Optional: Slash commands
+│   ├── command-1.md
+│   └── command-2.sh
+├── hooks/                    # Optional: Workflow hooks
+│   └── hooks.json
+├── README.md                 # Required: Documentation
+└── CHANGELOG.md             # Recommended: Version history
+```
+
+### plugin.json Minimal Format
+
+```json
+{
+  "name": "fx-plugin-name",
+  "version": "1.0.0",
+  "description": "Clear, concise description of what this plugin does"
+}
+```
+
+Only `name` is required. Version and description are highly recommended.
+
+## Development Workflow
+
+### 1. Planning
+
+Before creating a plugin:
+1. **Identify the domain**: What problem does it solve?
+2. **List components**: What skills, agents, commands are needed?
+3. **Check for grouping**: Should these be combined or separate?
+4. **Choose name**: Follow naming conventions
+
+### 2. Implementation
+
+1. Create plugin directory structure
+2. Add `.claude-plugin/plugin.json`
+3. Implement components (skills, agents, etc.)
+4. Write comprehensive README.md
+5. Test locally using `/plugin marketplace add /path/to/fx-cc`
+
+### 3. Testing
+
+Test each component:
+- **Skills**: Ask questions that should trigger them
+- **Agents**: Check `/agents` list, invoke via Task tool
+- **Commands**: Run slash commands if implemented
+- **Structure**: Validate JSON with `jq empty plugin.json`
+
+### 4. Documentation
+
+Every plugin must have:
+- **README.md**: Purpose, installation, usage examples
+- **plugin.json**: Minimal required metadata
+- **Component docs**: Frontmatter in skills/agents
+
+Good documentation includes:
+- Clear usage examples
+- Expected behavior
+- Troubleshooting tips
+- Structure diagram
+
+### 5. Marketplace Registration
+
+Update `.claude-plugin/marketplace.json`:
+
+```json
+{
+  "plugins": [
+    {
+      "name": "fx-new-plugin",
+      "source": "./plugins/fx-new-plugin"
+    }
+  ]
+}
+```
+
+## Quality Standards
+
+### Code Quality
+
+- **Validate JSON**: All `.json` files must be valid
+- **Frontmatter required**: All skills and agents need proper frontmatter
+- **No dead references**: All paths in plugin.json must exist
+- **Clear descriptions**: Help Claude and users understand purpose
+
+### Documentation Quality
+
+- **README.md required**: Every plugin needs documentation
+- **Usage examples**: Show how to use each component
+- **Expected behavior**: Document what users should see
+- **Troubleshooting**: Common issues and solutions
+
+### Testing
+
+CI automatically validates:
+- JSON structure and validity
+- Required fields in manifests
+- File existence for referenced components
+- Frontmatter presence in markdown files
+
+Manual testing required for:
+- Actual plugin functionality
+- User experience
+- Component interaction
+
+## Best Practices
+
+### DRY (Don't Repeat Yourself)
+
+- Group related components in one plugin
+- Avoid creating near-duplicate plugins
+- Reuse skills/agents across plugins when appropriate
+
+### Clear Boundaries
+
+- Each plugin should have a clear, single responsibility
+- Don't create "kitchen sink" plugins with unrelated components
+- Consider user install preferences (granularity)
+
+### Versioning
+
+- Use semantic versioning: `MAJOR.MINOR.PATCH`
+- A **pre-commit hook** enforces version bumps automatically:
+  - If files inside `plugins/<name>/` change, that plugin's `plugin.json` version must be bumped
+  - If any plugin version is bumped or top-level files change, `marketplace.json` `metadata.version` must be bumped
+  - The hook rejects the commit with an actionable message — the LLM should read the message and apply the appropriate bump
+- **Semver rules**: patch for fixes/typos, minor for new features/skills, major for breaking changes
+- After cloning, run: `git config core.hooksPath .githooks`
+
+### Backward Compatibility
+
+- Don't remove components without major version bump
+- Deprecate before removing
+- Document breaking changes clearly
+
+## Common Patterns
+
+### Domain-Specific Plugins
+
+Pattern: `fx-{domain}`
+- `fx-git`: Git workflow tools
+- `fx-aws`: AWS deployment helpers
+- `fx-k8s`: Kubernetes utilities
+
+### Utility Plugins
+
+Pattern: `fx-{utility-type}`
+- `fx-utils`: General development utilities
+- `fx-docs`: Documentation generation
+- `fx-lint`: Code quality tools
+
+## Questions?
+
+For questions about plugin development:
+- Check [Claude Code Plugin Documentation](https://docs.claude.com/en/docs/claude-code/plugins)
+- Review existing plugins in `plugins/` directory
+- Open an issue for clarification
+
+## Contributing
+
+When contributing new plugins:
+1. Follow these guidelines
+2. Test thoroughly locally
+3. Update marketplace.json
+4. Create PR with clear description
+5. Include testing instructions in PR

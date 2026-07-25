@@ -151,6 +151,30 @@ Check `references/known-issues.md` before attempting operations that have failed
 - Eliminate unnecessary prose and filler content
 - Focus on what changed and why, not how the work was organized
 
+**⛔ Never hard-wrap anything GitHub renders as markdown:**
+
+PR descriptions, PR/issue comments, and issue bodies MUST NOT be hard-wrapped at 80 columns — or any column. GitHub reflows markdown to the reader's viewport, so manual line breaks only produce ragged text that re-wraps badly on narrow screens. **Write each paragraph as ONE long line** and let it soft-wrap.
+
+Commit messages are the **opposite**: git renders them as plain text, so wrap commit bodies at ~72 columns as usual. The rule follows the renderer, not the content.
+
+| Target | Wrap? |
+|---|---|
+| Commit message body | Yes, ~72 columns |
+| PR description / PR comment / issue body | **No — one line per paragraph** |
+
+```markdown
+❌ WRONG — hard-wrapped PR body, renders ragged on GitHub
+## Summary
+Standardizes every skill on two canonical instruction files, with a
+pointer for each tool that cannot read them natively.
+
+✅ RIGHT — one line per paragraph, GitHub reflows it
+## Summary
+Standardizes every skill on two canonical instruction files, with a pointer for each tool that cannot read them natively.
+```
+
+This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`. Tables, lists, and fenced code blocks keep their own line structure; the rule is about prose paragraphs.
+
 **Use Conventional Formats:**
 - **Commit messages**: Follow conventional commit format (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)
 - **PR titles**: MUST use conventional commit format — `type(scope): description` (e.g., `feat: add user authentication`, `fix(api): handle null token`). **BLOCKING**: on squash-merge the PR title becomes the commit subject, so a plain prose title (no `type:` prefix) permanently pollutes a conventional-commit history. **Canonical check** — every PR title, no matter who creates it (pr-preparer, the `/dev` workflow, or a `/team` coordinator running `gh pr create` directly), MUST match this regex; verify before creating AND before merging:
