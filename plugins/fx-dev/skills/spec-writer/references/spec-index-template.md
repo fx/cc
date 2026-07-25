@@ -101,5 +101,8 @@ Unresolved design decisions. Each should state:
 - **RFC 2119**: Use MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY, and OPTIONAL per RFC 2119
 - **GIVEN/WHEN/THEN**: Every requirement SHOULD have at least one testable scenario
 - **No task lists**: Specs are knowledge, not plans. Tasks go in `docs/changes/` documents
+- **This spec OWNS its behavior**: Change documents reference these requirements and scenarios rather than restating them. If a change document has started re-specifying behavior, move the behavior here and leave a link there
+- **Observable behavior only**: Do NOT name library components, methods, props, hooks, or file layout in requirements — a third-party API written into a normative rule is a claim reviewers must re-verify forever, and it goes stale on every upgrade. Exceptions are cross-cutting contracts other documents depend on (design tokens, stable selectors, public API surfaces), which are architecture rather than mechanism
+- **Open Questions are legitimate**: Deferring a decision is this section working as designed. Resolve one only when a change document has actually settled it — then mark it resolved here and state the decision, so the spec stays the single source
 - **Changelog is mandatory**: Every modification to the spec MUST be logged with a link to the change document that drove it
 - **Supplementary files**: The spec folder MAY contain additional `.md` files for large subsections (e.g., `api-reference.md`, `data-models.md`). The `index.md` MUST link to them

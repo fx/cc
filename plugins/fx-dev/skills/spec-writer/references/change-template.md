@@ -35,19 +35,18 @@ This change MUST satisfy the project's standing testing rules (see [<link to the
 
 Skipping or weakening any of these rules to land the PR MUST be treated as a bug in the PR, not in the rule.
 
-### <Requirement>
+### Functional requirements
 
-Description using RFC 2119 language.
+The [<Spec Name>](../specs/<spec-name>/) owns <the behavior this change implements — option keys, defaults, state matrices, and its scenarios>. Those scenarios are this change's acceptance criteria and are NOT restated here. What implementing them requires of this change:
 
-#### Scenario: <Name>
+- <Something the CHANGE owns — a migration, a registration, a dispatch-path move, a bugfix, a constraint the implementation must respect>
+- <Another change-owned item>
+
+#### Scenario: <Name — only for behavior THIS change introduces that no spec owns>
 
 - **GIVEN** <precondition>
 - **WHEN** <action or event>
 - **THEN** <expected outcome>
-
-### <Another Requirement>
-
-...
 
 ## Design
 
@@ -100,6 +99,9 @@ What this change explicitly does NOT address (to prevent scope creep).
 - **Mark completion**: `- [x] Task name (PR #N)` — always include the PR number
 - **RFC 2119**: Use MUST, SHOULD, MAY throughout requirements
 - **Link to spec**: Every change document MUST reference the spec it modifies
+- **Never restate the spec**: The spec owns behavior; this document owns sequencing, migrations, registration, PR breakdown, design decisions, and out-of-scope boundaries. Reference the spec section rather than copying its rules — duplicated contracts drift, and every stale copy becomes a review finding. If behavior has no owning spec section yet, add it to the spec instead of housing it here
+- **Scenarios only for what this change introduces**: Copying a spec's GIVEN/WHEN/THEN into a change document creates a second copy that will drift. Scenarios here cover migrations, bugfixes, and build gates the spec does not own
+- **No library APIs in requirements**: Component names, method names, and library-specific props belong in Design Decisions, not in normative requirements — a named third-party API is a claim reviewers must re-verify forever
 - **Status tracking**: Update the Status field as work progresses (draft → in-progress → complete). Values MUST be lowercase. NEVER use `Proposed`, `Current`, or other alternative values
 - **Depends On**: If this change depends on other changes being completed first, list their IDs. Use `—` if no dependencies. This field MUST match what appears in `docs/index.yml` and `docs/index.md`
 - **Testing Requirements is mandatory and project-specific**: Every change document MUST lead its Requirements section with `### Testing Requirements`. Populate it from the target project's actual testing conventions — usually the architecture spec's Testing section, or an equivalent standing-conventions document. Do NOT copy rules from another project. If the project has no documented testing conventions yet, flag that as an Open Question and state a minimal defensible baseline (e.g., "tests MUST exist for changed behavior; CI MUST run them") until the project codifies its rules. The link in the stanza MUST point at the real section; leaving a placeholder link is not acceptable.

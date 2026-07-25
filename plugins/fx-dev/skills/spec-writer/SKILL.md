@@ -25,9 +25,78 @@ If the user asks to "write a spec AND implement it", write the spec/changes firs
 2. **One spec per major feature** — Never create a single monolithic spec for an entire application. Each major feature area (e.g., authentication, file storage, upload system, password protection) gets its own spec. A general "architecture" or "setup" spec is appropriate for project-level concerns (tech stack, directory structure, deployment topology), but feature behavior belongs in feature-specific specs. This keeps specs focused, readable in one sitting, and independently maintainable.
 3. **Changes are plans** — Planning, task tracking, and implementation details go in `docs/changes/NNNN-name.md`, never in specs.
 4. **RFC 2119 everywhere** — All specs and changes MUST use RFC 2119 keywords (MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY, OPTIONAL) for requirement precision.
-5. **Behavioral scenarios** — Every requirement SHOULD have GIVEN/WHEN/THEN scenarios that map directly to test cases.
+5. **Behavioral scenarios** — Every requirement SHOULD have GIVEN/WHEN/THEN scenarios that map directly to test cases. Scenarios live in the document that OWNS the requirement — never copied into a second document that references it.
 6. **Exhaustive exploration** — Research the codebase deeply before writing anything. Every claim in a spec must be verified against actual code.
 7. **Clarify before writing** — Use AskUserQuestion for scope decisions and design choices.
+8. **Single-owner contracts** — Every behavioral rule has exactly ONE owning document. Other documents LINK to it; they MUST NOT restate it. See "Single-Owner Contracts" below.
+9. **Observable behavior, not mechanism** — Specs describe what a user or consumer can observe, not the implementation that produces it. See "Specification Altitude" below.
+
+---
+
+## Single-Owner Contracts
+
+**CRITICAL: Never write the same behavioral rule in two documents.**
+
+The most common failure mode of a spec corpus is duplication. A contract written in the spec, restated in the change document's requirements, restated again in a scenario, and again in a task line is four copies and four chances to drift. Every later edit that touches one copy leaves the other three stale — and reviewers then report each stale copy as a separate defect, indefinitely. The duplication IS the defect, not the drift it eventually produces.
+
+**The ownership rule:**
+
+| Content | Owner |
+|---------|-------|
+| Behavior, requirements, defaults, state matrices, scenarios | The **spec** |
+| Sequencing, dependencies, migrations, PR breakdown, per-change design decisions, out-of-scope boundaries, testing requirements | The **change document** |
+
+**When writing a change document, reference the spec instead of restating it:**
+
+```markdown
+<!-- ❌ WRONG — restates the spec, will drift -->
+### Functional requirements
+
+- The widget MUST toggle on tap, MUST show a spinner while the call is in
+  flight, MUST render `unavailable` state as inert, and MUST NOT fire when
+  the entity is in a transitional state...
+
+<!-- ✅ RIGHT — references the spec, states only what this change owns -->
+### Functional requirements
+
+The [widget spec](../specs/widgets/index.md) owns the option keys, defaults,
+state matrix, and its scenarios — this change's acceptance criteria, not
+restated here. What implementing them requires of this change:
+
+- Options are stored under `item.config` and edited via the existing config form.
+- **Legacy migration:** the loader rewrites `enableFoo` to `showFoo`; the legacy
+  key is never written back.
+```
+
+**Rules:**
+
+- A change document's requirements section MUST open by naming the spec section that owns the behavior, then list ONLY what the change itself owns.
+- If a change document needs a GIVEN/WHEN/THEN scenario, first ask whether the behavior belongs in the spec. Change documents get scenarios ONLY for things they introduce that no spec owns (e.g. a migration, a bugfix in a service mapping, a build gate).
+- If a behavior has no owning spec section yet, ADD it to the spec — do not let the change document become its de facto home.
+- When you catch yourself writing "per the spec" followed by a restatement of that spec, delete the restatement and keep the link.
+
+## Specification Altitude
+
+**Specs describe observable behavior. They MUST NOT prescribe the implementation that produces it.**
+
+Naming a library's components, methods, or built-in behaviors inside a normative requirement converts a third-party API into a checkable claim — reviewers will then verify it against that library forever, and it goes stale on every upgrade. It is review surface the spec never needed.
+
+```markdown
+<!-- ❌ WRONG — names a library API in a normative rule -->
+- Cancelling (button, ESC, outside tap) MUST fire nothing — Radix
+  `AlertDialog.Content` blocks interact-outside dismissal.
+
+<!-- ✅ RIGHT — states the observable rule -->
+- Cancelling MUST fire nothing and leave no pending state. Dismissal MUST
+  require an explicit choice.
+```
+
+**Rules:**
+
+- Do NOT write component names, method names, library-specific props/events, hook names, class names, or file layout into spec requirements. Those are implementation-time decisions.
+- **Exception:** genuine cross-cutting commitments that other documents depend on — a design-token contract, a stable selector contract, cascade ordering, a named dispatch path, a public API surface — are architecture, not mechanism, and belong in the spec.
+- Implementation guidance that IS useful goes in the change document's Design Decisions, where it is explicitly a decision for that change rather than a standing contract.
+- **`MUST` density is a smell.** Each `MUST` is an assertion someone must verify against every other one. If a requirement does not describe something observable or a contract another document depends on, write it as prose or a design decision instead.
 
 ## RFC 2119 Reference
 
@@ -275,9 +344,11 @@ Read the template at `references/change-template.md` and write each change to `d
 
 **Critical rules:**
 - Every change MUST reference the spec it relates to
-- Use RFC 2119 language for requirements
-- Include GIVEN/WHEN/THEN scenarios
+- **MUST NOT restate behavior the spec already owns** — open the requirements section by naming the owning spec section, then list only what the change itself owns (sequencing, migrations, registration, dispatch-path moves, bugfixes). See "Single-Owner Contracts" above. This is the single most important rule for keeping a corpus reviewable.
+- Use RFC 2119 language for the requirements the change genuinely owns
+- Include GIVEN/WHEN/THEN scenarios ONLY for behavior this change introduces that no spec owns — never copy a spec's scenarios
 - Include a detailed `## Tasks` section with checkbox items
+- Every capability the requirements mandate MUST appear in a task; a change that requires infrastructure later changes depend on cannot be markable complete without a task for it
 - Each top-level task SHOULD map to one PR
 - Include design decisions with rationale
 - Be specific about files to modify, APIs to change, tests to write
