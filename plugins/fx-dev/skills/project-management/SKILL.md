@@ -13,11 +13,12 @@ This skill manages project tasks and documentation for AI-driven development. Wo
 ## Core Principles
 
 1. **Changes are primary** — Most feature work SHOULD be tracked in `docs/changes/` documents, not in `docs/tasks.md`. Change documents are what `/team` and `/dev` consume.
-2. **NEVER duplicate tasks** — Tasks that exist in a `docs/changes/` document MUST NOT be copied, summarized, or mirrored into `docs/tasks.md`. Each task lives in exactly one place. `docs/tasks.md` is ONLY for orphan work not tied to any change document.
-3. **One task = one PR** — Every top-level task represents work that results in a single pull request.
-4. **Smaller PRs are better** — Prefer many focused PRs over few large ones.
-5. **Clarify before acting** — Use AskUserQuestion to resolve ambiguity.
-6. **Research first** — Understand requirements before planning.
+2. **Approved change documents are implementation contracts** — Once the user approves implementation of a change document, that document—together with the spec sections it links and all mandatory project rules—is the implementation contract. Its requirements, tasks, design decisions, dependencies, and non-goals/out-of-scope boundary define the allowed implementation boundary. Discovery during implementation does not silently expand that boundary. Any new product behavior, architecture, subsystem, cross-cutting policy, or additional task MUST first be written into the change document and approved by the user; until then, record it as follow-up/out-of-scope and do not implement it. Mandatory project rules and demonstrable regressions introduced by the branch remain blocking even when the document does not mention them. Clarifications that do not change observable behavior or architecture may be recorded without reapproval.
+3. **NEVER duplicate tasks** — Tasks that exist in a `docs/changes/` document MUST NOT be copied, summarized, or mirrored into `docs/tasks.md`. Each task lives in exactly one place. `docs/tasks.md` is ONLY for orphan work not tied to any change document.
+4. **One task = one PR** — Every top-level task represents work that results in a single pull request.
+5. **Smaller PRs are better** — Prefer many focused PRs over few large ones.
+6. **Clarify before acting** — Use AskUserQuestion to resolve ambiguity.
+7. **Research first** — Understand requirements before planning.
 
 ## When This Skill Triggers
 
@@ -117,6 +118,7 @@ When instructed to break down tasks for a change document or spec:
 4. **Scope each top-level task to one PR**
 5. **Be specific** — include file paths, function names, test requirements
 6. **Do not duplicate** — if another change document already tracks related work, reference it
+7. **Define the contract boundary before approval** — Make scope explicit through the Requirements and **Non-Goals** (or **Out of Scope**) sections, and map every top-level task to a contract requirement. Approval freezes this scope; later product or architecture expansion follows the amendment-and-approval rule in Core Principles.
 
 ### Workflow 4: Initial Setup
 

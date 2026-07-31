@@ -162,7 +162,7 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 
 **PR creation** → Either do it yourself via `gh pr create` or spawn a focused PR preparer agent. Load `fx-dev:github` skill first. **⛔ If you create the PR yourself, the `--title` MUST be a conventional-commit subject — `type(scope): description` — matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (see the github skill's "Use Conventional Formats"). Do NOT write a prose title; running `gh pr create` directly does NOT exempt you from the conventional-commit rule. Verify the title against the regex before AND after creation.** (Prose titles the coordinator wrote directly — bypassing pr-preparer — are exactly how non-conventional titles have slipped onto `main`.)
 
-**Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. Invoke `fx-dev:copilot-review` AND `fx-dev:coderabbit-review` yourself (sequentially, or with the slow CodeRabbit waiter as a background Bash process while you handle Copilot in the foreground — see the Reviewer Gates section below). Run `gh pr checks --watch` yourself. Invoke `fx-dev:resolve-pr-feedback` yourself.
+**Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback. Run `gh pr checks --watch` yourself.
 
 **⛔ NEVER spawn sub-agents to handle reviewer waits.** `fx-dev:dev` Step 6.3's mode A (parallel sub-agents per reviewer) is for the **root-session caller** only. As a team coordinator you ARE the root agent for the team's lifecycle and must use mode B (sequential or background-Bash overlap).
 
@@ -212,7 +212,7 @@ Skill tool: skill="fx-dev:coderabbit-review",  args="<PR_NUMBER>"
 # 3. When Bash task completes: Skill fx-dev:rabbit-feedback-resolver
 ```
 
-When available, both reviewers converge through "wait → resolve → if anyone pushed, wait again". CodeRabbit re-runs on every push and may post new threads on the new SHA. Cap at 4 outer iterations. **If CodeRabbit reports a rate/quota limit or cooldown at any point, stop its loop immediately, report once, record `skipped (rate-limited)`, and continue without waiting or escalating.** Copilot must still converge normally.
+Apply `fx-dev:dev` Steps 2.5 and 6.3 as the canonical reviewer policy: maintain the coordinator-owned finding ledger, fix only blocking-class findings, and rerun only reviewer state invalidated by the latest delta. Do not restart every reviewer after each push or seek zero suggestions. Settle all required threads within the bounded remediation rounds. **If CodeRabbit reports a rate/quota limit or cooldown at any point, stop its loop immediately, report once, record `skipped (rate-limited)`, and continue without waiting or escalating.** Copilot must still satisfy its mandatory review gate.
 
 If CodeRabbit is not configured (wait script exits 2), report once and proceed. Do not silently skip ordinary failures; the optional exception is specifically for CodeRabbit throttling.
 

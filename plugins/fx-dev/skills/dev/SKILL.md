@@ -126,6 +126,20 @@ gh issue view [NUMBER] --json title,body,labels,comments
 
 ---
 
+### STEP 2.5: Freeze the Implementation Contract and Open the Finding Ledger
+
+If the task is sourced from, names, or discovers a relevant `docs/changes/*.md` file, read it and the spec sections it links. Confirm implementation approval from the conversation or the change's recorded workflow state; if approval is unclear, STOP and ask the user. Record the contract path and approval evidence in the working brief. The change document, its linked specs, and all mandatory project rules form the implementation contract: the plan and coder prompt MUST map work to that contract and MUST NOT infer adjacent product or architecture work.
+
+The coordinator owns one in-memory finding ledger for the run; reviewer sub-agents return findings to the coordinator and MUST NOT mutate the ledger concurrently. Give every finding a stable fingerprint (`category + file + line/range + normalized claim`) and record its source, first-seen revision, classification, disposition, and verification evidence. Classify each finding exactly once as:
+
+- **required-by-contract** — Necessary to satisfy the change document, its linked specs, or any mandatory project, security, privacy, test, or merge rule.
+- **regression-caused-by-change** — A demonstrable correctness, security, privacy, or data-loss regression caused by this branch anywhere within its behavioral impact, including downstream consumers or integrations.
+- **follow-up/out-of-scope** — A pre-existing issue, hardening, cleanup, product addition, architecture expansion, or improvement not required by either category above.
+
+Fix only the first two classes. Deduplicate repeated or reworded findings by fingerprint and update the existing ledger entry. Record follow-up/out-of-scope findings for the PR or later tracking; do not implement them. When reviewer resolvers are invoked by `/dev`, their deferred-feedback paths MUST return follow-ups to the coordinator instead of modifying task trackers in the implementation PR. To implement out-of-scope product or architecture work, first amend the change document and obtain user approval.
+
+---
+
 ### STEP 3: Planning
 
 **MANDATORY: Launch a sub-agent that loads the planner skill.**
@@ -142,6 +156,8 @@ Agent tool:
            - Identify files to modify
            - Determine test requirements
            - Flag if multiple PRs needed
+           - Treat the approved change document as the implementation contract
+           - Do not include follow-up/out-of-scope work or expand product/architecture without an approved amendment
 
            Output: Numbered implementation steps"
   description: "Plan implementation"
@@ -176,6 +192,8 @@ Agent tool:
            - Atomic commits (format: type(scope): message)
            - Follow existing patterns
            - Run tests
+           - Treat the approved change document as the implementation contract
+           - Do not implement follow-up/out-of-scope findings or expand product/architecture without an approved amendment
            - Do NOT create PR"
   description: "Implement changes"
 ```
@@ -192,7 +210,7 @@ git diff main --stat
 
 ### STEP 4.5: Pre-PR Self-Review (simplify → review → CodeRabbit → Codex)
 
-**MANDATORY: Self-review the changes locally BEFORE creating the PR. The PR is opened only once all four passes are clean against the final diff at the same time.** Run them in order, fixing and committing findings after each; because a later pass's fixes invalidate earlier passes, loop the whole sequence until a full pass yields no new commits (see "Re-run after fixes" below).
+**MANDATORY: Run one complete local review matrix before creating the PR.** Run each available pass once in order against the current `HEAD`, record the revision that each channel reviewed, and classify its findings before accepting fixes. If `/simplify` edits directly, retain only changes that satisfy the contract classification and record the resulting revision before starting the next pass.
 
 **1. `/simplify`** — reuse, quality, efficiency cleanup:
 
@@ -200,7 +218,7 @@ git diff main --stat
 Skill tool: skill="simplify"
 ```
 
-Reviews all changed code for **reuse** (duplicated logic), **quality** (copy-paste, leaky abstractions, nesting), and **efficiency** (redundant computation, missed concurrency).
+Reviews changed code for **reuse** (duplicated logic), **quality** (copy-paste, leaky abstractions, nesting), and **efficiency** (redundant computation, missed concurrency).
 
 **2. `/code-review`** — correctness bugs in the diff:
 
@@ -208,30 +226,42 @@ Reviews all changed code for **reuse** (duplicated logic), **quality** (copy-pas
 Skill tool: skill="code-review"
 ```
 
-**3. CodeRabbit (local, via `cr`)** — run CodeRabbit's AI review on the local changes BEFORE the PR exists, so its feedback is resolved up front instead of churning the PR:
+**3. CodeRabbit (local, via `cr`)** — independent local review:
 
 ```
 Skill tool: skill="fx-dev:coderabbit-review"
 ```
 
-The skill runs `cr review --agent` against the working tree (Mode 1), resolves every actionable finding, and re-runs until clean. If `cr` is **unavailable**, fall back to the PR-level CodeRabbit review in Step 6.3. If `cr` reports it is **not authenticated**, STOP and report to the user — NEVER run `cr auth login` (it is interactive; the workspace should already be authed). **If CodeRabbit reports a rate/quota limit or cooldown, report it once, resolve findings already received, mark the pass `skipped (rate-limited)`, and continue immediately. Never wait or retry solely for a CodeRabbit cooldown.**
+If `cr` is **unavailable**, fall back to the PR-level CodeRabbit review in Step 6.3. If `cr` is installed but **not authenticated**, STOP and report to the user — NEVER run `cr auth login`. If CodeRabbit reports a rate/quota limit or cooldown, report it once, classify findings already received, mark the pass `skipped (rate-limited)`, and continue immediately. Never wait or retry solely for a CodeRabbit cooldown.
 
-**4. Codex (local, via `codex`)** — run OpenAI Codex's AI review one-shot on the branch BEFORE the PR exists. Codex and CodeRabbit are independent reviewers; each catches issues the other misses:
+**4. Codex (local, via `codex`)** — independent one-shot branch review:
 
 ```
 Skill tool: skill="fx-dev:codex-review"
 ```
 
-The skill runs `codex review --base main` (read-only, one-shot, branch vs `main`), prints findings to stdout, and you resolve every actionable one before opening the PR. If the `codex` CLI is **unavailable or not authenticated**, report to the user once and proceed without this pass — NEVER run `codex login` (it is interactive; the workspace should already be authed).
+If the `codex` CLI is unavailable or not authenticated, report it once and proceed without this pass. NEVER run `codex login`.
 
-Fix any issues found in each pass and commit the fixes. **Whenever a later pass commits a change, the earlier passes' clean results no longer cover the final diff — re-run the whole sequence (simplify → review → CodeRabbit → Codex) from the top.** Only proceed to PR creation once a complete pass through all four reviewers produces **no new commits** (every available reviewer is clean against the final diff at once).
+#### Remediation and Delta Verification
 
-**⛔ DO NOT PROCEED to Step 5 until simplify and review have run and all findings are addressed, AND each local AI reviewer has been resolved or correctly degraded:**
+Fix only findings classified `required-by-contract` or `regression-caused-by-change`. After a fix commit:
 
-- **CodeRabbit** clean, unavailable, or explicitly `skipped (rate-limited)`. If rate-limited, report once and do not wait or retry. If `cr` is installed but **not authenticated**, STOP and report to the user; do NOT treat an auth failure as a skip.
-- **Codex** clean, OR — if the `codex` CLI is **unavailable or not authenticated** — report once and skip this pass.
+1. Rerun the reviewer or check that originated the blocking finding.
+2. Rerun tests affected by the delta.
+3. Rerun another reviewer only when the delta touches the risk area that reviewer covered or invalidates its recorded evidence.
 
-Opening the PR with known unresolved actionable findings from an available reviewer is forbidden. A missing or rate-limited CodeRabbit service is a documented optional-review degradation and does not block PR creation.
+Do not restart the full matrix merely because `HEAD` changed. Deduplicate repeated or reworded findings against the ledger; they do not start a new cycle. When `/dev` invokes reviewer subskills, this contract classification and bounded stopping policy takes precedence over generic instructions to resolve every actionable finding or rerun until clean.
+
+#### PR-Ready Stopping Condition
+
+Proceed to Step 5 when all of the following are true:
+
+1. Every `required-by-contract` and `regression-caused-by-change` ledger entry is resolved with evidence.
+2. Contract-required tests and tests affected by the latest delta pass.
+3. Every available review channel completed its initial pass or has a documented permitted degradation.
+4. One verification pass over the latest affected delta produces no new finding in either blocking class.
+
+`follow-up/out-of-scope` entries and non-contract suggestions do not block PR creation. Limit each review channel to two remediation/delta-verification rounds after its initial pass, with four post-review fix rounds total. At the bound, create the PR if only follow-up/out-of-scope entries remain. If a blocking-class finding remains, STOP and report it to the user. A contract amendment may change product scope, but it cannot waive mandatory correctness, security, privacy, testing, or merge rules. Perfect local convergence is not required.
 
 ---
 
@@ -453,14 +483,18 @@ Agent tool:
   description: "Review PR"
 ```
 
-#### 6.2 Fix Issues (if any found)
+The coordinator MUST classify and deduplicate these findings in the Step 2.5 ledger before invoking a coder. Do not pass follow-up/out-of-scope findings to implementation.
+
+#### 6.2 Fix Blocking Issues (if any found)
 
 ```
 Agent tool:
   prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
 
-           Fix these issues in PR #[NUMBER]:
-           [ISSUES FROM REVIEW]"
+           Fix only these blocking-class issues in PR #[NUMBER]:
+           [REQUIRED-BY-CONTRACT OR REGRESSION-CAUSED-BY-CHANGE FINDINGS]
+
+           Do not implement ledger entries classified follow-up/out-of-scope."
   description: "Fix review issues"
 ```
 
@@ -475,7 +509,7 @@ Agent tool:
 | Reviewer | Skill | Notes |
 |----------|-------|-------|
 | GitHub Copilot | `fx-dev:copilot-review` | Auto-reviews; we explicitly request via API as a defensive belt. Does NOT re-review on push by default. |
-| CodeRabbit | `fx-dev:coderabbit-review` | Already run **locally** in Step 4.5 (`cr`). Here = fallback PR-level gate when the GitHub App auto-reviews PRs: **re-reviews after every push**, exposes state via the `CodeRabbit` check; cycle until terminal AND 0 threads. Skip if not configured. |
+| CodeRabbit | `fx-dev:coderabbit-review` | Already run **locally** in Step 4.5 (`cr`). Here = fallback PR-level gate when the GitHub App auto-reviews PRs: re-reviews after pushes and exposes state via the `CodeRabbit` check. Classify new feedback in the shared ledger and settle its threads within the bounds below. Skip if not configured. |
 
 ##### Pick the right execution mode for your context
 
@@ -495,18 +529,20 @@ Agent tool (spawn ALL reviewer sub-agents in the same message — parallel):
 
 Agent 1:
   prompt: "Load the copilot-review skill (Skill tool: skill='fx-dev:copilot-review'),
-           then run it for PR #[PR_NUMBER]. Loop until 0 unresolved Copilot threads.
-           Report when done."
-  description: "Wait/resolve Copilot review"
+           then wait for and inspect currently unresolved feedback for PR #[PR_NUMBER] at its
+           current head SHA. Return findings and evidence only; do not edit, push, resolve threads,
+           or modify task trackers. Report the reviewed SHA."
+  description: "Inspect Copilot review"
 
 Agent 2:
   prompt: "Load the coderabbit-review skill (Skill tool: skill='fx-dev:coderabbit-review'),
-           then run it for PR #[PR_NUMBER]. Loop until the CodeRabbit check is terminal
-           AND 0 unresolved CodeRabbit threads. Report when done."
-  description: "Wait/resolve CodeRabbit review"
+           then wait for and inspect currently unresolved feedback for PR #[PR_NUMBER] at its
+           current head SHA. Return findings and evidence only; do not edit, push, resolve threads,
+           or modify task trackers. Report the reviewed SHA."
+  description: "Inspect CodeRabbit review"
 ```
 
-Wait for **all** sub-agents to report completion before proceeding.
+Wait for **all** sub-agents to report completion. The coordinator then deduplicates and classifies their findings, dispatches blocking remediation serially, and settles all reviewer threads. Never let parallel reviewer agents push fixes before coordinator classification.
 
 ###### Mode B: sequential, with background wait scripts (team-coordinator / sub-agent)
 
@@ -520,29 +556,16 @@ Concrete recipe:
         > /tmp/coderabbit-wait-[PR_NUMBER].log 2>&1
    ```
    Use `Bash` with `run_in_background: true`. Capture the task ID.
-2. In the foreground, run the Copilot wait+resolve cycle by invoking the skill directly:
-   ```
-   Skill tool: skill="fx-dev:copilot-review", args="[PR_NUMBER]"
-   ```
-   That skill polls Copilot, then calls `fx-dev:resolve-pr-feedback` to fix and resolve threads. When it returns, Copilot is settled (for this pass).
-3. Wait for the background CodeRabbit waiter to finish (you'll receive a completion notification) or check its log; when its check is terminal, invoke the resolver directly:
-   ```
-   Skill tool: skill="fx-dev:rabbit-feedback-resolver", args="[PR_NUMBER]"
-   ```
-4. If either resolver pushed commits in steps 2–3, **CodeRabbit will re-run** on the new SHA. Restart at step 1 (relaunch the background waiter; it observes the now-pending check). Copilot does not re-review on push, but check for new threads anyway:
-   ```bash
-   gh api graphql -f query='...' --jq '[.threads ... copilot ...] | length'
-   ```
-   If 0, skip step 2. Otherwise re-run it.
-5. **Stop when two consecutive passes produce zero new feedback from any reviewer** (and CodeRabbit's check is `success`).
+2. In the foreground, wait for Copilot using the bundled `copilot-review` waiter, then read its unresolved threads without invoking a resolver. Classify and deduplicate them in the coordinator-owned ledger.
+3. Wait for the background CodeRabbit waiter to finish, then read its unresolved threads and classify them before invoking a resolver. Invoke each reviewer resolver only after classification, passing the blocking findings and instructing it to settle deferred findings without code or task-tracker changes.
+4. After a resolver pushes, record the new SHA and inspect only feedback added or changed since the previous reviewed SHA. Classify and deduplicate it in the shared ledger. Rerun only the reviewer whose state or evidence the delta invalidated; do not restart every reviewer merely because `HEAD` changed.
+5. Stop after one latest-delta pass produces no new `required-by-contract` or `regression-caused-by-change` finding and every required reviewer thread is settled.
 
 If `Bash` `run_in_background` isn't available in your context, fall back to fully-serial: Copilot first, then CodeRabbit. Slower but correct.
 
-##### Cycle until convergence (both modes)
+##### Bounded delta review (both modes)
 
-Either reviewer's resolver may push commits to fix feedback. Pushed commits restart CodeRabbit's review automatically (its check goes back to pending), and may produce new Copilot feedback. Repeat the wait+resolve loop until two consecutive passes produce zero new feedback from either reviewer.
-
-**Cap at 4 outer iterations.** If reviewers keep producing new feedback after 4 cycles, escalate to the user — this usually indicates a design disagreement, not more code edits.
+Fix only blocking-class findings. Record follow-up/out-of-scope feedback without implementing it, and settle its thread with an out-of-scope disposition when repository policy permits. Allow at most two remediation rounds per reviewer. At the bound, continue when only follow-up/out-of-scope findings remain; escalate any unresolved blocking-class finding to the user. Do not seek zero suggestions or restart unrelated review channels.
 
 ##### Skip rules
 
@@ -617,9 +640,10 @@ Step 7.1 (wait) → fail → Step 7.2 (fix) → Step 7.1 (wait) → ...
 gh pr checks [NUMBER]
 
 # 2. Automated reviewers — MUST be settled and resolved (if not already done in Step 6.3)
+# Reuse Step 6.3 evidence when it covers the current head SHA. Invoke a dedicated
+# reviewer skill only when its check, threads, or reviewed SHA changed; do not restart
+# a settled review loop solely because finalization was reached.
 # Use the dedicated skills — NEVER raw gh api commands.
-# Run them in parallel via Agent sub-agents (see Step 6.3 pattern), or
-# sequentially if you only need to spot-check.
 ```
 ```
 Skill tool: skill="fx-dev:copilot-review",     args="[NUMBER]"
@@ -640,9 +664,9 @@ gh pr checks [NUMBER]  # verify codecov/patch and codecov/project
 - [ ] ALL CI checks green
 - [ ] Copilot review RECEIVED and ALL threads resolved (via `fx-dev:copilot-review` skill — NEVER raw `gh api`)
 - [ ] CodeRabbit is passing with all received threads resolved, not configured, or explicitly recorded as `skipped (rate-limited)`. CodeRabbit throttling is optional and never blocks merge.
-- [ ] No reviewer has posted new feedback since the last fix push (the wait-and-resolve loop has converged)
+- [ ] Zero unresolved `required-by-contract` or `regression-caused-by-change` findings; the latest affected delta is verified within the stopping bounds
 - [ ] Codecov coverage passing with 0 missing lines
-- [ ] No unresolved review threads from any reviewer (Copilot, CodeRabbit, human, or future automated reviewer)
+- [ ] No unresolved review threads from any reviewer (Copilot, CodeRabbit, human, or future automated reviewer); follow-up/out-of-scope threads are settled without expanding implementation
 
 **PR size is NEVER a reason to skip merge gates.** A 1-line fix gets the same verification as a 1000-line feature.
 
@@ -760,12 +784,12 @@ All sub-agents are launched via the Agent tool. Each loads its skill via the Ski
 | 3 | Planner | `fx-dev:planner` |
 | 3,8 | Issue Updater | `fx-dev:issue-updater` |
 | 4,6.2,8.2 | Coder | `fx-dev:coder` |
-| 4.5 | Pre-PR Self-Review | `simplify`, then `code-review`, then `fx-dev:coderabbit-review` (local `cr`), then `fx-dev:codex-review` (local `codex`) — all must be clean before opening the PR |
+| 4.5 | Pre-PR Self-Review | `simplify`, then `code-review`, then `fx-dev:coderabbit-review` (local `cr`), then `fx-dev:codex-review` (local `codex`) — initial passes complete, blocking-class findings resolved, latest affected delta verified |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 5.5.2 | Browser Verification | `fx-dev:verify-web-change` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
 | 6.3 | Copilot Review | `fx-dev:copilot-review` (run in parallel with coderabbit-review) |
-| 6.3 | CodeRabbit Review | `fx-dev:coderabbit-review` (run in parallel with copilot-review; cycles on its check until terminal + 0 threads) |
+| 6.3 | CodeRabbit Review | `fx-dev:coderabbit-review` (run in parallel with copilot-review; classify/deduplicate feedback and verify only affected deltas within bounds) |
 | 6.3 | PR Feedback Resolver | `fx-dev:resolve-pr-feedback` (meta — called by reviewer skills) |
 | 7.2 | CI Failure Resolver | `fx-dev:resolve-ci-failures` |
 
@@ -785,12 +809,12 @@ Workflow complete when ALL true:
 - ✅ Requirements documented
 - ✅ Plan created
 - ✅ Code implemented with atomic commits
-- ✅ Pre-PR self-review clean: /simplify (reuse, quality, efficiency), /review (correctness), a local CodeRabbit `cr` review, AND a local Codex `codex` review — all findings resolved BEFORE the PR was opened
+- ✅ Pre-PR review matrix completed (or permitted degradation documented), findings classified in the shared ledger, blocking-class findings resolved, and the latest affected delta verified within the stopping bounds
 - ✅ PR created with description (including links to related specs/changes and test plan)
 - ✅ ALL test plan items addressed: browser-verified, programmatically verified, or user-confirmed manual verification (NEVER silently skipped)
 - ✅ PR test plan items checked off or annotated with verification results in the PR description
 - ✅ Self-review done, issues fixed
-- ✅ Automated review feedback resolved (Copilot AND CodeRabbit, run in parallel; cycle until both converge with zero new feedback)
+- ✅ Automated review feedback classified and settled; blocking-class findings resolved and the latest affected delta verified without unrelated review restarts
 - ✅ All CI/CD checks pass
 - ✅ Task tracking docs updated (completed tasks marked in relevant change doc or tasks.md)
 - ✅ User notified, awaiting merge approval
