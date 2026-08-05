@@ -445,23 +445,32 @@ GitHub Copilot can automatically review pull requests. This section covers how t
 
 - **Copilot username**: `copilot-pull-request-reviewer` (GraphQL) or `copilot-pull-request-reviewer[bot]` (REST API)
 - **Review state**: Copilot only leaves `COMMENTED` state reviews, never `APPROVED` or `CHANGES_REQUESTED`
-- **API limitation**: No direct API endpoint to request Copilot reviews; must use UI or automatic triggers
+- **Reviews are per-commit**: each review carries a `commit_id`. A review of an earlier commit says nothing about the current head.
+- **Pushing does NOT re-trigger a review** unless the repo's ruleset enables "Review new pushes". Assume it does not.
 
 ### Request Copilot to Review a PR
 
-There is no API endpoint to programmatically request a Copilot review. Reviews are triggered by:
+**A Copilot review CAN be requested via the API** — add the bot as a requested reviewer:
 
-1. **Automatic reviews via repository rulesets** (recommended)
+```bash
+REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+gh api --method POST "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/requested_reviewers" \
+  --input - <<'EOF'
+{"reviewers":["copilot-pull-request-reviewer[bot]"]}
+EOF
+```
+
+A `422` means a review is already requested or already in flight — treat it as success. Prefer `fx-dev:copilot-review`, which wraps this together with a head-SHA-aware waiter.
+
+**Do this again after every push to the PR branch.** Copilot will not look at new commits on its own, and a stale review must never be read as coverage for the current head.
+
+Other ways a review can be triggered, none of which replace the request above:
+
+1. **Automatic reviews via repository rulesets**
    - Configure in repo Settings → Rules → Rulesets
-   - Enable "Automatically request Copilot code review"
-   - Optionally enable "Review new pushes" for re-reviews on each commit
-
-2. **GitHub UI**
-   - Open PR → Reviewers menu → Select "Copilot"
-   - To re-request: Click the re-request button (🔄) next to Copilot's name
-
-3. **Push new commits** (if "Review new pushes" ruleset is enabled)
-   - Simply push to the PR branch to trigger a new review
+   - Enable "Automatically request Copilot code review" (first review on PR open only)
+   - Optionally enable "Review new pushes" for re-reviews on each commit — **off by default**
+2. **GitHub UI** — Open PR → Reviewers → "Copilot"; the re-request button (🔄) forces a fresh pass
 
 ### Check if Copilot Review is Pending
 
@@ -573,9 +582,10 @@ jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == 
 | Condition | Meaning |
 |-----------|---------|
 | Review request exists for `copilot-pull-request-reviewer` | Review in progress |
-| Review with `submittedAt` exists, no pending request | Review completed |
+| Review whose `commit_id` == the PR's `headRefOid` | Review completed **for the code you are about to merge** |
+| Review exists, but its `commit_id` is an older commit | **Current head is UNREVIEWED.** Request a new review — do not treat this as reviewed |
 | Unresolved threads with Copilot author | Feedback needs attention |
-| No request, no reviews | Copilot not configured or not triggered |
+| No request, no reviews | Nobody has asked Copilot to review — request one; this is not "clean" |
 
 ## Bundled References
 

@@ -109,6 +109,15 @@ Parse the response and categorize unresolved threads by author:
 - **Copilot threads**: author login is `Copilot`
 - **CodeRabbit threads**: author login contains `coderabbitai`
 
+**⛔ Threads are not the whole review.** Copilot puts some findings in a `<details><summary>Suppressed comments</summary>` block in the **review body**, where they create no thread at all. A review that reports "generated no new comments" with zero unresolved threads can still contain real bugs there. Read the body of the newest Copilot review as well:
+
+```bash
+gh api "/repos/OWNER/REPO/pulls/PR_NUMBER/reviews" \
+  --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer"))] | last | .body'
+```
+
+Triage those the same way as thread comments. They cannot be resolved (no thread exists), so record the outcome in the commit message or PR body instead.
+
 ### 3b. Check for Codecov Coverage Feedback
 
 Codecov uses PR comments and commit statuses, NOT review threads. Query separately:
@@ -151,13 +160,23 @@ Skill tool: skill="fx-dev:resolve-codecov-feedback"
 
 After invoking resolver skills, re-query to confirm all threads are resolved AND that no reviewer has posted new feedback in response to the fixes that were pushed.
 
-**Cycle, don't single-shot.** CodeRabbit specifically re-runs after every push and may post new threads on the new commits. Single-pass resolvers leave a stale "settled" state behind. Loop:
+**Cycle, don't single-shot.** CodeRabbit re-runs after every push and may post new threads on the new commits. Copilot does **not** — it must be asked again. Either way, a single-pass resolver leaves a stale "settled" state behind. Loop:
 
-1. Wait for all reviewer checks to reach terminal state (use the dedicated waiters: `fx-dev:copilot-review` for Copilot, `fx-dev:coderabbit-review` for CodeRabbit).
-2. Re-query unresolved threads (per below).
-3. If count > 0, re-invoke the relevant resolver(s).
-4. After fixes are pushed, restart at step 1.
-5. Stop when two consecutive passes produce zero new feedback. Cap at 4 outer iterations and escalate to the user if not converged.
+1. **Re-request the Copilot review for the current head SHA** via `fx-dev:copilot-review` (its Step 1). **Copilot does NOT re-review pushed commits on its own.** Skipping this makes the rest of the loop meaningless: you will poll, see nothing, and "converge" on code no reviewer has read.
+2. Wait for all reviewer checks to reach terminal state (use the dedicated waiters: `fx-dev:copilot-review` for Copilot, `fx-dev:coderabbit-review` for CodeRabbit). **Do not hand-roll a `gh api` / GraphQL polling loop in their place** — a hand-rolled loop only observes, never requests, and will happily accept a review of a superseded commit.
+3. Re-query unresolved threads (per below).
+4. If count > 0, re-invoke the relevant resolver(s).
+5. After fixes are pushed, restart at step 1 — the push created unreviewed commits.
+6. Stop when a pass produces zero new feedback **on a head SHA that was actually reviewed** (verify: the newest Copilot review's `commit_id` equals `headRefOid`). Cap at 4 outer iterations and escalate to the user if not converged.
+
+**⛔ Zero new threads is not convergence unless a review was requested for the current head SHA and received.** Absence of feedback you never asked for is not evidence of quality. Verify before declaring the loop converged:
+
+```bash
+gh pr view <PR> --json headRefOid --jq '.headRefOid'
+gh api "/repos/OWNER/REPO/pulls/<PR>/reviews" \
+  --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer")) | .commit_id] | last'
+# These two MUST match.
+```
 
 Re-query to count remaining unresolved threads:
 
@@ -206,9 +225,9 @@ If unresolved threads remain, report which reviewers still have open feedback.
 
 ## Success Criteria
 
-1. All unresolved automated review threads identified
+1. All unresolved automated review threads identified — **plus** any findings in the Copilot review body's "Suppressed comments" block, which produce no threads
 2. Appropriate resolver skill(s) invoked (Copilot + CodeRabbit in parallel where applicable)
-3. The wait-and-resolve loop has CONVERGED — two consecutive passes produced zero new feedback from any reviewer
+3. The wait-and-resolve loop has CONVERGED — a Copilot review was **requested for and received on the current head SHA** and produced zero new findings. A quiet poll on an unreviewed head is not convergence
 4. CodeRabbit's check is in a terminal passing state (or absent if not configured)
 5. Final verification confirms all threads resolved
 6. Summary output provided
