@@ -16,6 +16,25 @@ Request, wait for, and resolve GitHub Copilot's automated PR review on a pull re
 - No exceptions — not for "first PRs", not for "small PRs", not because "CI isn't set up yet", not because "nothing is configured yet".
 - **NEVER use raw `gh api repos/.../reviews` commands to check Copilot status.** Use the script provided by this skill.
 
+## MANDATORY: Triage Against the Scope Brief
+
+Copilot accepts no prompt, so scope cannot be injected into its review — it will
+report work that was deliberately not done. Apply the **Scope Brief** (canonical
+definition: `fx-dev/skills/dev/references/scope-contract.md`) at **triage**
+instead, and establish one from the conversation and PR description if you were
+not handed it.
+
+- A finding covered by the brief's out-of-scope list is **resolved as deferred
+  with the exclusion that covers it** — recorded, not silently fixed and not
+  silently dropped.
+- **The brief never suppresses a real finding.** It excludes work deliberately
+  not done; it does not excuse defects in the work that *was* done. Security,
+  data-loss, and correctness problems inside the change are always actionable and
+  always block the merge gate.
+- Copilot being unable to see the scope is not a reason to widen the change.
+  Implementing its out-of-scope suggestions is scope creep with a reviewer's name
+  on it.
+
 ## When to Use
 
 - After creating a PR (SDLC Step 6.3)

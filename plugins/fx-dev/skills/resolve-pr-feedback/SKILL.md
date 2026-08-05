@@ -7,6 +7,18 @@ description: Check a PR for unresolved automated review feedback (Copilot, CodeR
 
 Meta-skill that checks a PR for unresolved automated review feedback and invokes the appropriate resolver skills.
 
+## MANDATORY: Triage against the Scope Brief
+
+Automated reviewers accept no scope prompt, so they will report work that was deliberately not done. Establish the **Scope Brief** — from the coordinator, or reconstructed from the conversation and PR description — before dispatching any resolver. Definition: `fx-dev/skills/dev/references/scope-contract.md`.
+
+Pass it into every resolver you invoke, and classify each finding before acting:
+
+- **In scope** → resolve it.
+- **Covered by the brief's out-of-scope list** → resolve the thread as deferred, citing the exclusion. Never silently fix it, never silently drop it, and never widen the PR to satisfy it.
+- **Excluded but correct** → the exclusion was wrong. Fix the work and say the brief was wrong.
+
+Security, data-loss, and correctness problems **inside** the change are always in scope, whatever the brief says. Resolving out-of-scope suggestions is scope creep with a reviewer's name on it.
+
 ## WHEN TO USE THIS SKILL
 
 **USE THIS SKILL** when ANY of the following occur:

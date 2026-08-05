@@ -80,6 +80,8 @@ Agent tool:
 
            [PLAN FROM STEP 3]
 
+           [PASTE THE SCOPE BRIEF VERBATIM HERE]
+
            Requirements:
            - Implement the minimal fix
            - The failing test must now pass
@@ -89,5 +91,7 @@ Agent tool:
            Output: Files changed and test results"
   description: "Implement bug fix"
 ```
+
+**"Minimal fix" is the scope contract of this skill.** A bug report authorizes fixing that bug, not refactoring the code around it. Carry the Scope Brief (`fx-dev/skills/dev/references/scope-contract.md`) into implementation and into every reviewer call, and if the bug turns out to require a redesign, a migration, or changes to subsystems the report never mentioned, **stop and tell the user** with the cheapest option first — do not deliver a refactor in response to "fix this bug real quick".
 
 The SDLC skill provides the remaining mandatory steps (PR creation, review, CI). Follow them exactly.

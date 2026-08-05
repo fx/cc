@@ -46,6 +46,37 @@ When the user's invocation is unambiguous — e.g. `implement all pending change
 
 If you find yourself drafting a "before I burn that compute, one quick check…" message in response to a clearly-scoped instruction, stop. Delete the draft. Spawn the team.
 
+### Build the Scope Brief (MANDATORY)
+
+Before spawning anything, write down the **Scope Brief**. It is what every teammate and every reviewer will be judged against, and it must carry the user's own framing — not your summary of it. Full definition: `fx-dev/skills/dev/references/scope-contract.md`.
+
+```markdown
+### Scope Brief
+- **Verbatim request:** "<the user's exact words, quoted, never paraphrased>"
+- **Interpreted scope:** <tasks, change docs, specs in play>
+- **Deliverable type:** <docs | code | spec | research | config | mixed>
+- **Explicitly out of scope:** <what must NOT be touched or flagged, with reasons>
+- **Size signal:** <narrow | normal | open-ended>
+- **Known-and-accepted:** <deliberate states a reviewer would otherwise flag>
+```
+
+**Every coder prompt, every verify prompt, and every reviewer invocation MUST include this brief verbatim.** A reviewer that does not know what was asked for reports the work the team deliberately did not do, and the coordinator pays for it in filtering time on every PR.
+
+### The sprawl STOP rule for autonomous runs
+
+`/team` exists to run unattended for a long time, so **duration, task count, PR count, and effort are NEVER reasons to stop**. Working through an approved backlog is the job — do not check in between waves, and do not ask permission for the next approved task.
+
+Stop and inform the user **only** when a task requires something the approved contract does not cover:
+
+- Work outside the spec, change document, or task list the user pointed you at
+- An architectural decision no approved document has made
+- A migration, dependency, or breaking change the contract never mentioned
+- A destructive or irreversible action not implied by the request
+
+When that happens, finish every task that IS covered, then report what is blocked and why in two or three sentences. Never halt the whole run for one out-of-contract task.
+
+This rule and the "do NOT pause to confirm scope" rule above are the same rule seen from two sides: **the user's scope is authoritative — execute all of it without asking, and none of what lies outside it without asking.**
+
 ## STEP 1: The Team Is Implicit — Do NOT Create One
 
 **As of Claude Code v2.1.178 there is no team-creation step, and the `TeamCreate`/`TeamDelete` tools no longer exist.** A session has exactly **one implicit team**, scoped to that session, and it forms automatically the moment you spawn your first teammate via the `Agent` tool (you, the main session, are permanently the lead). There is nothing to name, nothing to provision, and nothing to tear down — cleanup is automatic when the session ends (see STEP 4).
@@ -162,7 +193,7 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 
 **PR creation** → Either do it yourself via `gh pr create` or spawn a focused PR preparer agent. Load `fx-dev:github` skill first. **⛔ If you create the PR yourself, the `--title` MUST be a conventional-commit subject — `type(scope): description` — matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (see the github skill's "Use Conventional Formats"). Do NOT write a prose title; running `gh pr create` directly does NOT exempt you from the conventional-commit rule. Verify the title against the regex before AND after creation.** (Prose titles the coordinator wrote directly — bypassing pr-preparer — are exactly how non-conventional titles have slipped onto `main`.)
 
-**Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback. Run `gh pr checks --watch` yourself.
+**Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. **Pass the STEP 0 Scope Brief into every reviewer invocation that accepts one, and apply it when triaging every reviewer that does not** (Copilot and the CodeRabbit GitHub App accept nothing). A finding covered by the brief's out-of-scope list is recorded as deferred with the covering exclusion — never silently fixed, never silently dropped, and never a reason to widen a teammate's PR. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback. Run `gh pr checks --watch` yourself.
 
 **⛔ NEVER spawn sub-agents to handle reviewer waits.** `fx-dev:dev` Step 6.3's mode A (parallel sub-agents per reviewer) is for the **root-session caller** only. As a team coordinator you ARE the root agent for the team's lifecycle and must use mode B (sequential or background-Bash overlap).
 

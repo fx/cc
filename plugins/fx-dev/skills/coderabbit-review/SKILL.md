@@ -1,6 +1,6 @@
 ---
 name: coderabbit-review
-description: "Run CodeRabbit's optional AI review. PRIMARY path: run it LOCALLY via the `cr` CLI before opening a PR and resolve actionable findings. FALLBACK path: wait for + resolve its automated PR review when available. Rate limits degrade gracefully: report once, skip CodeRabbit, and continue the SDLC."
+description: "Run CodeRabbit's optional AI review. PRIMARY path: run it LOCALLY via the `cr` CLI before opening a PR and resolve actionable findings. FALLBACK path: wait for + resolve its automated PR review when available. Pass a Scope Brief as args — findings MUST be triaged against the user's original request. Rate limits degrade gracefully: report once, skip CodeRabbit, and continue the SDLC."
 ---
 
 # CodeRabbit Review
@@ -37,8 +37,44 @@ Catch CodeRabbit's feedback **before** a PR exists, using the `cr` CLI on your l
 
 ## Arguments
 
-- Mode 1 (local): no argument needed — reviews the current working tree / branch.
-- Mode 2 (PR-level): pass the PR number — `skill='fx-dev:coderabbit-review', args='<PR_NUMBER>'`.
+- Mode 1 (local): pass the **Scope Brief** (see below). No PR number needed — reviews the current working tree / branch.
+- Mode 2 (PR-level): pass the PR number plus the Scope Brief — `skill='fx-dev:coderabbit-review', args='<PR_NUMBER> — <scope brief>'`.
+
+## MANDATORY: Carry the Scope Brief
+
+**Never review a bare diff.** A reviewer that does not know what was asked for
+reports the work you deliberately did not do — missing implementation for a
+docs-only change, missing tests for a spec, dependencies a later phase adds.
+Each such finding costs a full cycle to filter by hand.
+
+Every invocation of this skill MUST carry a **Scope Brief** (canonical definition
+and field rules: `fx-dev/skills/dev/references/scope-contract.md`) holding the
+user's **verbatim** request, the interpreted scope, the deliverable type, an
+explicit out-of-scope list with reasons, and anything known-and-accepted.
+
+**If you were invoked without one, reconstruct it from the conversation before
+reviewing, and say that you did.**
+
+How the brief is applied differs by mode:
+
+- **Mode 1 (local `cr`)** — CodeRabbit's CLI reviews the diff and does not take a
+  scope prompt. Apply the brief when **triaging** its output.
+- **Mode 2 (PR-level GitHub App)** — the brief cannot reach the reviewer at all.
+  Apply it entirely at triage.
+
+In both modes, triage means: a finding covered by the out-of-scope list is
+**recorded as deferred with the exclusion that covers it**, never silently fixed
+and never silently dropped. Deferred findings belong in the PR description or the
+coordinator's ledger.
+
+**The brief never suppresses a real finding.** It excludes work deliberately not
+done; it does not excuse defects in the work that *was* done. Security,
+data-loss, and correctness problems inside the change are always actionable. If a
+finding the brief excluded turns out to be correct, the exclusion was wrong — fix
+the work and correct the brief.
+
+Persistent out-of-scope noise across passes means the brief is too thin. Tighten
+it rather than filtering the same findings by hand every round.
 
 ---
 

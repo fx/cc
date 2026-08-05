@@ -38,8 +38,32 @@ Agent tool:
 - ✅ ALWAYS instruct sub-agents to load skills via the Skill tool
 - ✅ ALWAYS verify each step before proceeding
 - ✅ ALWAYS fix, replace, refactor, or remove tests - never skip them
+- ✅ ALWAYS carry the Scope Brief (Step 2.5) verbatim into every sub-agent prompt and every reviewer call
 
 **FAILURE TO USE SUB-AGENTS = WORKFLOW FAILURE**
+
+### Scope Discipline (STOP rule)
+
+**When the work outgrows the request, stop and tell the user.** Do not silently
+deliver more than was asked. Full rule and calibration:
+`references/scope-contract.md`.
+
+Stop when you discover the task needs materially more than its own framing
+implies: subsystems the user never named, a migration or breaking change, several
+PRs where one was implied, or an architectural decision the user has not made.
+Report in two or three sentences — what you found, why it exceeds the request,
+the cheapest path forward — offer the narrow option first, and wait. Deliver
+everything unambiguously in scope first; never stop with nothing done.
+
+The threshold moves with the Scope Brief's size signal: a `narrow` request stops
+at any overrun, `normal` stops at an unmade decision or a reach beyond the named
+subsystem, `open-ended` stops only at architectural forks or irreversible actions.
+
+**Do NOT stop for work inside the request's natural boundary:** tests for code you
+just wrote, docs the change invalidates, fixing a build you broke, following an
+approved change document to completion, or resolving findings classified
+`required-by-contract` / `regression-caused-by-change`. Over-triggering is its own
+failure mode.
 
 ### Test Policy
 
@@ -126,9 +150,33 @@ gh issue view [NUMBER] --json title,body,labels,comments
 
 ---
 
-### STEP 2.5: Freeze the Implementation Contract and Open the Finding Ledger
+### STEP 2.5: Freeze the Scope Brief and Implementation Contract, and Open the Finding Ledger
 
-If the task is sourced from, names, or discovers a relevant `docs/changes/*.md` file, read it and the spec sections it links. Confirm implementation approval from the conversation or the change's recorded workflow state; if approval is unclear, STOP and ask the user. Record the contract path and approval evidence in the working brief. The change document, its linked specs, and all mandatory project rules form the implementation contract: the plan and coder prompt MUST map work to that contract and MUST NOT infer adjacent product or architecture work.
+**First, build the Scope Brief.** It is the user's own framing, and it must
+survive every sub-agent hop and every reviewer call. Full definition and field
+rules: `references/scope-contract.md` (beside this skill).
+
+```markdown
+### Scope Brief
+- **Verbatim request:** "<the user's exact words, quoted, never paraphrased>"
+- **Interpreted scope:** <files, subsystems, deliverable>
+- **Deliverable type:** <docs | code | spec | research | config | mixed>
+- **Explicitly out of scope:** <what must NOT be touched or flagged, with reasons>
+- **Size signal:** <narrow | normal | open-ended>
+- **Known-and-accepted:** <deliberate states a reviewer would otherwise flag>
+```
+
+Derive **size signal** from the user's own language: "just", "real quick",
+"only", "small", "minimal" → `narrow`; "thoroughly", "comprehensive", "audit",
+"properly" → `open-ended`; otherwise `normal`. A `narrow` request is a budget,
+not filler — honour it.
+
+**The Scope Brief MUST be included verbatim in every downstream sub-agent prompt
+and every reviewer invocation in Steps 3, 4, 4.5, 6, and 8.** A reviewer without
+it reports the work you deliberately did not do, and every such finding costs a
+full review cycle to filter by hand.
+
+**Then freeze the implementation contract.** If the task is sourced from, names, or discovers a relevant `docs/changes/*.md` file, read it and the spec sections it links. Confirm implementation approval from the conversation or the change's recorded workflow state; if approval is unclear, STOP and ask the user. Record the contract path and approval evidence in the working brief. The change document, its linked specs, and all mandatory project rules form the implementation contract: the plan and coder prompt MUST map work to that contract and MUST NOT infer adjacent product or architecture work.
 
 The coordinator owns one in-memory finding ledger for the run; reviewer sub-agents return findings to the coordinator and MUST NOT mutate the ledger concurrently. Give every finding a stable fingerprint (`category + file + line/range + normalized claim`) and record its source, first-seen revision, classification, disposition, and verification evidence. Classify each finding exactly once as:
 
@@ -148,10 +196,14 @@ Fix only the first two classes. Deduplicate repeated or reworded findings by fin
 Agent tool:
   prompt: "Load the planner skill (Skill tool: skill='fx-dev:planner'), then:
 
+           [PASTE THE STEP 2.5 SCOPE BRIEF VERBATIM HERE]
+
            Create implementation plan for:
 
            [REQUIREMENTS FROM STEP 2]
 
+           - Keep the plan inside the Scope Brief; if the work cannot be done
+             within it, stop and report that rather than planning around it
            - Break into atomic steps
            - Identify files to modify
            - Determine test requirements
@@ -184,11 +236,15 @@ Agent tool:
 Agent tool:
   prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
 
+           [PASTE THE STEP 2.5 SCOPE BRIEF VERBATIM HERE]
+
            Implement this plan:
 
            [PLAN FROM STEP 3]
 
            Requirements:
+           - Stay inside the Scope Brief; if implementation cannot be completed
+             within it, stop and report rather than widening the change
            - Atomic commits (format: type(scope): message)
            - Follow existing patterns
            - Run tests
@@ -212,10 +268,12 @@ git diff main --stat
 
 **MANDATORY: Run one complete local review matrix before creating the PR.** Run each available pass once in order against the current `HEAD`, record the revision that each channel reviewed, and classify its findings before accepting fixes. If `/simplify` edits directly, retain only changes that satisfy the contract classification and record the resulting revision before starting the next pass.
 
+**⛔ EVERY pass below MUST receive the Step 2.5 Scope Brief verbatim.** A reviewer handed a bare diff reports the work you deliberately did not do — missing implementation for a docs-only change, missing tests for a spec, dependencies a later phase adds — and each such finding costs a full cycle to filter by hand. A pass run without the brief is incomplete: rerun it with the brief rather than filtering its output. Findings the brief excludes are recorded as deferred with the covering exclusion, never silently fixed and never silently dropped — unless the finding is correct and the exclusion was wrong, in which case fix the work and correct the brief.
+
 **1. `/simplify`** — reuse, quality, efficiency cleanup:
 
 ```
-Skill tool: skill="simplify"
+Skill tool: skill="simplify", args="<Scope Brief>"
 ```
 
 Reviews changed code for **reuse** (duplicated logic), **quality** (copy-paste, leaky abstractions, nesting), and **efficiency** (redundant computation, missed concurrency).
@@ -223,13 +281,13 @@ Reviews changed code for **reuse** (duplicated logic), **quality** (copy-paste, 
 **2. `/code-review`** — correctness bugs in the diff:
 
 ```
-Skill tool: skill="code-review"
+Skill tool: skill="code-review", args="<Scope Brief>"
 ```
 
 **3. CodeRabbit (local, via `cr`)** — independent local review:
 
 ```
-Skill tool: skill="fx-dev:coderabbit-review"
+Skill tool: skill="fx-dev:coderabbit-review", args="<Scope Brief>"
 ```
 
 If `cr` is **unavailable**, fall back to the PR-level CodeRabbit review in Step 6.3. If `cr` is installed but **not authenticated**, STOP and report to the user — NEVER run `cr auth login`. If CodeRabbit reports a rate/quota limit or cooldown, report it once, classify findings already received, mark the pass `skipped (rate-limited)`, and continue immediately. Never wait or retry solely for a CodeRabbit cooldown.
@@ -237,10 +295,10 @@ If `cr` is **unavailable**, fall back to the PR-level CodeRabbit review in Step 
 **4. Codex (local, via `codex`)** — independent one-shot branch review:
 
 ```
-Skill tool: skill="fx-dev:codex-review"
+Skill tool: skill="fx-dev:codex-review", args="<Scope Brief>"
 ```
 
-If the `codex` CLI is unavailable or not authenticated, report it once and proceed without this pass. NEVER run `codex login`.
+The Codex CLI takes the scope as its review prompt, so this pass is the one where a missing brief is most expensive — it will confidently report every deliberate omission. If the `codex` CLI is unavailable or not authenticated, report it once and proceed without this pass. NEVER run `codex login`.
 
 #### Remediation and Delta Verification
 
@@ -473,13 +531,17 @@ If any Test Plan items failed verification:
 Agent tool:
   prompt: "Load the pr-reviewer skill (Skill tool: skill='fx-dev:pr-reviewer'), then:
 
+           [PASTE THE STEP 2.5 SCOPE BRIEF VERBATIM HERE — the reviewer must
+            know what was asked for before it reads the diff, and must report
+            out-of-scope findings as deferred rather than blocking]
+
            Review PR #[NUMBER] for:
            - Code quality
            - Test coverage
            - Security issues
            - Performance
 
-           Output: Issues found (if any)"
+           Output: Issues found (if any), each marked in-scope or deferred"
   description: "Review PR"
 ```
 
@@ -524,20 +586,32 @@ If unsure: assume mode B. It's strictly slower but always correct; mode A is an 
 
 In a single message, spawn one sub-agent per reviewer using the Agent tool. Both wait scripts run concurrently and each resolves its own reviewer.
 
+Neither Copilot nor the CodeRabbit GitHub App accepts a scope prompt, so the brief cannot reach them — it MUST still go to the sub-agents, which apply it when triaging what comes back.
+
 ```
 Agent tool (spawn ALL reviewer sub-agents in the same message — parallel):
 
 Agent 1:
   prompt: "Load the copilot-review skill (Skill tool: skill='fx-dev:copilot-review'),
            then wait for and inspect currently unresolved feedback for PR #[PR_NUMBER] at its
-           current head SHA. Return findings and evidence only; do not edit, push, resolve threads,
+           current head SHA.
+
+           [PASTE THE STEP 2.5 SCOPE BRIEF VERBATIM HERE — mark each finding
+            in-scope or out-of-scope against it; never widen the change to
+            satisfy an out-of-scope suggestion]
+
+           Return findings and evidence only; do not edit, push, resolve threads,
            or modify task trackers. Report the reviewed SHA."
   description: "Inspect Copilot review"
 
 Agent 2:
   prompt: "Load the coderabbit-review skill (Skill tool: skill='fx-dev:coderabbit-review'),
            then wait for and inspect currently unresolved feedback for PR #[PR_NUMBER] at its
-           current head SHA. Return findings and evidence only; do not edit, push, resolve threads,
+           current head SHA.
+
+           [PASTE THE STEP 2.5 SCOPE BRIEF VERBATIM HERE — same triage rule]
+
+           Return findings and evidence only; do not edit, push, resolve threads,
            or modify task trackers. Report the reviewed SHA."
   description: "Inspect CodeRabbit review"
 ```

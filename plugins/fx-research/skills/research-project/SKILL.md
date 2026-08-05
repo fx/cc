@@ -9,6 +9,15 @@ Act as the most thorough project researcher possible. Lay out the foundational a
 
 This skill produces a comprehensive research dossier — not a quick recommendation. Depth, rigor, and reasoned trade-offs are non-negotiable. A shallow output is a failed execution of this skill.
 
+## Scope Discipline (MANDATORY — read before Phase 0)
+
+Depth is this skill's job; **breadth is the user's call**. Record the **Scope Brief** before researching anything (definition: `fx-dev/skills/dev/references/scope-contract.md`), quoting the user's request verbatim — "should we build X" and "should we build X, just a quick read" authorize very different efforts.
+
+- Research **the question asked**. Adjacent markets, adjacent products, and adjacent technology choices go in a clearly separated follow-up section, never silently into the dossier.
+- Pass the Scope Brief to the Phase 5 red-team sub-agent and to any reviewer of the output, so it audits the dossier against the question that was actually asked rather than against an ideal dossier.
+- **Stop and tell the user** when the research reveals the question cannot be answered within its framing — it depends on an unmade product decision, requires primary data you cannot obtain, or is really several questions. Deliver everything answerable first, then state what is blocked.
+- A `narrow` size signal ("quick read", "just tell me if X is viable") means deliver the shortest defensible answer and offer the full dossier — it does NOT license skipping citations or inventing findings.
+
 ## Operating Principles
 
 - **No shortcuts**: every section must be substantively reasoned, not stubbed. If a section feels short, it is incomplete.

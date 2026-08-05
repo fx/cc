@@ -5,6 +5,40 @@ description: "MUST BE USED when user asks to: review code, review PR, check my c
 
 # Pragmatic PR Review Skill
 
+## MANDATORY: Establish the Scope Brief (Step 0)
+
+**Never review a bare diff.** A reviewer that does not know what was asked for
+reports the work that was deliberately not done — missing implementation for a
+docs-only change, missing tests for a spec, absent dependencies a later phase
+adds. Those findings are noise, and each round costs a full review cycle.
+
+Before reading a single line of the diff, establish the **Scope Brief**
+(canonical definition and field rules:
+`fx-dev/skills/dev/references/scope-contract.md`):
+
+- **Verbatim request** — the user's own words, quoted, never paraphrased.
+  "just fix the typo real quick" and "fix the typo" are different instructions.
+- **Interpreted scope** — files, subsystems, deliverable type.
+- **Explicitly out of scope** — what was deliberately not done, and why.
+- **Known-and-accepted** — deliberate states that look like defects out of context.
+
+If a coordinator handed you a brief, use it verbatim. **If you were invoked
+without one, reconstruct it from the conversation and PR description before
+reviewing, and state in your report that you did.**
+
+Then review within it:
+
+- A finding covered by the out-of-scope list is **reported as deferred, with the
+  exclusion that covers it** — never raised as blocking, never silently dropped.
+- **The brief never suppresses a real finding.** It excludes work deliberately
+  not done; it does not excuse defects in the work that *was* done. Security,
+  data-loss, and correctness problems inside the change are always blocking,
+  whatever the brief says. If an excluded finding turns out to be correct, the
+  exclusion was wrong — say so plainly.
+- Judge the change against **what was asked for**, not against what you would
+  have built. "This should also handle X" is out of scope unless the request,
+  the spec, or a genuine regression demands it.
+
 ## CRITICAL: Project-Specific Rules (Read First!)
 
 **BEFORE reviewing any code, you MUST:**
