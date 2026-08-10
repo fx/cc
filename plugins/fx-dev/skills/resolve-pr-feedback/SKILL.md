@@ -171,7 +171,7 @@ After invoking resolver skills, re-query to confirm all threads are resolved AND
 1. **Nudge Copilot for the current head SHA** via `fx-dev:copilot-review` (its Step 1). **Copilot does NOT re-review pushed commits on its own.** Skipping this makes the rest of the loop meaningless: you will poll, see nothing, and "converge" on code no reviewer has read. Issue the nudge and discard its response — it is fire-and-forget, never evidence, and having issued it is never a substitute for step 6's received-review check.
 2. Wait for all reviewer checks to reach terminal state (use the dedicated waiters: `fx-dev:copilot-review` for Copilot, `fx-dev:coderabbit-review` for CodeRabbit). **Do not hand-roll a `gh api` / GraphQL polling loop in their place** — a hand-rolled loop only observes, never requests, and will happily accept a review of a superseded commit.
 3. Re-query unresolved threads (per below).
-4. If count > 0, re-invoke the relevant resolver(s).
+4. If the breakdown array is non-empty, re-invoke the relevant resolver(s).
 5. After fixes are pushed, restart at step 1 — the push created unreviewed commits.
 6. Stop when a pass produces zero new feedback **on a head SHA that was actually reviewed** (verify: the newest Copilot review's `commit_id` equals `headRefOid`). Cap at 4 outer iterations and escalate to the user if not converged.
 
@@ -190,9 +190,10 @@ REVIEWED=$(gh api "/repos/OWNER/REPO/pulls/<PR>/reviews" \
 
 The `// empty` is load-bearing: without it, a PR with no Copilot reviews prints the literal string `null`, which then gets compared against a SHA under a "these MUST match" instruction — an unreviewed head presented as a concrete-looking value instead of an obvious absence.
 
-Re-query to count remaining unresolved threads **from automated reviewers only**.
+Re-query remaining unresolved threads **from automated reviewers only**. The query
+below returns a per-reviewer breakdown array, not a single number.
 This skill resolves automated feedback and `fx-dev:github` forbids touching human
-review threads at all, so an unfiltered count makes one open human comment
+review threads at all, so an unfiltered query makes one open human comment
 permanently unsatisfiable and loops this skill against work it must not do:
 
 ```bash
