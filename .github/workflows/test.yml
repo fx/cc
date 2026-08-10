@@ -163,10 +163,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # The action only installs duvet; its default version input is a stale
-      # 0.3.0, so pin to the version the snapshot was generated with.
+      # Two independent pins. The action ref is v0.4.2 because it must be
+      # immutable like every other `uses:` here, and v0.4.2 is the newest tag
+      # awslabs/duvet has — there is no v0.4.3 tag, which is why this once said
+      # @main. The action is only a thin wrapper that installs the duvet crate
+      # at `version:`, so its own ref does not constrain that version: 0.4.3 is
+      # the latest crate on crates.io and the version .duvet/snapshot.txt was
+      # generated with (the action's default input is a stale 0.3.0).
       - name: Install duvet
-        uses: awslabs/duvet@main
+        uses: awslabs/duvet@v0.4.2
         with:
           version: 0.4.3
 
