@@ -258,7 +258,7 @@ The gate is defined at the **repository root**, so the check MUST resolve the ro
 
 If `.duvet/` exists, **every rule in "Duvet Mode — Requirements Traceability" above applies for the rest of this run** — REQ IDs for newly created requirements only, one self-contained statement per requirement section, RFC 2119 keywords confined to requirement sections, the extraction check, and the registration and snapshot items you REPORT rather than apply. Record this in your working notes so it is not forgotten by Phase 6.
 
-If it does not exist, proceed normally and do not raise duvet at all. Adopting duvet is `fx-dev:setup`'s decision to offer, not this skill's.
+If it does not exist, proceed normally and do not raise duvet at all. Adopting duvet is `fx-dev:setup`'s and `fx-dev:upgrade`'s decision to offer — both entry points do — not this skill's.
 
 ---
 
@@ -590,8 +590,10 @@ Skip entirely if `.duvet/` does not exist.
 **2. The snapshot needs regenerating.** `.duvet/snapshot.txt` is committed and CI runs `duvet report --ci`, which fails whenever the re-derived report disagrees with the committed snapshot. Adding, renaming, or removing **any** requirement turns that job red. Report the exact command:
 
 ```bash
-rm -rf .duvet/requirements && duvet report
+cd "$(git rev-parse --show-toplevel)" && rm -rf .duvet/requirements && duvet report
 ```
+
+The `cd` is not optional. duvet resolves the config, every specification source, and every source pattern relative to the current working directory and never searches upwards, so the same command run from a subdirectory loads 0 specifications, writes no snapshot, and still exits 0 — a silent no-op that looks like success.
 
 The `rm -rf` is not optional. `duvet report` writes one TOML per current spec section into `.duvet/requirements/` and never prunes stale ones, so a renamed or removed heading leaves an orphan behind — which fails locally with `missing section "..."` while CI, running from a fresh checkout, passes. Deleting the directory first keeps local and CI results identical. **You do not run this**: it writes outside `docs/`.
 
@@ -637,7 +639,7 @@ After completing all phases, report:
 5. **Requirements needing traces** (duvet mode only) — list every requirement you created or renamed **by REQ ID and heading**, so an implementing skill can establish the annotations. Call out renamed headings separately: those break existing annotations and need them re-pointed, not newly written.
 6. **duvet wiring to apply** (duvet mode only) — everything from Phase 6.3 that you reported instead of applying, because it lives outside `docs/`:
    - the `[[specification]]` stanza for each new spec, with its `format = "markdown"` warning
-   - the snapshot regeneration command, `rm -rf .duvet/requirements && duvet report`
+   - the snapshot regeneration command, `cd "$(git rev-parse --show-toplevel)" && rm -rf .duvet/requirements && duvet report` — root-qualified, because duvet is cwd-relative and the un-`cd`'d form is a silent no-op from a subdirectory
    - any `[[source]]` pattern gap that would leave the new requirements untraceable
    - the warning that the spec PR's duvet check stays red until traces land, plus your recommended sequencing
 7. **Suggested next steps**:
