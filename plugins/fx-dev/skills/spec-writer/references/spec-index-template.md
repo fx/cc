@@ -95,6 +95,43 @@ Unresolved design decisions. Each should state:
 
 ---
 
+## Duvet mode — a different Requirements shape
+
+**This section applies ONLY when `.duvet/` exists at the repository root.** It overrides two parts of the template above: the `## Requirements` shape, replaced wholesale below, and the `## Overview` guidance — the "Use RFC 2119 keywords (MUST, SHOULD, MAY) to indicate requirement levels" instruction there does NOT apply in duvet mode, where the Overview is plain prose like every other non-requirement section. Every remaining section of the template is unchanged. Projects without `.duvet/` use the whole template above exactly as written.
+
+Duvet traces each normative statement to the code implementing it, which constrains how requirements may be written. The shape above — a named requirement holding several `MUST` bullets, with keywords free to appear in scenarios — does not survive that: duvet extracts one requirement per section and quotes it byte for byte, so a section with three bullets is uncitable, and a `MUST` in a `THEN` line splits one requirement into two.
+
+Replace the `## Requirements` block with this shape:
+
+```markdown
+## Requirements
+
+### REQ-001: Descriptive Title
+
+The system MUST <a single, self-contained normative sentence>.
+
+#### Scenario: <Scenario Name>
+
+- **GIVEN** <precondition>
+- **WHEN** <action or event>
+- **THEN** <expected observable outcome, stated plainly — no RFC 2119 keyword>
+
+### REQ-002: Another Descriptive Title
+
+The system SHOULD <a single, self-contained normative sentence>.
+```
+
+Rules that differ from the default shape:
+
+- **`### REQ-NNN: Title` headings**, zero-padded to three digits, globally unique across the whole `docs/specs/` tree. Assigned to NEWLY created requirements only — never retrofitted onto a heading that already exists.
+- **Exactly one normative sentence per requirement section**, self-contained, not a bullet list. This sets no count for any other `###` section — those carry zero normative sentences, per the next rule.
+- **RFC 2119 keywords appear ONLY inside requirement sections** — `###` sections whose sole purpose is to state a single normative requirement, whether or not the heading carries a REQ ID (newly created requirements get one; pre-existing plain-titled requirements keep their headings, so both styles coexist). Overview, Background, Design, Constraints, Open Questions, and scenario bodies are plain prose. A keyword anywhere else becomes an extracted requirement with no ID and no annotatable home, failing `duvet query -c implementation` permanently.
+- **Heading text is an address.** Renaming one breaks every annotation citing its anchor.
+
+Full rules, including what the skill reports rather than applies: the "Duvet Mode — Requirements Traceability" section of `SKILL.md`.
+
+---
+
 ## Notes
 
 - **Living document**: This spec describes the CURRENT state of the system, not a future plan
