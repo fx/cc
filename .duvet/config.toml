@@ -1,0 +1,24 @@
+'$schema' = "https://awslabs.github.io/duvet/config/v0.4.0.json"
+
+# The marketplace-structure spec is prose markdown, not an IETF RFC. Without an
+# explicit `format`, duvet applies the `ietf` parser, which silently extracts
+# zero requirements from this document rather than failing.
+[[specification]]
+source = "docs/specs/marketplace-structure/index.md"
+format = "markdown"
+
+# The CI validation steps are what actually verify these invariants, so they
+# carry `test` citations. `#=`/`#%` are the YAML/shell comment equivalents of
+# duvet's `//=`/`//#` defaults.
+[[source]]
+pattern = ".github/workflows/*.yml"
+type = "test"
+comment-style = { meta = "#=", content = "#%" }
+
+[report.snapshot]
+enabled = true
+path = ".duvet/snapshot.txt"
+
+[report.json]
+enabled = true
+path = ".duvet/reports/report.json"
