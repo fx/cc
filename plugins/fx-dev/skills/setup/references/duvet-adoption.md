@@ -108,7 +108,8 @@ rule.
 
 ### 1. Install duvet
 
-**If the repo has a mise config**, merge duvet into its existing `[tools]` table.
+**If the repo has a mise config**, pin duvet in its `[tools]` table — merging into
+the one that is already there, or adding the table if the config has none.
 
 Check every path mise actually honours, not just the two obvious ones — a repo
 using any of these has a mise config, and offering it a competing root
@@ -128,27 +129,80 @@ Prefer the non-`.local.toml` file when both are present: `*.local.toml` is
 conventionally gitignored and per-developer, so a pin placed there does not reach
 CI or other contributors.
 
-**Merge these two keys INTO the existing `[tools]` table. Do not append a
-`[tools]` header.**
+These are the two keys to add:
 
 ```toml
 rust = "1.97.1"
 "cargo:duvet" = "0.4.3"
 ```
 
-- **The header is omitted on purpose.** A file with two `[tools]` tables is a
-  TOML parse error (`Cannot declare ('tools',) twice`), and mise then loads **no
-  tools at all** for the repo — adoption would break every unrelated tool the
-  project pins. Verified. Insert the keys under the `[tools]` header that is
-  already there.
+**Where they go depends on whether the file already has a `[tools]` table. Check
+first, then follow exactly one branch:**
+
+```bash
+grep -n '^\[tools\]' "$repo_root/<config>"
+```
+
+**Branch A — the file already has a `[tools]` table** (the grep matched). Insert
+the two keys as lines *under the header that is already there*. Do **not** write
+a second `[tools]` header.
+
+```toml
+[tools]
+node = "22.14.0"          # already there — untouched
+rust = "1.97.1"           # added
+"cargo:duvet" = "0.4.3"   # added
+```
+
+**Branch B — the file has no `[tools]` table** (the grep matched nothing). **Add
+one.** A mise config of only `[env]`, `[tasks]`, and/or `[settings]` is perfectly
+legal and common, so this branch is not an edge case. Append the header with the
+two keys under it:
+
+```toml
+[env]
+FOO = "bar"               # already there — untouched
+
+[tools]                   # added, header included
+rust = "1.97.1"
+"cargo:duvet" = "0.4.3"
+```
+
+A file that has only `[tools.<name>]` sub-tables and no bare `[tools]` is also
+branch B: adding a `[tools]` header alongside `[tools.node]` is valid TOML and
+mise loads both (verified).
+
+**Never write the keys with no `[tools]` header above them.** Both ways of
+getting that wrong are verified against mise 2026.7.10, and neither is
+recoverable by later steps:
+
+- **Appended at the end of a file whose last table is, say, `[tasks.hello]`,** the
+  keys parse as *fields of that table*. mise rejects the entire config —
+  ``unknown field `rust`, expected one of `description`, `alias`, …`` — and exits
+  1, loading no tools at all.
+- **Placed at true top level, above every header,** mise warns `unknown field …:
+  rust` and **silently ignores the pin**: `mise ls --current` shows `rust`
+  resolved from the global `~/.config/mise/config.toml`, not from the repo. Step 1
+  becomes a no-op and adoption then aborts at step 2 with a confusing "duvet does
+  not run".
+
+**Never write a second `[tools]` header** when one already exists, either. Two
+`[tools]` tables is a TOML parse error — mise reports `TOML parse error at line
+N … duplicate key` — after which mise loads **no tools at all** for the repo,
+so adoption would break every unrelated tool the project pins. Verified.
+
 - **If `rust` is already pinned, leave it exactly as it is** and add only
   `"cargo:duvet"`. A second `rust` key in the same table is the same
   duplicate-key parse error, and *overwriting* the existing pin is a change to a
   config value that is already set — forbidden by `fx-dev:setup`'s create-only
   contract (see its "setup MAY / MUST NOT" table). Any cargo toolchain builds
   duvet; the repo's own pin is not adoption's to relitigate.
-- **If `"cargo:duvet"` is already pinned to a different version**, stop and
-  report it rather than changing it — same rule.
+- **If `"cargo:duvet"` is already pinned, leave that pin exactly as it is too and
+  continue adoption** — identical rule, identical reasoning. The repo's own duvet
+  pin is no more adoption's to relitigate than its `rust` pin, and blocking here
+  would mean a repo that already pins and runs duvet can never adopt. If the
+  pinned version is old enough to matter, say so in the final report; do not
+  change it and do not stop.
 
 Then run `mise install` from `$repo_root`.
 
@@ -189,7 +243,8 @@ its CLI requires a subcommand (`init|extract|report|query|merge|help`), so both
 forms print `error: unexpected argument '--version' found` and **exit 2** on a
 perfectly working install (verified). Using either as the gate makes step 2 fail
 for every user, and because a failed step 2 aborts adoption, every adoption would
-stop here with step 1's mise edit already applied. `duvet help` exits 0; so does
+stop here with step 1 already done — including its `[tools]` edit, on the mise
+path. `duvet help` exits 0; so does
 `duvet report --help` if a subcommand-level check is wanted.
 
 If the binary is not on `PATH`, try `"$HOME/.cargo/bin/duvet" help` (the
@@ -226,10 +281,20 @@ neither is this procedure running a command:
    the one command the config tells them to run.
 
 **If duvet does not run, ERROR and stop.** Report the command that failed, its
-output, and exactly what exists so far: at this point that is the `[tools]`
-entries from step 1 and **no `.duvet/` at all**, so `fx-dev:spec-writer` is
-unaffected and the only thing to revert is the mise edit. Do not continue to
-step 3 hoping it resolves itself.
+output, and exactly what exists so far. There is **no `.duvet/` at all** at this
+point on either path, so `fx-dev:spec-writer` is unaffected. What there is to
+revert depends on the install path step 1 took, and the report must name the one
+that applies:
+
+- **mise path** — the `[tools]` entries added to `<mise config path>` are the only
+  change; reverting means removing them (and the `[tools]` header too, if step 1's
+  branch B created it).
+- **`cargo install duvet --locked` path** — **nothing in the repo was modified at
+  all.** No mise config was touched, so there is nothing to revert; only the
+  machine-local binary was installed. Do not tell the user to undo a mise edit
+  that does not exist.
+
+Do not continue to step 3 hoping it resolves itself.
 
 ### 3. Establish the source patterns, then scaffold `<root>/.duvet/config.toml`
 
@@ -290,7 +355,8 @@ AskUserQuestion:
 
 **If the user cannot or will not name a pattern, abort adoption.** Nothing under
 `.duvet/` exists yet — 3e has not run — so the only thing to revert is step 1's
-install edit; name it and stop. Writing `.duvet/` without a `[[source]]` is worse
+install edit *if it took the mise path*, and nothing at all if it took
+`cargo install`; name whichever applies and stop. Writing `.duvet/` without a `[[source]]` is worse
 than not adopting at all: it flips `spec-writer` into duvet mode *and* guarantees
 the gate fails later.
 
@@ -532,8 +598,14 @@ AskUserQuestion:
     - label: "Keep, I'll wire CI"
       description: "Leave .duvet/ in place. Specs get stricter now; you add `duvet query -c implementation` and `duvet report --ci` to your CI yourself"
     - label: "Revert adoption"
-      description: "Delete .duvet/, undo the .gitignore and mise edits. spec-writer returns to its normal mode"
+      description: "Delete .duvet/, undo the .gitignore entries<, and undo the [tools] edits in <mise config path> — include this clause ONLY if step 1 took the mise path>. spec-writer returns to its normal mode"
 ```
+
+**That description is conditional, like the report lines.** On the `cargo install
+duvet --locked` path no mise config was edited, so offering to "undo the mise
+edits" names a change that does not exist; drop the clause and revert only
+`.duvet/` and the `.gitignore` entries. The installed binary is machine-local and
+outside the repo either way — reverting adoption does not require uninstalling it.
 
 Do not report success on the "keep" path without repeating, in the final report,
 that no gate exists yet. An acknowledged trade is fine; an unmentioned one is the
@@ -580,6 +652,7 @@ was not written:
 ```
 Duvet adopted:
   <mise config path>  + cargo:duvet 0.4.3 (rust already pinned / + rust <version>)
+                        — or: cargo:duvet <version> already pinned, left as-is
                         — or: cargo install duvet --locked, no in-repo pin
   .duvet/config.toml  created (snapshot + JSON report, no specifications yet)
                         [[source]]: <the confirmed patterns, with comment styles>
