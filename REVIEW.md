@@ -38,6 +38,10 @@ reference another file.
 - The correct method for programmatically resolving PR review threads is using the GitHub GraphQL API via `gh api graphql` with the `resolveReviewThread` mutation.
 - Verify command existence before suggesting `gh` CLI alternatives.
 
+### jq Semantics
+
+- `jq`'s `group_by(f)` sorts its input by `f` internally before grouping — that is documented behaviour, not incidental. A missing `sort` before `group_by` is NOT a defect and MUST NOT be flagged; `group_by` does not require pre-sorted input and does not only group adjacent elements.
+
 ### Instruction File Layout
 
 - `AGENTS.md` holds project conventions; `REVIEW.md` holds review conventions. Do not suggest moving rules between them or reviving `CLAUDE.md` as a conventions file.

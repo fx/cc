@@ -84,15 +84,34 @@ This skill triggers automatically when:
 | Gate | Verification | Blocking? |
 |------|-------------|-----------|
 | CI checks ALL green | `gh pr checks <NUMBER>` — every check must show `pass` | ⛔ YES |
-| Copilot review RECEIVED | `gh api repos/{owner}/{repo}/pulls/<NUMBER>/reviews --jq '.[] \| select(.user.login == "copilot-pull-request-reviewer[bot]")'` — must return a review | ⛔ YES |
-| Copilot comments RESOLVED | All Copilot review threads resolved (0 unresolved) | ⛔ YES |
+| Copilot review RECEIVED **for the commit being merged** | A Copilot review whose `commit_id` equals the PR's current `headRefOid` — see the scoped command below. A review of ANY older commit does NOT satisfy this gate | ⛔ YES |
+| Copilot suppressed comments TRIAGED | The reviewed body's `<details><summary>Suppressed comments (N)</summary>` block read in full and every item triaged. Those findings create **no** review thread, so the row below can never surface them | ⛔ YES |
+| Copilot comments RESOLVED | All **Copilot-authored** review threads resolved (0 unresolved). Filter on the Copilot login — human threads are out of scope and must never be touched | ⛔ YES |
 | CodeRabbit review attempted (if GitHub App configured) | Prefer a received review; explicit `skipped (rate-limited)` is acceptable | Optional when rate-limited |
 | CodeRabbit comments resolved (if received) | Resolve all threads received before any rate limit | Optional when rate-limited |
 | Codecov passing | `codecov/patch` and `codecov/project` checks pass | ⛔ YES |
 
 > **CodeRabbit is run primarily LOCALLY (via the `cr` CLI) BEFORE the PR is opened** — see `fx-dev:coderabbit-review` (Mode 1) and `fx-dev:dev` Step 4.5. The PR-level review applies only when the GitHub App auto-reviews PRs. **CodeRabbit is optional when it reports a rate/quota limit or cooldown:** report once, resolve findings already received, record `skipped (rate-limited)`, and continue without waiting or retrying. Other merge gates remain mandatory.
 
-**If Copilot review has NOT been received:** WAIT. Poll every 60 seconds for up to 15 minutes. Do NOT merge without it.
+Verify the Copilot gate with a **head-SHA-scoped** query — an unscoped one accepts a
+review of a superseded commit as coverage for the code you are about to merge:
+
+```bash
+PR_NUMBER=$(gh pr view --json number --jq '.number')          # or set it explicitly: PR_NUMBER=123
+REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+HEAD_SHA=$(gh pr view "$PR_NUMBER" --json headRefOid --jq '.headRefOid')
+gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" \
+  --jq "[.[] | select(.user.login | startswith(\"copilot-pull-request-reviewer\")) | select(.commit_id == \"${HEAD_SHA}\")] | length"
+```
+
+A result of `0` means **the commit you are about to merge is UNREVIEWED**, whatever
+older reviews the PR carries.
+
+**If a Copilot review of the current head has NOT been received:** WAIT — using
+`fx-dev:copilot-review`, which owns the head-SHA-aware waiter. **Do not hand-roll a
+polling loop here.** Hand-rolled loops reliably accept a review of a superseded
+commit, re-derive the broken `requested_reviewers` readiness check, and read thread
+counts without reading suppressed comments. Do NOT merge without it.
 
 **Incident context:** A "small follow-up" PR was merged without waiting for Copilot review. Copilot found 5 real bugs (timing drift, race conditions, missing tests) that shipped to main. PR size is NEVER a reason to skip review gates.
 
@@ -453,16 +472,22 @@ GitHub Copilot can automatically review pull requests. This section covers how t
 **A Copilot review CAN be requested via the API** — add the bot as a requested reviewer:
 
 ```bash
+PR_NUMBER=$(gh pr view --json number --jq '.number')          # or set it explicitly: PR_NUMBER=123
 REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
-gh api --method POST "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/requested_reviewers" \
+gh api --method POST "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/requested_reviewers" \
   --input - <<'EOF'
 {"reviewers":["copilot-pull-request-reviewer[bot]"]}
 EOF
 ```
 
-A `422` means a review is already requested or already in flight — treat it as success. Prefer `fx-dev:copilot-review`, which wraps this together with a head-SHA-aware waiter.
+**The response to this POST is not evidence of anything.** It returns 200 with an
+empty `requested_reviewers` array regardless, and a `422` is equally
+uninformative — neither tells you whether a review is coming. Issue it and ignore
+the result. The only sound signal is a review whose `commit_id` equals the PR's
+current `headRefOid`; see `fx-dev:copilot-review` ("Known GitHub API Behaviour",
+D1–D3) and use that skill, which wraps this together with a head-SHA-aware waiter.
 
-**Do this again after every push to the PR branch.** Copilot will not look at new commits on its own, and a stale review must never be read as coverage for the current head.
+**Do this again after every push to the PR branch.** Copilot will not reliably look at new commits on its own, and a stale review must never be read as coverage for the current head.
 
 Other ways a review can be triggered, none of which replace the request above:
 
@@ -472,79 +497,92 @@ Other ways a review can be triggered, none of which replace the request above:
    - Optionally enable "Review new pushes" for re-reviews on each commit — **off by default**
 2. **GitHub UI** — Open PR → Reviewers → "Copilot"; the re-request button (🔄) forces a fresh pass
 
-### Check if Copilot Review is Pending
+### ⛔ There Is No Way to Check Whether a Copilot Review Is "Pending"
 
-Query review requests for Bot reviewers:
+**Do not try.** `reviewRequests` / `requested_reviewers` is **empirically always
+empty** for the Copilot bot — 200 with `requested_reviewers: []` every time, and the
+GraphQL `reviewRequests` node is empty too, including while a review is genuinely on
+its way and after it has landed. See `fx-dev:copilot-review` (**D1**/**D3**).
+
+Because that field is always empty, an "if non-empty → pending" check has only one
+reachable branch: the negative one. Wired into a workflow it concludes "nobody asked
+Copilot to review" on every PR, forever — which is exactly the false conclusion
+**D3** forbids, and it made an earlier waiter report "no review requested" against
+reviews that had already been delivered.
+
+**The only sound signal is the review itself, scoped to the commit** — nothing has to
+be "requested" for that to become true, and nothing being there yet does not mean
+nothing was requested. Absence is never a verdict.
+
+### Check Whether Copilot Has Reviewed the Current Head
+
+This is the real check. Note the `commit_id` scoping — without it you learn only that
+Copilot reviewed *something*, which says nothing about the code in front of you:
 
 ```bash
-# Replace OWNER, REPO, PR_NUMBER with actual values
+PR_NUMBER=$(gh pr view --json number --jq '.number')          # or set it explicitly: PR_NUMBER=123
+REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+HEAD_SHA=$(gh pr view "$PR_NUMBER" --json headRefOid --jq '.headRefOid')
+
+# Reviews of the CURRENT head — this is coverage.
+gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" \
+  --jq "[.[] | select(.user.login | startswith(\"copilot-pull-request-reviewer\")) | select(.commit_id == \"${HEAD_SHA}\") | {state, submitted_at}]"
+
+# Every Copilot review with its commit — diagnostic, to see whether a review exists
+# but covers an older commit. NOT a pass signal.
+gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" \
+  --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer")) | {commit_id, state, submitted_at}]'
+```
+
+Or via GraphQL — include `commit { oid }`, otherwise the result is unscoped and
+cannot answer the question:
+
+```bash
+# Replace OWNER, REPO, PR_NUMBER with actual values. `-f query='...'` is single-quoted,
+# so nothing inside it is shell-expanded — these are literal substitutions, not shell
+# variables. The `$head` in the --jq below is a *jq* variable and stays as written.
 gh api graphql -f query='
 query {
   repository(owner: "OWNER", name: "REPO") {
     pullRequest(number: PR_NUMBER) {
-      reviewRequests(first: 10) {
-        nodes {
-          requestedReviewer {
-            ... on Bot { login }
-          }
-        }
-      }
-    }
-  }
-}' --jq '.data.repository.pullRequest.reviewRequests.nodes[] | select(.requestedReviewer.login == "copilot-pull-request-reviewer")'
-```
-
-If output is non-empty, Copilot review is pending (in progress).
-
-### Check if Copilot Has Finished Reviewing
-
-Query completed reviews via REST API:
-
-```bash
-gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews \
-  --jq '.[] | select(.user.login == "copilot-pull-request-reviewer[bot]") | {state, submitted_at}'
-```
-
-Or via GraphQL:
-
-```bash
-gh api graphql -f query='
-query {
-  repository(owner: "OWNER", name: "REPO") {
-    pullRequest(number: PR_NUMBER) {
+      headRefOid
       reviews(first: 20) {
         nodes {
           author { login }
           state
           submittedAt
+          commit { oid }
         }
       }
     }
   }
-}' --jq '.data.repository.pullRequest.reviews.nodes[] | select(.author.login == "copilot-pull-request-reviewer")'
+}' --jq '.data.repository.pullRequest | .headRefOid as $head | [.reviews.nodes[] | select(.author.login == "copilot-pull-request-reviewer") | {state, submittedAt, oid: .commit.oid, covers_head: (.commit.oid == $head)}]'
 ```
+
+**Prefer `fx-dev:copilot-review` over any of the above.** It wraps the request and a
+head-SHA-aware wait, and it also reads the suppressed-comments block that no thread
+or review query will ever surface.
 
 ### Full Copilot Review Status Summary
 
-Query all Copilot-related information in one call:
+Query all Copilot-related information in one call. Note there is deliberately **no
+`reviewRequests` node**: it is always empty for the Copilot bot (**D1**), so including
+it only invites the "no request → nobody asked" misreading. `headRefOid` and
+`commit { oid }` are what make the result answerable.
 
 ```bash
+# Replace OWNER, REPO, PR_NUMBER with actual values (GraphQL body — no shell expansion here)
 gh api graphql -f query='
 query {
   repository(owner: "OWNER", name: "REPO") {
     pullRequest(number: PR_NUMBER) {
-      reviewRequests(first: 10) {
-        nodes {
-          requestedReviewer {
-            ... on Bot { login }
-          }
-        }
-      }
+      headRefOid
       reviews(first: 20) {
         nodes {
           author { login }
           state
           submittedAt
+          commit { oid }
         }
       }
       reviewThreads(first: 100) {
@@ -567,11 +605,11 @@ query {
 Then filter for Copilot status:
 
 ```bash
-# Pending review request
-jq '.data.repository.pullRequest.reviewRequests.nodes[] | select(.requestedReviewer.login == "copilot-pull-request-reviewer")'
+# Reviews covering the CURRENT head — the only pass signal
+jq '.data.repository.pullRequest | .headRefOid as $head | [.reviews.nodes[] | select(.author.login == "copilot-pull-request-reviewer" and .commit.oid == $head)]'
 
-# Completed reviews
-jq '.data.repository.pullRequest.reviews.nodes[] | select(.author.login == "copilot-pull-request-reviewer")'
+# All Copilot reviews with their commits — diagnostic only, NOT a pass signal
+jq '.data.repository.pullRequest | .headRefOid as $head | [.reviews.nodes[] | select(.author.login == "copilot-pull-request-reviewer") | {state, oid: .commit.oid, covers_head: (.commit.oid == $head)}]'
 
 # Unresolved Copilot threads
 jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .comments.nodes[0].author.login == "copilot-pull-request-reviewer")] | length'
@@ -579,13 +617,18 @@ jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == 
 
 ### Status Interpretation
 
+Every row keys off a **delivered review and its commit**. No row keys off a review
+*request*: that field is always empty (**D1**), so any rule reading it fires its
+negative branch on every PR (**D3**).
+
 | Condition | Meaning |
 |-----------|---------|
-| Review request exists for `copilot-pull-request-reviewer` | Review in progress |
-| Review whose `commit_id` == the PR's `headRefOid` | Review completed **for the code you are about to merge** |
-| Review exists, but its `commit_id` is an older commit | **Current head is UNREVIEWED.** Request a new review — do not treat this as reviewed |
+| Review whose `commit_id` == the PR's `headRefOid` | Review completed **for the code you are about to merge**. Still read its suppressed-comments block (**D4**) |
+| Review exists, but its `commit_id` is an older commit | **Current head is UNREVIEWED.** Nudge, then wait via `fx-dev:copilot-review` — do not treat this as reviewed |
+| No Copilot review at all | **Nothing has reviewed this PR yet.** Wait via `fx-dev:copilot-review`. This is not "clean", and it is *not* evidence that no review was requested — you cannot determine that at all (**D1**) |
 | Unresolved threads with Copilot author | Feedback needs attention |
-| No request, no reviews | Nobody has asked Copilot to review — request one; this is not "clean" |
+| Zero unresolved threads | **Not a clean review on its own.** Suppressed comments create no threads (**D4**) |
+| `reviewRequests` / `requested_reviewers` empty | **Means nothing.** It is always empty. Do not derive any status from it (**D1**) |
 
 ## Bundled References
 
