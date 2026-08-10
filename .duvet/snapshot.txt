@@ -1,24 +1,24 @@
 SPECIFICATION: [Marketplace Structure](docs/specs/marketplace-structure/index.md)
   SECTION: [Marketplace Manifest Is Parseable](#marketplace-manifest-is-parseable)
-    TEXT[!MUST,test]: The repository MUST contain a `.claude-plugin/marketplace.json` file that parses as valid JSON.
+    TEXT[!MUST,implication]: The repository MUST contain a `.claude-plugin/marketplace.json` file that parses as valid JSON.
 
   SECTION: [Marketplace Manifest Declares Its Identity](#marketplace-manifest-declares-its-identity)
-    TEXT[!MUST,test]: `.claude-plugin/marketplace.json` MUST declare the top-level fields `name`, `owner`, and `plugins`.
+    TEXT[!MUST,implication]: `.claude-plugin/marketplace.json` MUST declare the top-level fields `name`, `owner`, and `plugins`.
 
   SECTION: [Every Plugin Directory Carries a Manifest](#every-plugin-directory-carries-a-manifest)
-    TEXT[!MUST,test]: Every directory directly under `plugins/` MUST contain a `.claude-plugin/plugin.json` file.
+    TEXT[!MUST,implication]: Every directory directly under `plugins/` MUST contain a `.claude-plugin/plugin.json` file.
 
   SECTION: [Plugin Manifests Are Parseable](#plugin-manifests-are-parseable)
-    TEXT[!MUST,test]: Every `plugins/*/.claude-plugin/plugin.json` file MUST parse as valid JSON.
+    TEXT[!MUST,implication]: Every `plugins/*/.claude-plugin/plugin.json` file MUST parse as valid JSON.
 
   SECTION: [Plugin Manifests Declare Name and Version](#plugin-manifests-declare-name-and-version)
-    TEXT[!MUST,test]: Every `plugins/*/.claude-plugin/plugin.json` file MUST declare the top-level fields `name` and `version`.
+    TEXT[!MUST,implication]: Every `plugins/*/.claude-plugin/plugin.json` file MUST declare the top-level fields `name` and `version`.
 
   SECTION: [Declared Component Paths Resolve](#declared-component-paths-resolve)
-    TEXT[!MUST,test]: Every path listed in a plugin manifest's `skills` or `agents` array MUST resolve to an existing file, interpreted relative to that plugin's own directory.
+    TEXT[!MUST,implication]: Every path listed in a plugin manifest's `skills` or `agents` array MUST resolve to an existing file, interpreted relative to that plugin's own directory.
 
   SECTION: [Marketplace Entries Resolve to Plugin Directories](#marketplace-entries-resolve-to-plugin-directories)
-    TEXT[!MUST,test]: Every entry in `.claude-plugin/marketplace.json` whose `source` begins with `./` MUST resolve to an existing directory that contains a `.claude-plugin/plugin.json` file.
+    TEXT[!MUST,implication]: Every entry in `.claude-plugin/marketplace.json` whose `source` begins with `./` MUST resolve to an existing directory that contains a `.claude-plugin/plugin.json` file.
 
   SECTION: [Plugin Markdown Carries Frontmatter](#plugin-markdown-carries-frontmatter)
-    TEXT[!SHOULD,test]: Every markdown file under `plugins/` other than a file named `README.md` SHOULD begin with a `---` frontmatter delimiter on its first line.
+    TEXT[!SHOULD,implication]: Every markdown file under `plugins/` other than a file named `README.md` SHOULD begin with a `---` frontmatter delimiter on its first line.

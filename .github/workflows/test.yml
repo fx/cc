@@ -18,13 +18,13 @@ jobs:
           echo "Validating marketplace manifest..."
 
           #= docs/specs/marketplace-structure/index.md#marketplace-manifest-is-parseable
-          #= type=test
+          #= type=implication
           #% The repository MUST contain a `.claude-plugin/marketplace.json` file that parses as valid JSON.
           jq empty .claude-plugin/marketplace.json
 
           # Check required fields
           #= docs/specs/marketplace-structure/index.md#marketplace-manifest-declares-its-identity
-          #= type=test
+          #= type=implication
           #% `.claude-plugin/marketplace.json` MUST declare the top-level fields `name`, `owner`, and `plugins`.
           jq -e '.name' .claude-plugin/marketplace.json > /dev/null || (echo "Missing 'name' field" && exit 1)
           jq -e '.owner' .claude-plugin/marketplace.json > /dev/null || (echo "Missing 'owner' field" && exit 1)
@@ -40,14 +40,14 @@ jobs:
               echo "Validating $plugin_json..."
 
               #= docs/specs/marketplace-structure/index.md#plugin-manifests-are-parseable
-              #= type=test
+              #= type=implication
               #% Every `plugins/*/.claude-plugin/plugin.json` file MUST parse as valid JSON.
               jq empty "$plugin_json"
 
               # Check required fields
               plugin_dir=$(dirname "$(dirname "$plugin_json")")
               #= docs/specs/marketplace-structure/index.md#plugin-manifests-declare-name-and-version
-              #= type=test
+              #= type=implication
               #% Every `plugins/*/.claude-plugin/plugin.json` file MUST declare the top-level fields `name` and `version`.
               jq -e '.name' "$plugin_json" > /dev/null || (echo "Missing 'name' in $plugin_json" && exit 1)
               jq -e '.version' "$plugin_json" > /dev/null || (echo "Missing 'version' in $plugin_json" && exit 1)
@@ -64,7 +64,7 @@ jobs:
             plugin_json="$plugin_dir.claude-plugin/plugin.json"
 
             #= docs/specs/marketplace-structure/index.md#every-plugin-directory-carries-a-manifest
-            #= type=test
+            #= type=implication
             #% Every directory directly under `plugins/` MUST contain a `.claude-plugin/plugin.json` file.
             if [ ! -f "$plugin_json" ]; then
               echo "Missing plugin.json for $plugin_name"
@@ -73,7 +73,7 @@ jobs:
 
             # Check if referenced files exist
             #= docs/specs/marketplace-structure/index.md#declared-component-paths-resolve
-            #= type=test
+            #= type=implication
             #% Every path listed in a plugin manifest's `skills` or `agents` array MUST resolve to an existing file, interpreted relative to that plugin's own directory.
             if jq -e '.skills' "$plugin_json" > /dev/null; then
               for skill in $(jq -r '.skills[]' "$plugin_json"); do
@@ -102,7 +102,7 @@ jobs:
         run: |
           echo "Validating markdown files..."
           #= docs/specs/marketplace-structure/index.md#plugin-markdown-carries-frontmatter
-          #= type=test
+          #= type=implication
           #% Every markdown file under `plugins/` other than a file named `README.md` SHOULD begin with a `---` frontmatter delimiter on its first line.
           find plugins -name '*.md' | while read -r md_file; do
             if [ -f "$md_file" ] && [ "$(basename "$md_file")" != "README.md" ]; then
@@ -121,7 +121,7 @@ jobs:
         run: |
           echo "Verifying marketplace plugin references..."
           #= docs/specs/marketplace-structure/index.md#marketplace-entries-resolve-to-plugin-directories
-          #= type=test
+          #= type=implication
           #% Every entry in `.claude-plugin/marketplace.json` whose `source` begins with `./` MUST resolve to an existing directory that contains a `.claude-plugin/plugin.json` file.
           for plugin in $(jq -r '.plugins[].name' .claude-plugin/marketplace.json); do
             source=$(jq -r ".plugins[] | select(.name==\"$plugin\") | .source" .claude-plugin/marketplace.json)
@@ -170,7 +170,40 @@ jobs:
         with:
           version: 0.4.3
 
+      # The actual coverage gate. `duvet report --ci` only diffs the committed
+      # snapshot — duvet's own coverage enforcement is skipped whenever a
+      # snapshot path is configured — so without this step a requirement with
+      # no citing annotation would pass CI unnoticed.
+      - name: Verify every requirement is implemented
+        run: duvet query -c implementation
+
       # `--ci` re-derives the report and diffs it against the committed
       # snapshot, failing if annotations and .duvet/snapshot.txt disagree.
       - name: Verify requirement coverage snapshot
         run: duvet report --ci
+
+      # Runs only when one of the two steps above failed, so a contributor
+      # looking at a red job finds the remedy in the job log itself.
+      - name: How to fix a failing duvet job
+        if: failure()
+        run: |
+          cat <<'EOF'
+          Requirements traceability failed. The two gates fail for different reasons:
+
+          "Verify every requirement is implemented" (duvet query -c implementation)
+            A MUST/SHOULD sentence in docs/specs/marketplace-structure/index.md has
+            no annotation citing it. Add a `#= <spec>#<section>` / `#= type=implication`
+            / `#% <quoted sentence>` comment above the check that enforces it in this
+            workflow, or remove the requirement from the spec.
+
+          "Verify requirement coverage snapshot" (duvet report --ci)
+            The spec or the annotations changed but .duvet/snapshot.txt was not
+            regenerated. Locally run:
+
+                rm -rf .duvet/requirements && duvet report
+
+            and commit the updated .duvet/snapshot.txt. The `rm -rf` matters:
+            duvet writes one TOML per current spec section into .duvet/requirements/
+            and never deletes stale ones, so a renamed heading leaves an orphan that
+            fails locally with `missing section "..."` while CI passes.
+          EOF

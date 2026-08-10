@@ -1,3 +1,18 @@
+# Regenerating the snapshot
+# -------------------------
+# `.duvet/snapshot.txt` is committed and `duvet report --ci` fails whenever the
+# re-derived report disagrees with it. After editing the spec or any annotation,
+# regenerate with:
+#
+#     rm -rf .duvet/requirements && duvet report
+#
+# The `rm -rf` is not optional. `duvet report` writes one TOML file per current
+# spec section into `.duvet/requirements/` and never deletes stale ones, so
+# renaming or removing a requirement heading leaves an orphan TOML behind. That
+# orphan makes duvet fail locally with `missing section "..."` while CI — which
+# runs from a fresh checkout, and where `.duvet/requirements/` is gitignored —
+# passes. Deleting the directory first keeps local and CI results identical.
+
 '$schema' = "https://awslabs.github.io/duvet/config/v0.4.0.json"
 
 # The marketplace-structure spec is prose markdown, not an IETF RFC. Without an
@@ -7,12 +22,23 @@
 source = "docs/specs/marketplace-structure/index.md"
 format = "markdown"
 
-# The CI validation steps are what actually verify these invariants, so they
-# carry `test` citations. `#=`/`#%` are the YAML/shell comment equivalents of
-# duvet's `//=`/`//#` defaults.
+# These citations are `implication`, not `test`. Each one sits on a bash
+# assertion that both enforces the invariant and verifies it: the assertion is
+# the only implementation the invariant has, and because it gates every pull
+# request the invariant cannot reach `main` violated. That is duvet's meaning
+# for `implication` — a requirement satisfied by construction rather than by
+# separate implementing and testing code.
+#
+# `test` alone would leave duvet with no implementation anchor: `duvet query -c
+# implementation` counts only `implementation`, `implication`, and `exception`,
+# so every requirement would report as unimplemented, while `duvet query -c
+# test` would pass vacuously against zero counted requirements.
+#
+# `#=`/`#%` are the YAML/shell comment equivalents of duvet's `//=`/`//#`
+# defaults.
 [[source]]
 pattern = ".github/workflows/*.yml"
-type = "test"
+type = "implication"
 comment-style = { meta = "#=", content = "#%" }
 
 [report.snapshot]

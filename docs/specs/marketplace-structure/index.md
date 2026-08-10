@@ -137,7 +137,9 @@ The steps map to the requirements above as follows:
 
 The distinction matters for traceability, because an advisory check does not gate anything.
 
-Every check except the frontmatter check aborts the workflow on failure. The frontmatter check emits `Warning:` to the step log and always exits zero — it is diagnostic output, never a gate. Treating it as blocking in future tooling would be a behavior change, not a bug fix.
+Every requirement-enforcing step except the frontmatter check aborts the workflow on failure. The frontmatter check emits `Warning:` to the step log and always exits zero — it is diagnostic output, never a gate. Treating it as blocking in future tooling would be a behavior change, not a bug fix.
+
+The job's final step, `Test marketplace accessibility (after merge)`, is also non-blocking, but for a different reason: it specifies no requirement at all. See Open Questions.
 
 ### Current Repository State
 
@@ -150,6 +152,7 @@ No plugin manifest currently declares a `skills` or `agents` array; skills are d
 These are properties of the existing implementation, recorded so the spec is not read as claiming stronger guarantees than CI delivers:
 
 - A `source` that does not begin with `./` is skipped entirely by the resolution check. No non-relative sources exist today.
+- The resolution check reaches entries by `name`, not by position: it iterates `jq -r '.plugins[].name'` and then re-selects each entry with `select(.name==...)`. An entry with no `name` key therefore yields the literal string `null`, matches nothing on re-selection, and has its `source` silently skipped; if two entries share a `name`, the first match is checked twice and the second never. The requirement as stated covers every entry with a relative `source`; the check covers only those that are uniquely named. All entries are uniquely named today.
 - The manifest-driven loops iterate over unquoted command substitution, so a plugin name or component path containing whitespace would be word-split rather than checked as a single value.
 - Nothing verifies that a plugin manifest's `name` matches its directory name, or that it matches the `name` used for that plugin in `marketplace.json`.
 
