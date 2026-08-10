@@ -1,0 +1,17 @@
+# Documentation Index
+# Auto-updated by /spec-writer and /project-management skills
+
+specs:
+  - name: marketplace-structure
+    path: specs/marketplace-structure/
+    description: Structural invariants of the marketplace manifest and the plugins/ tree, as enforced by CI
+    status: active
+
+changes:
+  # - id: "NNNN"
+  #   name: <change-name>
+  #   path: changes/NNNN-<change-name>.md
+  #   description: <one-line description>
+  #   spec: <spec-name>
+  #   status: draft | in-progress | complete
+  #   depends_on: []
