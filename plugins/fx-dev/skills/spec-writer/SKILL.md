@@ -162,13 +162,13 @@ If a project wants IDs backfilled, that is a **deliberate migration** — spec e
 
 ### Structural rules
 
-- **Exactly one normative statement per `###` section** — gives a 1:1 requirement→anchor mapping and makes each requirement individually citable.
+- **Exactly one normative statement per requirement section** — gives a 1:1 requirement→anchor mapping and makes each requirement individually citable. This is a rule about requirement sections only; it sets no count for any other `###` section, because those must contain zero normative statements — see "Keywords belong ONLY in requirement sections" below.
 - **Each normative statement MUST be a single self-contained sentence.** An annotation quotes it byte-for-byte, so a requirement spread across bullets, or one whose subject depends on the previous sentence, cannot be cited.
 - **The `MUST`-density smell is worse here.** Duvet mode is an argument for writing FEWER normative statements, not more. Every keyword you write becomes an annotation someone must add to a source file and keep true forever, plus a red CI check until they do. Default to prose; promote a sentence to a normative requirement only when the thing it states genuinely needs to be traced.
 
 ### Keywords belong ONLY in requirement sections
 
-**In duvet mode, RFC 2119 keywords MUST appear only inside `### REQ-NNN:` sections — nowhere else in the spec.**
+**In duvet mode, RFC 2119 keywords MUST appear only inside requirement sections — nowhere else in the spec.** A requirement section is a `###` section whose sole purpose is to state a single normative requirement, whether or not its heading carries a REQ ID: newly created ones are headed `### REQ-NNN: Title`, while pre-existing plain-titled ones are requirement sections too and keep their headings untouched (see "NEVER retrofit an ID onto an existing requirement").
 
 duvet extracts keywords from **every** section of a registered markdown file, not only the ones you intended as requirements. A `MUST` in Overview, Background, Design, or Constraints becomes an extracted requirement with no REQ ID and no sensible place to annotate, and it then fails `duvet query -c implementation` permanently — nobody can cite a design paragraph.
 

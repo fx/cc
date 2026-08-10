@@ -125,7 +125,7 @@ Rules that differ from the default shape:
 
 - **`### REQ-NNN: Title` headings**, zero-padded to three digits, globally unique across the whole `docs/specs/` tree. Assigned to NEWLY created requirements only — never retrofitted onto a heading that already exists.
 - **Exactly one normative sentence per section**, self-contained, not a bullet list.
-- **RFC 2119 keywords appear ONLY inside `### REQ-NNN:` sections.** Overview, Background, Design, Constraints, Open Questions, and scenario bodies are plain prose. A keyword anywhere else becomes an extracted requirement with no ID and no annotatable home, failing `duvet query -c implementation` permanently.
+- **RFC 2119 keywords appear ONLY inside requirement sections** — `###` sections whose sole purpose is to state a single normative requirement, whether or not the heading carries a REQ ID (newly created requirements get one; pre-existing plain-titled requirements keep their headings, so both styles coexist). Overview, Background, Design, Constraints, Open Questions, and scenario bodies are plain prose. A keyword anywhere else becomes an extracted requirement with no ID and no annotatable home, failing `duvet query -c implementation` permanently.
 - **Heading text is an address.** Renaming one breaks every annotation citing its anchor.
 
 Full rules, including what the skill reports rather than applies: the "Duvet Mode — Requirements Traceability" section of `SKILL.md`.
