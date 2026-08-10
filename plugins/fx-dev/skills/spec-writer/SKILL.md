@@ -43,7 +43,7 @@ If the user asks to "write a spec AND implement it", write the spec/changes firs
 1. **Specs are living knowledge** — They describe the CURRENT state of the system, not a future plan. They MUST be kept in sync with implementation.
 2. **One spec per major feature** — Never create a single monolithic spec for an entire application. Each major feature area (e.g., authentication, file storage, upload system, password protection) gets its own spec. A general "architecture" or "setup" spec is appropriate for project-level concerns (tech stack, directory structure, deployment topology), but feature behavior belongs in feature-specific specs. This keeps specs focused, readable in one sitting, and independently maintainable.
 3. **Changes are plans** — Planning, task tracking, and implementation details go in `docs/changes/NNNN-name.md`, never in specs.
-4. **RFC 2119 everywhere** — All specs and changes MUST use RFC 2119 keywords (MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY, OPTIONAL) for requirement precision.
+4. **RFC 2119 everywhere** — All specs and changes MUST use RFC 2119 keywords (MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY, OPTIONAL) for requirement precision. **In duvet mode this principle is narrowed, not contradicted:** keywords still express every requirement, but they are confined to requirement sections — see "Keywords belong ONLY in requirement sections" under "Duvet Mode — Requirements Traceability".
 5. **Behavioral scenarios** — Every requirement SHOULD have GIVEN/WHEN/THEN scenarios that map directly to test cases. Scenarios live in the document that OWNS the requirement — never copied into a second document that references it.
 6. **Exhaustive exploration** — Research the codebase deeply before writing anything. Every claim in a spec must be verified against actual code.
 7. **Clarify before writing** — Use AskUserQuestion for scope decisions and design choices.
@@ -140,7 +140,7 @@ Requirements outlive the workflow that satisfies them. Step order, which tool ru
 
 ### Requirement IDs
 
-Every requirement section heading MUST take the form:
+Every **newly created** requirement section heading MUST take the form:
 
 ```markdown
 ### REQ-NNN: Descriptive Title
@@ -150,19 +150,43 @@ Every requirement section heading MUST take the form:
 
 The ID lands in duvet's section anchor (`#req-001-descriptive-title`), so every annotation target carries it. That is what makes a later migration to a UID-based tool a mechanical transform rather than a re-derivation.
 
+#### NEVER retrofit an ID onto an existing requirement
+
+**IDs are assigned ONLY to requirements you are creating in this run. An existing requirement heading is left exactly as it is — byte for byte — even when it has no ID.**
+
+This holds even when the rest of the spec is being updated, even when the un-ID'd headings look inconsistent beside the new ones, and even when adding the IDs would take one pass. A spec carrying both styles is the correct outcome, not a mess to tidy up.
+
+The reason is the same one that makes renames breaking (see "Renaming a requirement heading is a breaking change" below), only worse in bulk: the heading is the address. Retrofitting IDs rewrites every address at once, so every annotation citing an old anchor breaks simultaneously — and those annotations live in source files this skill MUST NOT touch. The remedy is outside this skill's boundary, so the skill would be guaranteed to break CI with no way to repair it.
+
+If a project wants IDs backfilled, that is a **deliberate migration** — spec edits and annotation re-pointing planned together in a change document and landed together. It is never something a spec update does incidentally along the way.
+
 ### Structural rules
 
 - **Exactly one normative statement per `###` section** — gives a 1:1 requirement→anchor mapping and makes each requirement individually citable.
 - **Each normative statement MUST be a single self-contained sentence.** An annotation quotes it byte-for-byte, so a requirement spread across bullets, or one whose subject depends on the previous sentence, cannot be cited.
-- **`MUST` density matters more here.** Every keyword becomes an annotation someone must write and keep true forever.
+- **The `MUST`-density smell is worse here.** Duvet mode is an argument for writing FEWER normative statements, not more. Every keyword you write becomes an annotation someone must add to a source file and keep true forever, plus a red CI check until they do. Default to prose; promote a sentence to a normative requirement only when the thing it states genuinely needs to be traced.
+
+### Keywords belong ONLY in requirement sections
+
+**In duvet mode, RFC 2119 keywords MUST appear only inside `### REQ-NNN:` sections — nowhere else in the spec.**
+
+duvet extracts keywords from **every** section of a registered markdown file, not only the ones you intended as requirements. A `MUST` in Overview, Background, Design, or Constraints becomes an extracted requirement with no REQ ID and no sensible place to annotate, and it then fails `duvet query -c implementation` permanently — nobody can cite a design paragraph.
+
+- **Overview / Background / Design / Constraints:** plain prose. Write "the loader rewrites the legacy key", not "the loader MUST rewrite the legacy key".
+- **`#### Scenario:` blocks:** plain phrasing. Write "**THEN** the job fails", not "**THEN** the job MUST fail". A scenario is evidence for the requirement above it, not a second copy of it — and a keyword there splits one requirement into two extracted ones, the second of which is uncitable.
+- **Open Questions / References / Changelog:** plain prose, no keywords.
+
+This **narrows Core Principle 4 ("RFC 2119 everywhere")** for duvet-mode projects, and the two do not conflict. Principle 4 governs how requirements are stated; duvet mode confines where they may be stated, because in a traced corpus every keyword outside a requirement section is an obligation nobody can discharge. Outside duvet mode, Principle 4 applies unchanged.
 
 ### Renaming a requirement heading is a breaking change
 
 The heading is the address. Renaming `### REQ-007: Foo` breaks every annotation citing `#req-007-foo`. It fails loudly — CI goes red — rather than drifting silently, but say so in your report when you rename one, and prefer keeping a title stable once assigned.
 
-### Register the spec with duvet
+### Report the registration a new spec needs — do NOT apply it
 
-Every new spec MUST be added to `.duvet/config.toml`:
+`.duvet/config.toml` sits outside `docs/`, so this skill MUST NOT edit it (see "Scope — Documentation Only"). The stance is the same one taken on annotations: **you report what is needed; whoever has write authority there applies it.**
+
+For every new spec, emit the exact stanza in your report, filled in and ready to paste:
 
 ```toml
 [[specification]]
@@ -170,19 +194,31 @@ source = "docs/specs/<spec-name>/index.md"
 format = "markdown"
 ```
 
-**`format = "markdown"` is mandatory and its absence is silent.** duvet's default format is IETF; pointed at a markdown spec it extracts **zero** requirements and exits **0**, which looks exactly like success.
+**`format = "markdown"` is mandatory and its absence is silent.** duvet's default format is IETF; pointed at a markdown spec it extracts **zero** requirements and exits **0**, which looks exactly like success. Say this in the report too — whoever pastes the stanza needs to know that line is load-bearing rather than decorative.
 
-### Verify before relying on it
+Until the stanza is applied, the spec is invisible to duvet: its requirements are neither extracted nor counted.
+
+### Verify the extraction yourself
+
+Extraction is read-only and takes no config, so you can and MUST run it on the spec you just wrote — no registration needed first:
 
 ```bash
 duvet extract -f markdown -o /tmp/duvet-check docs/specs/<spec-name>/index.md
 ```
 
-If the reported requirement count does not match the normative statements you wrote, the spec is malformed — fix it before finishing. The extracted TOMLs are also the authoritative quote text for whoever writes the annotations; rendered markdown is not.
+If the reported requirement count does not match the normative statements you wrote, the spec is malformed — fix it before finishing. A count **lower** than expected means a requirement is not a `###` heading or carries no keyword; a count **higher** means keywords leaked out of your requirement sections. The extracted TOMLs are also the authoritative quote text for whoever writes the annotations; rendered markdown is not.
 
 ### This skill still does NOT annotate
 
 Establishing traces means editing source files, which is outside this skill's boundary (see "Scope — Documentation Only"). Instead, **report every requirement that now needs a trace, by REQ ID**, so an implementing skill can establish them. A requirement with no annotation fails `duvet query -c implementation` — that is the intended signal, not a defect in your spec.
+
+**But say out loud what that signal costs.** Where duvet runs as a required check, a red check blocks merge — so a duvet-mode spec PR is **unmergeable by construction** until the implementing traces land. That is expected behavior, not a bug, but it is something to sequence deliberately rather than discover at merge time. Your report MUST state that the spec PR will have a red duvet check, and name the sequencing options:
+
+- Run the implementing skill immediately and land the spec together with its annotations in one PR.
+- Keep the spec PR open and stack the implementing PR on it, merging the stack once traces exist.
+- Land the spec knowing the check stays red, only if the project accepts that and the requirements are registered but not yet traced.
+
+Pick a recommendation rather than listing all three neutrally — the first is right unless the user has said otherwise.
 
 ## RFC 2119 Reference
 
@@ -215,10 +251,12 @@ Wait for setup to complete before proceeding.
 #### 0.1 Detect duvet mode
 
 ```bash
-test -d .duvet && echo "duvet mode: ON" || echo "duvet mode: off"
+test -d "$(git rev-parse --show-toplevel)/.duvet" && echo "duvet mode: ON" || echo "duvet mode: off"
 ```
 
-If `.duvet/` exists, **every rule in "Duvet Mode — Requirements Traceability" above applies for the rest of this run** — REQ IDs, one statement per section, config registration, extraction check. Record this in your working notes so it is not forgotten by Phase 6.
+The gate is defined at the **repository root**, so the check MUST resolve the root explicitly. A bare `test -d .duvet` is cwd-relative and reports "off" for a duvet repo whenever the session's working directory is a subdirectory — silently skipping every rule below.
+
+If `.duvet/` exists, **every rule in "Duvet Mode — Requirements Traceability" above applies for the rest of this run** — REQ IDs for newly created requirements only, one self-contained statement per section, RFC 2119 keywords confined to requirement sections, the extraction check, and the registration and snapshot items you REPORT rather than apply. Record this in your working notes so it is not forgotten by Phase 6.
 
 If it does not exist, proceed normally and do not raise duvet at all. Adopting duvet is `fx-dev:setup`'s decision to offer, not this skill's.
 
@@ -329,7 +367,7 @@ Read the template at `references/spec-index-template.md` and write `docs/specs/<
 - Verify every claim against the actual code — do not guess or assume.
 - NO task lists in specs. Tasks belong in change documents.
 - Initialize the Changelog with a creation entry.
-- **In duvet mode:** heading every requirement `### REQ-NNN: Title`, one self-contained normative sentence per section, then run the `duvet extract` check before moving on. See "Duvet Mode — Requirements Traceability".
+- **In duvet mode:** head every requirement `### REQ-NNN: Title`, write one self-contained normative sentence per section, and keep RFC 2119 keywords out of every other section — Overview, Background, Design, Constraints, and Scenario blocks are plain prose. Then run the `duvet extract` check before moving on. See "Duvet Mode — Requirements Traceability".
 
 #### 3.3 Scope Analysis
 
@@ -393,6 +431,8 @@ Categorize findings:
    - Keep in spec and create a change document to implement it
 4. **Undocumented behavior** — Implementation has behavior not in the spec. Add to spec.
 
+**In duvet mode, categories 3 and 4 produce new requirements and category 2 does not.** Only the genuinely new ones get IDs; an outdated requirement is edited in place with its heading untouched. Never let "the spec is being updated anyway" turn into retrofitting IDs onto the headings that were already there.
+
 #### 4.3 Update the Spec
 
 Edit `docs/specs/<spec-name>/index.md` to reflect the current truth:
@@ -401,6 +441,7 @@ Edit `docs/specs/<spec-name>/index.md` to reflect the current truth:
 - Remove requirements for deprecated behavior
 - Update code snippets to match current implementation
 - Add new GIVEN/WHEN/THEN scenarios for undocumented behavior
+- **In duvet mode:** requirements you ADD get the next `### REQ-NNN: Title` ID, one self-contained normative sentence, keywords confined to the requirement section (scenarios stay plain). Requirements that ALREADY exist keep their headings byte for byte — **never retrofit an ID onto one**, and treat any heading rename as the breaking change it is. See "NEVER retrofit an ID onto an existing requirement" and "Renaming a requirement heading is a breaking change". Re-run the `duvet extract` check after editing, then report the registration and snapshot items from Phase 6.3.
 
 #### 4.4 Update Changelog
 
@@ -538,19 +579,33 @@ Read the template at `references/docs-index-md-template.md`. The template define
 - The `Spec` column in both tables MUST be a markdown link, not plain text
 - The `Description` column MUST be filled — never leave it empty or omit it
 
-#### 6.3 Register with duvet (duvet mode only)
+#### 6.3 Report the duvet wiring (duvet mode only)
 
 Skip entirely if `.duvet/` does not exist.
 
-Add every new spec to `.duvet/config.toml` as a `[[specification]]` entry with `format = "markdown"`, then confirm duvet sees what you expect:
+**This step produces a report, not edits.** `.duvet/` is outside `docs/`, so this skill MUST NOT write to it: no `config.toml` edit, no snapshot regeneration, no annotation. Report all three so someone with write authority there can act in one pass.
+
+**1. The `[[specification]]` stanza for every new spec.** Emit it filled in and ready to paste, and repeat the `format = "markdown"` warning verbatim — see "Report the registration a new spec needs" above.
+
+**2. The snapshot needs regenerating.** `.duvet/snapshot.txt` is committed and CI runs `duvet report --ci`, which fails whenever the re-derived report disagrees with the committed snapshot. Adding, renaming, or removing **any** requirement turns that job red. Report the exact command:
+
+```bash
+rm -rf .duvet/requirements && duvet report
+```
+
+The `rm -rf` is not optional. `duvet report` writes one TOML per current spec section into `.duvet/requirements/` and never prunes stale ones, so a renamed or removed heading leaves an orphan behind — which fails locally with `missing section "..."` while CI, running from a fresh checkout, passes. Deleting the directory first keeps local and CI results identical. **You do not run this**: it writes outside `docs/`.
+
+**3. Whether the implementation can be traced at all.** duvet attributes annotations only from files matching a `[[source]]` pattern in `.duvet/config.toml`. Read those patterns and check them against where the new spec's implementation will plausibly live. If it falls outside every pattern, the requirements can never be satisfied no matter how carefully someone annotates — report that gap and the pattern that would close it.
+
+**Verify what you can from inside `docs/`.** Extraction is read-only, so run it:
 
 ```bash
 duvet extract -f markdown -o /tmp/duvet-check docs/specs/<spec-name>/index.md
 ```
 
-The reported requirement count MUST equal the number of normative statements you wrote. A count of 0 almost always means `format = "markdown"` is missing — duvet's IETF default fails silently and exits 0.
+The reported requirement count MUST equal the number of normative statements you wrote. A count of **0** means the spec itself is malformed — requirements are not `###` headings, or carry no keyword. A count **higher** than expected means RFC 2119 keywords leaked outside your requirement sections; find them and rewrite them as prose. (A correct count here but zero requirements in CI means the applied config stanza is missing `format = "markdown"` — duvet's IETF default fails silently and exits 0.)
 
-A spec that is written but not registered is invisible to CI, so this step is what makes the requirements real.
+Registration is what makes the requirements **visible** to CI. It is not sufficient to make them pass: they also need `[[source]]` coverage and actual annotations, neither of which this skill can supply.
 
 ---
 
@@ -580,7 +635,12 @@ After completing all phases, report:
 3. **Key findings** from the implementation audit (if updating)
 4. **Open questions** that need user input
 5. **Requirements needing traces** (duvet mode only) — list every requirement you created or renamed **by REQ ID and heading**, so an implementing skill can establish the annotations. Call out renamed headings separately: those break existing annotations and need them re-pointed, not newly written.
-6. **Suggested next steps**:
+6. **duvet wiring to apply** (duvet mode only) — everything from Phase 6.3 that you reported instead of applying, because it lives outside `docs/`:
+   - the `[[specification]]` stanza for each new spec, with its `format = "markdown"` warning
+   - the snapshot regeneration command, `rm -rf .duvet/requirements && duvet report`
+   - any `[[source]]` pattern gap that would leave the new requirements untraceable
+   - the warning that the spec PR's duvet check stays red until traces land, plus your recommended sequencing
+7. **Suggested next steps**:
    - "Changes ready for implementation via `/dev` or `/team`"
    - "Spec has open questions that need resolution first"
    - "Spec updated to match current implementation — no changes needed"
