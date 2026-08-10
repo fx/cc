@@ -1,6 +1,6 @@
 ---
 name: upgrade
-description: "Migrate a repo's AI INSTRUCTION FILES to current fx-dev conventions — moving CLAUDE.md content into AGENTS.md, folding .github/copilot-instructions.md into REVIEW.md, resolving instruction-file symlinks. Intentionally intrusive; rewrites and deletes those files. Use ONLY for instruction-file/convention migration: 'migrate conventions', 'update instruction files', 'upgrade fx-dev conventions', 'migrate to AGENTS.md', or when fx-dev:setup reports a legacy layout. NOT for upgrading dependencies, packages, frameworks, language versions, or databases — those are ordinary code work, use fx-dev:dev."
+description: "Migrate a repo's AI INSTRUCTION FILES to current fx-dev conventions — moving CLAUDE.md content into AGENTS.md, folding .github/copilot-instructions.md into REVIEW.md, resolving instruction-file symlinks. Also offers duvet requirements-traceability adoption (opt-in, prompted, declinable) on every run. Intentionally intrusive; rewrites and deletes those files. Use ONLY for instruction-file/convention migration: 'migrate conventions', 'update instruction files', 'upgrade fx-dev conventions', 'migrate to AGENTS.md', 'adopt duvet', or when fx-dev:setup reports a legacy layout. NOT for upgrading dependencies, packages, frameworks, language versions, or databases — those are ordinary code work, use fx-dev:dev."
 ---
 
 # Upgrade
@@ -35,12 +35,17 @@ a legacy layout, it reports and recommends — it does not migrate.
 - User says "migrate conventions", "update instruction files", "upgrade fx-dev conventions", "migrate to AGENTS.md"
 - `fx-dev:setup` reported a legacy layout and told the user to run this
 - After pulling a new fx-dev version that changed a convention
+- User says "adopt duvet" or asks for requirements traceability — Step 6 offers it, and it runs even when there is nothing to migrate, so this skill is a valid entry point for adoption alone
 
 ## Migration Registry
 
 Each migration is independent, self-detecting, and idempotent — running
-`upgrade` on an already-current repo must report "nothing to do" and change
-nothing. Add new migrations here as conventions change.
+`upgrade` on an already-current repo finds no migration to apply and changes
+nothing here. Add new migrations here as conventions change.
+
+The duvet offer (Step 6) is **not** a migration and is not in this registry: it
+runs on every invocation regardless of what this table detects, and on acceptance
+it writes files even on an otherwise no-op run.
 
 | ID | Migration | Detect (any one is enough) |
 |----|-----------|--------|
@@ -115,7 +120,7 @@ fi
 
 `.coderabbit.yaml` is printed rather than grepped because both halves matter and a filename match proves neither. **M1.5 applies unless both are true:** `knowledge_base.code_guidelines.enabled` is `true` (or absent, which defaults to enabled) **and** `**/REVIEW.md` appears in `filePatterns`. A config that lists the pattern under `enabled: false` still needs migrating.
 
-**If no migration applies**, report "Already current — nothing to migrate" and skip straight to Step 7 — the duvet offer runs whether or not a migration applied. Do not proceed to Step 2.
+**If no migration applies**, note "Already current — nothing to migrate" and skip straight to **Step 6** — the duvet offer runs whether or not a migration applied — then still run **Step 7**, so the report and its `git status` cover anything adoption wrote. Do not proceed to Step 2.
 
 ### Step 2: Build the plan
 
@@ -189,41 +194,30 @@ Rules` section, `.coderabbit.yaml`. Use the exact seed blocks from
 
 **Do NOT invoke `fx-dev:setup` here.** It also scaffolds `docs/specs`,
 `docs/changes`, `tasks.md`, and the index files. This skill migrates instruction
-files; silently adding a documentation system the user never asked for is a
+files; **silently** adding a documentation system the user never asked for is a
 different change, and it would land in the same diff.
 
+The operative word is *silently*. Step 6 adds something larger — a CI job and a
+Rust toolchain dependency — and that is allowed precisely because it goes through
+an explicit prompt the user can decline. Nothing here may add anything the user
+did not ask for and was not asked about.
+
 If the repo has no `docs/` structure and looks like it wants one, say so in the
-Step 6 report and let the user run `/fx-dev:setup` themselves.
+Step 7 report and let the user run `/fx-dev:setup` themselves.
 
-### Step 6: Verify and report
+### Step 6: Offer duvet adoption (only if not already adopted)
 
-```bash
-git status --short
-git diff --stat
-```
-
-Report what moved, and confirm the end state:
-
-```
-Upgraded to current fx-dev conventions.
-
-M1: Instruction files
-  CLAUDE.md    412 lines -> AGENTS.md, now a 1-line @AGENTS.md pointer
-  .github/copilot-instructions.md  38 lines -> REVIEW.md, deleted
-  AGENTS.md    + ## Code Review Rules pointer
-  .coderabbit.yaml  created
-
-Review with: git diff HEAD
-Nothing has been committed.
-```
-
-If anything could not be migrated automatically, say so explicitly and name the
-file — never report a clean upgrade over a partial one.
-
-### Step 7: Offer duvet adoption (only if not already adopted)
+**This runs BEFORE the Step 7 report, and that ordering is load-bearing.**
+Adoption writes up to five files (a mise config edit, `.duvet/config.toml`,
+`.duvet/snapshot.txt`, a `.gitignore` edit, a CI workflow). Reporting first and
+adopting after would print "Nothing has been committed / review with `git diff`"
+and *then* create files that appear in no report at all — and the Step 7
+`git status` verification would run before the writes it is meant to verify.
 
 Runs on every invocation, including when Step 1 found nothing to migrate — an
-already-current repo can still be missing requirements traceability.
+already-current repo can still be missing requirements traceability. On the Step 1
+early-exit path ("Already current — nothing to migrate"), come here, then still
+run Step 7 so `git status` covers whatever adoption wrote.
 
 ```bash
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -241,13 +235,64 @@ whenever upgrade runs from a subdirectory.
   reinvent any of its steps here.
 
 Adoption is **not** part of M1 and not an instruction-file migration, so it never
-appears in the Step 3 plan and never blocks it. It is its own approval: one
-`AskUserQuestion`, and a decline changes nothing. If the user declines, finish
-the run normally and do not raise duvet again during it.
+appears in the Step 3 plan and never blocks it. It carries its own approval: the
+adopt-or-not question, plus — on acceptance — one or more follow-ups the procedure
+cannot infer safely (install method, `[[source]]` patterns, keep-or-revert with no
+GitHub Actions). A decline changes nothing. If the user declines, finish the run
+normally and do not raise duvet again during it.
+
+**Why adding a CI job here is legitimate when scaffolding `docs/` in Step 5 is
+not.** The distinction is not size — adoption is the larger change of the two: a
+CI job, a Rust toolchain dependency, and a mode switch in `fx-dev:spec-writer`.
+The distinction is **consent**. Step 5 refuses `docs/` because nothing in the
+user's request or the plan they approved mentioned a documentation system; it
+would arrive silently, inside a diff labelled "instruction-file migration".
+Adoption arrives only through an explicit, named prompt describing what it
+installs and what it costs, with a decline that writes nothing. Opt-in behind a
+prompt is a different act from silent addition, and that — not scope — is the line
+this skill draws. If adoption ever became automatic, Step 5's rule would forbid it
+too.
 
 Like everything else this skill does, nothing is committed — adoption leaves its
 files in the working tree for review. Any failure part-way through is an ERROR:
 report it, name what was written, and do not report a clean upgrade over it.
+
+### Step 7: Verify and report
+
+Runs last, after Step 6, so `git status` sees everything — migrations and adoption
+both.
+
+```bash
+git status --short
+git diff --stat
+```
+
+Report what moved, and confirm the end state:
+
+```
+Upgraded to current fx-dev conventions.
+
+M1: Instruction files
+  CLAUDE.md    412 lines -> AGENTS.md, now a 1-line @AGENTS.md pointer
+  .github/copilot-instructions.md  38 lines -> REVIEW.md, deleted
+  AGENTS.md    + ## Code Review Rules pointer
+  .coderabbit.yaml  created
+
+<if Step 6 adopted duvet, include the reference's report block here — it is
+ part of this diff and must not be omitted>
+
+Review with: git diff HEAD
+Nothing has been committed.
+```
+
+**The report must cover Step 6.** If duvet was adopted, its files are in this same
+working tree and this is the only report the user gets — reproduce the report block
+from `references/duvet-adoption.md`, including its conditional CI line. On the
+Step 1 early-exit path, report adoption alone rather than skipping the report:
+"Already current — nothing to migrate" is false once adoption has written files.
+
+If anything could not be migrated automatically, say so explicitly and name the
+file — never report a clean upgrade over a partial one.
 
 ---
 
@@ -377,6 +422,6 @@ Section deletion is the reason this lives here and not in setup: removing anythi
 - **Never delete convention content** — move it, or report it as dropped
 - **Never copy from a symlink that escapes the repo** — privacy boundary, no exceptions
 - **Never commit** — leave changes in the working tree for review
-- **Duvet is offered, never assumed** — if `.duvet/` is absent, ask once (Step 7); if it exists, stay silent. The procedure lives only in `fx-dev:setup` → `references/duvet-adoption.md`
-- **Idempotent** — a second run on a migrated repo reports "already current" and changes nothing
+- **Duvet is offered, never assumed** — if `.duvet/` is absent, ask (Step 6); if it exists, stay silent. The procedure lives only in `fx-dev:setup` → `references/duvet-adoption.md`
+- **Migrations are idempotent** — a second run on a migrated repo finds no migration to apply and changes nothing under M1. **This does not extend to Step 6:** the duvet offer runs on every invocation, so a rerun on a repo that has no `.duvet/` will offer adoption again and, if accepted, write files. That is not a broken invariant, it is a different one — M1 is idempotent, the duvet *offer* is unconditional, and acceptance is a new decision each time. Once `.duvet/` exists the offer goes silent and the whole run is a no-op again. Never describe a rerun as "changes nothing" without checking whether Step 6 wrote anything
 - **Partial is reported** — if a migration could not complete, name the file and say so
