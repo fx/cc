@@ -22,6 +22,12 @@ Two scope failures are specific to this skill:
 
 ## Scope — Documentation Only
 
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#spec-writer-touches-only-the-docs-tree
+duvet= type=implication
+duvet# The `fx-dev:spec-writer` skill MUST NOT create or modify any file outside the `docs/` tree.
+-->
+
 **CRITICAL: This skill writes ONLY specs and change documents. It MUST NOT write, modify, or generate any implementation code.**
 
 - Do NOT edit source files (`.ts`, `.tsx`, `.js`, `.py`, etc.)

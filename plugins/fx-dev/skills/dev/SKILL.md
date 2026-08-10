@@ -28,6 +28,12 @@ Agent tool:
 
 **Sub-agents MUST NEVER send "idle" or "complete" states via `mcp__coder__coder_report_task`.** Only the main agent session (root conversation) is allowed to report "idle" or "complete". Sub-agents spawned via the Agent tool may only report `"state": "working"`. This prevents sub-agents from overwriting the coordinator's dashboard status and falsely signaling task completion.
 
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#the-dev-coordinator-delegates-all-writes
+duvet= type=implication
+duvet# The `fx-dev:dev` coordinator MUST NOT write code, create files, or make commits itself, and MUST delegate that work to sub-agents.
+-->
+
 - ❌ NEVER write code yourself
 - ❌ NEVER create files yourself
 - ❌ NEVER make commits yourself
@@ -732,6 +738,18 @@ gh pr view [NUMBER] --json reviewThreads \
 gh pr checks [NUMBER]  # verify codecov/patch and codecov/project
 ```
 
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#required-checks-gate-every-merge
+duvet= type=implication
+duvet# A pull request MUST NOT be merged while any required check on it is failing or has not completed.
+-->
+
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#unresolved-reviewer-threads-gate-every-merge
+duvet= type=implication
+duvet# A pull request MUST NOT be merged while any review thread on it from a configured automated reviewer remains unresolved.
+-->
+
 **Merge gate checklist (every item must pass):**
 - [ ] PR is open and mergeable
 - [ ] **PR title is a conventional-commit subject** (`type(scope): description`) — verify `gh pr view [NUMBER] --json title -q .title | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+'`; a plain prose title FAILS — rename with `gh pr edit [NUMBER] --title "type(scope): …"` BEFORE merging (squash bakes the title into `main`). Also no stray `#<number>`/wave/phase wording.
@@ -741,6 +759,12 @@ gh pr checks [NUMBER]  # verify codecov/patch and codecov/project
 - [ ] Zero unresolved `required-by-contract` or `regression-caused-by-change` findings; the latest affected delta is verified within the stopping bounds
 - [ ] Codecov coverage passing with 0 missing lines
 - [ ] No unresolved review threads from any reviewer (Copilot, CodeRabbit, human, or future automated reviewer); follow-up/out-of-scope threads are settled without expanding implementation
+
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#merge-gates-apply-regardless-of-change-size
+duvet= type=implication
+duvet# The size, triviality, or follow-up status of a pull request MUST NOT be treated as grounds for waiving any merge gate.
+-->
 
 **PR size is NEVER a reason to skip merge gates.** A 1-line fix gets the same verification as a 1000-line feature.
 
@@ -803,6 +827,12 @@ Changes:
 
 Awaiting your approval to merge.
 ```
+
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#dev-runs-require-user-approval-before-merge
+duvet= type=implication
+duvet# A `fx-dev:dev` run MUST obtain explicit approval from the user before merging any pull request it produced.
+-->
 
 **⚠️ NEVER MERGE WITHOUT USER APPROVAL**
 **⚠️ NEVER MERGE WITHOUT ALL MERGE GATES PASSING (Step 8.1)**
