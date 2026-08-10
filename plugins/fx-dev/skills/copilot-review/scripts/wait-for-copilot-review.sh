@@ -3,16 +3,32 @@
 # Waits until GitHub Copilot has submitted a review of the PR's CURRENT head commit.
 #
 # Usage: ./wait-for-copilot-review.sh <PR_NUMBER> [TIMEOUT_SECONDS]
-# Default timeout: 900 seconds (15 minutes)
+# Default timeout: 480 seconds (8 minutes).
+#     Deliberately below the Claude Code Bash tool's 600 000 ms (600 s) hard cap,
+#     with headroom, so the script can always reach its own timeout path and
+#     return exit 1 instead of being killed mid-poll. A killed script prints no
+#     diagnostics and no exit code, which is what made the "re-run on exit 1"
+#     protocol unreachable. Callers that want to wait longer re-run the script;
+#     they do NOT raise this past the cap.
 # Env: COPILOT_WAIT_DEBUG=1  echo the raw review-request POST response
+#
+# The timeout is measured against the WALL CLOCK (bash `SECONDS`), not against
+# accumulated `sleep` time. Each poll also spends 2+ network round-trips, so
+# counting only sleeps understated real elapsed time by 40-110 s over a full run
+# and pushed the script past the caller's Bash-tool timeout.
 #
 # Exit codes:
 #   0 - SUCCESS. A Copilot review exists whose `commit_id` equals the PR's current
 #       head SHA. stdout carries machine-readable
 #           REVIEWED_COMMIT_ID=<sha>
 #           PR_HEAD_SHA=<sha>
+#           SUPPRESSED_COMMENTS=1|0
 #       so the caller can re-verify the match itself rather than trusting this
-#       script's word for it.
+#       script's word for it. `SUPPRESSED_COMMENTS=1` means at least one review of
+#       that commit carries a `Suppressed comments` block whose findings create NO
+#       review thread (D4): exit 0 is then NOT a clean result, and the caller MUST
+#       read and triage the printed body before treating the gate as passed.
+#       Exit 0 alone never establishes a clean review.
 #   1 - TIMEOUT. No review covering the current head arrived within TIMEOUT
 #       seconds. This is NOT a failure and NOT evidence that anything is wrong:
 #       observed delivery times range from 85 s to 12 m 42 s, and the repo ruleset
@@ -61,8 +77,15 @@
 #     block holding real, valid findings that create NO review thread at all.
 #     Confirmed 3 times, each time with a genuine finding — one of which, applied
 #     as Copilot suggested, would have introduced the very bug it claimed to
-#     report. This script prints the review body and flags that block; the CALLER
-#     must read and triage it. "0 unresolved threads" alone never passes the gate.
+#     report. This script prints the review body, flags that block, AND emits
+#     `SUPPRESSED_COMMENTS=1|0` so a caller that only branches on the exit code
+#     still has a checkable signal; the CALLER must read and triage it.
+#     "0 unresolved threads" alone never passes the gate.
+#
+#     The check spans EVERY review of the target commit, not just the newest one.
+#     Two reviews of one commit are routine (this script nudges on every head
+#     move, and the skill re-runs it up to 3 times), so a later "generated no new
+#     comments" review would otherwise mask an earlier one's suppressed block.
 #
 # HEAD-SHA AWARENESS (do not remove):
 #     Copilot does NOT re-review automatically when new commits are pushed unless
@@ -72,14 +95,26 @@
 #     one. Every check below is scoped to the current head SHA, the head is
 #     re-read on every poll, and a match is re-confirmed against a fresh head read
 #     before success is declared.
+#
+#     That re-confirmation FAILS CLOSED. `current_head_sha` swallows errors and
+#     returns empty on a failed API read, so empty means "unknown", never
+#     "unchanged". An earlier version treated empty as confirmation and could
+#     print a superseded SHA as both REVIEWED_COMMIT_ID and PR_HEAD_SHA — making
+#     the caller's mandated equality check pass on a stale review. A SHA pair is
+#     now emitted ONLY from a head read that actually succeeded.
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 MIN_GH_VERSION="2.50.0"
 
+# Default kept under the Bash tool's 600 s hard cap with headroom (see header): the
+# skill pairs this 480 s budget with `timeout: 540000` on the tool call, leaving 60 s
+# for the closing diagnostics. Raise the NUMBER OF RUNS to wait longer, never this.
+DEFAULT_TIMEOUT=480
+
 PR_NUMBER="${1:-}"
-TIMEOUT="${2:-900}"
+TIMEOUT="${2:-$DEFAULT_TIMEOUT}"
 POLL_INTERVAL=15
 
 if [[ -z "$PR_NUMBER" ]]; then
@@ -123,6 +158,8 @@ echo "Checking PR #${PR_NUMBER} for a Copilot review of its current head..."
 
 # The commit a review must cover to count. Re-read on every poll, so a push that
 # lands mid-wait moves the target instead of being satisfied by a stale review.
+# An EMPTY result means the read FAILED, not "the head is unchanged". Every caller
+# must treat empty as unknown and must never derive a confirmation from it.
 current_head_sha() {
     gh pr view "$PR_NUMBER" --json headRefOid --jq '.headRefOid' 2>/dev/null || true
 }
@@ -130,19 +167,24 @@ current_head_sha() {
 # THE readiness signal (D3). REST /reviews rather than `gh pr view --json reviews`
 # because only REST exposes `commit_id` — without it there is no way to tell a
 # review of this push from a review of the last one.
+#
+# Considers EVERY review of the commit, not just the newest: presence is what
+# matters, and two reviews of one commit are routine.
 check_review_submitted() {
     local sha="$1"
     gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" --jq \
-        "[.[] | select(.user.login | startswith(\"${COPILOT_LOGIN_PREFIX}\")) | select(.commit_id == \"${sha}\") | .state] | last // empty" \
+        "[.[] | select(.user.login | startswith(\"${COPILOT_LOGIN_PREFIX}\")) | select(.commit_id == \"${sha}\") | (.state // \"UNKNOWN\")] | unique | join(\", \")" \
         2>/dev/null || true
 }
 
-# The body of the newest Copilot review of a specific commit. Needed because the
-# findings that matter most may live only in its Suppressed comments block (D4).
-review_body() {
+# The bodies of ALL Copilot reviews of a specific commit, concatenated. Needed
+# because the findings that matter most may live only in a Suppressed comments
+# block (D4) — and taking only the newest review hid that block whenever a later
+# review of the same commit reported "generated no new comments".
+review_bodies() {
     local sha="$1"
     gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" --jq \
-        "[.[] | select(.user.login | startswith(\"${COPILOT_LOGIN_PREFIX}\")) | select(.commit_id == \"${sha}\") | .body] | last // empty" \
+        "[.[] | select(.user.login | startswith(\"${COPILOT_LOGIN_PREFIX}\")) | select(.commit_id == \"${sha}\") | .body] | join(\"\n\n----- (next Copilot review of this same commit) -----\n\n\")" \
         2>/dev/null || true
 }
 
@@ -201,34 +243,49 @@ count_copilot_threads() {
     fi
 }
 
-# Declare success. Emits the reviewed commit_id and the head SHA so the caller can
-# verify the match without trusting this script.
+# Declare success. Emits the reviewed commit_id, the head SHA, and the
+# suppressed-comments flag so the caller can verify the gate without trusting this
+# script — and cannot record "gate passed" off the exit code alone (D4).
+#
+# `head_now` MUST come from a head read that succeeded. Never pass a fallback value
+# here: emitting a SHA pair this script is not certain of is exactly the failure
+# the caller's equality check exists to catch.
 report_success() {
     local reviewed_sha="$1" state="$2" head_now="$3"
-    local body thread_count
+    local bodies thread_count suppressed=0
+
+    if [[ -z "$head_now" ]]; then
+        echo "Internal error: refusing to emit a SHA pair from an unconfirmed head read" >&2
+        exit 3
+    fi
+
+    bodies=$(review_bodies "$reviewed_sha")
+    if printf '%s' "$bodies" | grep -qi 'Suppressed comments'; then
+        suppressed=1
+    fi
 
     echo ""
     echo "Copilot review received for ${reviewed_sha:0:7} (state: ${state})"
     echo "REVIEWED_COMMIT_ID=${reviewed_sha}"
     echo "PR_HEAD_SHA=${head_now}"
+    echo "SUPPRESSED_COMMENTS=${suppressed}"
 
     echo ""
-    echo "=== Copilot Review Body ==="
-    body=$(review_body "$reviewed_sha")
-    if [[ -n "$body" ]]; then
-        printf '%s\n' "$body"
+    echo "=== Copilot Review Body (every review of ${reviewed_sha:0:7}) ==="
+    if [[ -n "$bodies" ]]; then
+        printf '%s\n' "$bodies"
     else
         echo "(review has an empty body)"
     fi
 
     echo ""
-    if printf '%s' "$body" | grep -qi 'Suppressed comments'; then
-        echo "!! SUPPRESSED COMMENTS PRESENT in the review body above."
+    if [[ "$suppressed" -eq 1 ]]; then
+        echo "!! SUPPRESSED_COMMENTS=1 — a 'Suppressed comments' block is PRESENT above."
         echo "!! Those are real findings and they create NO review thread. You MUST read"
         echo "!! the <details> block in full and triage every item in it. The gate is NOT"
-        echo "!! passed until you have (D4)."
+        echo "!! passed until you have (D4). Exit 0 does not mean clean."
     else
-        echo "No 'Suppressed comments' block detected in the review body."
+        echo "SUPPRESSED_COMMENTS=0 — no 'Suppressed comments' block in any review of this commit."
         echo "(Still read the body — thread counts alone never establish a clean review.)"
     fi
 
@@ -244,7 +301,8 @@ if [[ -z "$head_sha" ]]; then
 fi
 echo "Head commit: ${head_sha:0:7}"
 
-# Immediate check: this commit may already have been reviewed.
+# Immediate check: this commit may already have been reviewed. Passing head_sha as
+# the head is sound here — it came from the read above, which was verified non-empty.
 submitted=$(check_review_submitted "$head_sha")
 if [[ -n "$submitted" ]]; then
     report_success "$head_sha" "$submitted" "$head_sha"
@@ -255,18 +313,34 @@ fi
 # requested?" gate here: that question has no answerable form (D1/D3), and
 # treating it as answerable is what made this script report false negatives.
 request_review_nudge
-echo "Polling every ${POLL_INTERVAL}s for a review of ${head_sha:0:7} (timeout: ${TIMEOUT}s)..."
+echo "Polling every ${POLL_INTERVAL}s for a review of ${head_sha:0:7} (budget: ${TIMEOUT}s wall clock)..."
 echo "Observed Copilot delivery times range from 85s to 12m42s — a quiet first few minutes is normal."
 
-elapsed=0
-while [[ $elapsed -lt $TIMEOUT ]]; do
-    sleep "$POLL_INTERVAL"
-    elapsed=$((elapsed + POLL_INTERVAL))
+# Budget against the WALL CLOCK, not against accumulated sleep time: each poll also
+# spends 2+ network round-trips, and counting only the sleeps let real elapsed time
+# overrun the caller's Bash-tool timeout so the script was killed before it could
+# report exit 1. `SECONDS` is a bash builtin counting seconds since it was reset.
+SECONDS=0
+while (( SECONDS < TIMEOUT )); do
+    # Never sleep past the deadline — that is what turns a 480 s budget into 500 s.
+    remaining=$(( TIMEOUT - SECONDS ))
+    nap=$POLL_INTERVAL
+    if (( nap > remaining )); then
+        # NB: `(( ... )) && nap=...` would exit under `set -e` whenever the test is
+        # false, i.e. on every normal poll. Keep this as an `if`.
+        nap=$remaining
+    fi
+    sleep "$nap"
 
     # Re-read the head: if someone pushed while we waited, the review we are
     # waiting for is the one covering the NEW commit.
     new_head_sha=$(current_head_sha)
-    if [[ -n "$new_head_sha" && "$new_head_sha" != "$head_sha" ]]; then
+    if [[ -z "$new_head_sha" ]]; then
+        # Empty means the API read FAILED (see current_head_sha). Say so: silently
+        # retaining the old value is how a superseded SHA gets treated as current.
+        echo "  Warning: could not re-read the head of PR #${PR_NUMBER} this poll (API read failed)."
+        echo "           Still targeting ${head_sha:0:7}, which may already be superseded; retrying."
+    elif [[ "$new_head_sha" != "$head_sha" ]]; then
         echo "  Head moved ${head_sha:0:7} -> ${new_head_sha:0:7}; a review must now cover the new commit"
         head_sha="$new_head_sha"
         request_review_nudge
@@ -274,12 +348,17 @@ while [[ $elapsed -lt $TIMEOUT ]]; do
 
     submitted=$(check_review_submitted "$head_sha")
     if [[ -n "$submitted" ]]; then
-        # Re-confirm against a fresh head read: if the head moved between the two
-        # calls, this review does not cover the current head after all, so keep
-        # waiting rather than declaring a pass on unreviewed code.
+        # Re-confirm against a fresh head read. This FAILS CLOSED: an empty read is
+        # a failed read, not a confirmation, so it keeps waiting instead of emitting
+        # a SHA pair we are not certain of.
         confirm_head=$(current_head_sha)
-        if [[ -z "$confirm_head" || "$confirm_head" == "$head_sha" ]]; then
-            report_success "$head_sha" "$submitted" "${confirm_head:-$head_sha}"
+        if [[ -z "$confirm_head" ]]; then
+            echo "  Found a review of ${head_sha:0:7} but the head re-read FAILED, so the match is"
+            echo "  unconfirmed. Not declaring success on an unverifiable head; still waiting."
+            continue
+        fi
+        if [[ "$confirm_head" == "$head_sha" ]]; then
+            report_success "$head_sha" "$submitted" "$confirm_head"
             exit 0
         fi
         echo "  Found a review of ${head_sha:0:7} but head is now ${confirm_head:0:7}; still waiting"
@@ -288,11 +367,11 @@ while [[ $elapsed -lt $TIMEOUT ]]; do
         continue
     fi
 
-    echo "  Waiting... (${elapsed}s / ${TIMEOUT}s)"
+    echo "  Waiting... (${SECONDS}s / ${TIMEOUT}s wall clock)"
 done
 
 echo ""
-echo "TIMEOUT: no Copilot review of ${head_sha:0:7} arrived within ${TIMEOUT}s."
+echo "TIMEOUT: no Copilot review of ${head_sha:0:7} arrived within ${TIMEOUT}s (${SECONDS}s wall clock elapsed)."
 stale=$(latest_review_commit)
 if [[ -n "$stale" && "$stale" != "$head_sha" ]]; then
     echo "Newest Copilot review on this PR covers ${stale:0:7}, which is NOT the current head."

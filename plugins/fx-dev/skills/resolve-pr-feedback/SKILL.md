@@ -32,7 +32,7 @@ Security, data-loss, and correctness problems **inside** the change are always i
 
 | Reviewer | Author Pattern | Resolver Skill |
 |----------|---------------|----------------|
-| GitHub Copilot | `Copilot` | `fx-dev:copilot-feedback-resolver` |
+| GitHub Copilot | `copilot-pull-request-reviewer` (GraphQL thread authors) / `copilot-pull-request-reviewer[bot]` (REST) — **never** the bare `Copilot`, which matches nothing | `fx-dev:copilot-feedback-resolver` |
 | CodeRabbit | `coderabbitai[bot]` | `fx-dev:rabbit-feedback-resolver` |
 | Codecov | `codecov[bot]` / `codecov-commenter` | `fx-dev:resolve-codecov-feedback` |
 
@@ -106,15 +106,21 @@ query {
 
 Parse the response and categorize unresolved threads by author:
 
-- **Copilot threads**: author login is `Copilot`
+- **Copilot threads**: author login is `copilot-pull-request-reviewer` (GraphQL). Match with `startswith("copilot-pull-request-reviewer")` so the REST `copilot-pull-request-reviewer[bot]` form matches too.
+  - **⛔ It is NOT the bare string `Copilot`.** That value appears only in `requested_reviewers`, which is always empty and which this skill never reads. Matching on `Copilot` categorizes **zero** Copilot threads on every PR — so the resolver is never invoked, real threads are silently left unresolved, and this skill reports "nothing to do" while the merge gate is unsatisfiable.
 - **CodeRabbit threads**: author login contains `coderabbitai`
 
-**⛔ Threads are not the whole review.** Copilot puts some findings in a `<details><summary>Suppressed comments</summary>` block in the **review body**, where they create no thread at all. A review that reports "generated no new comments" with zero unresolved threads can still contain real bugs there. Read the body of the newest Copilot review as well:
+**⛔ Threads are not the whole review.** Copilot puts some findings in a `<details><summary>Suppressed comments</summary>` block in the **review body**, where they create no thread at all. A review that reports "generated no new comments" with zero unresolved threads can still contain real bugs there. Read the bodies of the Copilot reviews **of the current head commit** — scoping by `commit_id` is required, or after a push you grep the PREVIOUS commit's body and record this check as satisfied for code that review never covered:
 
 ```bash
+HEAD_SHA=$(gh pr view PR_NUMBER --json headRefOid --jq '.headRefOid')
 gh api "/repos/OWNER/REPO/pulls/PR_NUMBER/reviews" \
-  --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer"))] | last | .body'
+  --jq "[.[] | select(.user.login | startswith(\"copilot-pull-request-reviewer\")) | select(.commit_id == \"${HEAD_SHA}\") | .body] | join(\"\n\n----- (next review of this commit) -----\n\n\")"
 ```
+
+Empty output means **no Copilot review covers the current head** — that is an unreviewed head, not a clean one. Note this reads *every* review of that commit, not `| last`: two reviews of one commit are routine, and if the newer says "generated no new comments" while the older carried the suppressed block, `last` reads the clean body and finds nothing.
+
+`fx-dev:copilot-review`'s waiter does this for you and emits `SUPPRESSED_COMMENTS=1|0`; prefer it over this snippet.
 
 Triage those the same way as thread comments. They cannot be resolved (no thread exists), so record the outcome in the commit message or PR body instead.
 
@@ -162,23 +168,32 @@ After invoking resolver skills, re-query to confirm all threads are resolved AND
 
 **Cycle, don't single-shot.** CodeRabbit re-runs after every push and may post new threads on the new commits. Copilot does **not** — it must be asked again. Either way, a single-pass resolver leaves a stale "settled" state behind. Loop:
 
-1. **Re-request the Copilot review for the current head SHA** via `fx-dev:copilot-review` (its Step 1). **Copilot does NOT re-review pushed commits on its own.** Skipping this makes the rest of the loop meaningless: you will poll, see nothing, and "converge" on code no reviewer has read.
+1. **Nudge Copilot for the current head SHA** via `fx-dev:copilot-review` (its Step 1). **Copilot does NOT re-review pushed commits on its own.** Skipping this makes the rest of the loop meaningless: you will poll, see nothing, and "converge" on code no reviewer has read. Issue the nudge and discard its response — it is fire-and-forget, never evidence, and having issued it is never a substitute for step 6's received-review check.
 2. Wait for all reviewer checks to reach terminal state (use the dedicated waiters: `fx-dev:copilot-review` for Copilot, `fx-dev:coderabbit-review` for CodeRabbit). **Do not hand-roll a `gh api` / GraphQL polling loop in their place** — a hand-rolled loop only observes, never requests, and will happily accept a review of a superseded commit.
 3. Re-query unresolved threads (per below).
 4. If count > 0, re-invoke the relevant resolver(s).
 5. After fixes are pushed, restart at step 1 — the push created unreviewed commits.
 6. Stop when a pass produces zero new feedback **on a head SHA that was actually reviewed** (verify: the newest Copilot review's `commit_id` equals `headRefOid`). Cap at 4 outer iterations and escalate to the user if not converged.
 
-**⛔ Zero new threads is not convergence unless a review was requested for the current head SHA and received.** Absence of feedback you never asked for is not evidence of quality. Verify before declaring the loop converged:
+**⛔ Zero new threads is not convergence unless a Copilot review has been RECEIVED for the current head SHA.** "Received for the current head" is the *only* condition — do **not** phrase it as "was requested", and do not try to verify that a request happened: `requested_reviewers` is empirically always empty, so whether a review was requested is not a determinable fact (see `fx-dev:copilot-review` **D1**/**D3**). Issue the nudge because it sometimes helps, then judge convergence solely on the delivered review. Absence of feedback is not evidence of quality.
+
+Verify before declaring the loop converged:
 
 ```bash
-gh pr view <PR> --json headRefOid --jq '.headRefOid'
-gh api "/repos/OWNER/REPO/pulls/<PR>/reviews" \
-  --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer")) | .commit_id] | last'
-# These two MUST match.
+HEAD_SHA=$(gh pr view <PR> --json headRefOid --jq '.headRefOid')
+REVIEWED=$(gh api "/repos/OWNER/REPO/pulls/<PR>/reviews" \
+  --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer")) | .commit_id] | last // empty')
+[[ -n "$REVIEWED" && "$REVIEWED" == "$HEAD_SHA" ]] \
+  && echo "covered: $HEAD_SHA" \
+  || echo "NOT covered — head=$HEAD_SHA reviewed=${REVIEWED:-none}"
 ```
 
-Re-query to count remaining unresolved threads:
+The `// empty` is load-bearing: without it, a PR with no Copilot reviews prints the literal string `null`, which then gets compared against a SHA under a "these MUST match" instruction — an unreviewed head presented as a concrete-looking value instead of an obvious absence.
+
+Re-query to count remaining unresolved threads **from automated reviewers only**.
+This skill resolves automated feedback and `fx-dev:github` forbids touching human
+review threads at all, so an unfiltered count makes one open human comment
+permanently unsatisfiable and loops this skill against work it must not do:
 
 ```bash
 # Replace OWNER, REPO, PR_NUMBER with actual values
@@ -198,8 +213,19 @@ query {
       }
     }
   }
-}' | jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length'
+}' | jq '[.data.repository.pullRequest.reviewThreads.nodes[]
+          | select(.isResolved == false)
+          | .comments.nodes[0].author.login]
+         | group_by(.) | map({reviewer: .[0], unresolved: length})
+         | map(select(.reviewer
+               | startswith("copilot-pull-request-reviewer")
+                 or contains("coderabbitai")
+                 or startswith("codecov")))'
 ```
+
+That reports a per-reviewer breakdown, so "unresolved threads remain" comes with the
+reviewer name attached. An empty array means no automated reviewer has open feedback;
+any human threads it excluded are deliberately not your concern.
 
 If unresolved threads remain, report which reviewers still have open feedback.
 
@@ -225,9 +251,9 @@ If unresolved threads remain, report which reviewers still have open feedback.
 
 ## Success Criteria
 
-1. All unresolved automated review threads identified — **plus** any findings in the Copilot review body's "Suppressed comments" block, which produce no threads
+1. All unresolved automated review threads identified — matched on the `copilot-pull-request-reviewer` login, **not** the bare `Copilot` — **plus** any findings in the "Suppressed comments" block of every Copilot review **of the current head commit**, which produce no threads
 2. Appropriate resolver skill(s) invoked (Copilot + CodeRabbit in parallel where applicable)
-3. The wait-and-resolve loop has CONVERGED — a Copilot review was **requested for and received on the current head SHA** and produced zero new findings. A quiet poll on an unreviewed head is not convergence
+3. The wait-and-resolve loop has CONVERGED — a Copilot review has been **RECEIVED for the current head SHA** and produced zero new findings. That is the whole condition: do not add "and was requested", which is not a determinable fact (**D1**). A quiet poll on an unreviewed head is not convergence
 4. CodeRabbit's check is in a terminal passing state (or absent if not configured)
 5. Final verification confirms all threads resolved
 6. Summary output provided

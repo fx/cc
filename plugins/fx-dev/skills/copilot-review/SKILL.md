@@ -103,7 +103,7 @@ This skill can run **in parallel** with `fx-dev:coderabbit-review` and any futur
 - **Root session / standalone caller** → spawn one sub-agent per reviewer in a single message via the Agent tool (mode A). Best wall-clock latency.
 - **`fx-dev:team` coordinator OR a sub-agent yourself** → sub-agents CANNOT spawn sub-agents. Run each reviewer's lifecycle sequentially yourself, optionally with the slow waiter (CodeRabbit) launched as a background `Bash` process while you handle Copilot in the foreground (mode B).
 
-Don't serialize reviewers when you don't have to — Copilot is fast (≈30–90 s) and CodeRabbit is slow (2–10+ min and re-runs on every push). But never spawn sub-agents from a sub-agent context.
+Don't serialize reviewers when you don't have to — but do not budget for Copilot being quick. Observed Copilot delivery ranges from **85 s to 12 m 42 s** (D3), which is why the wait budget below is three runs; CodeRabbit is 2–10+ min and re-runs on every push. Both are slow enough that parallelism pays. But never spawn sub-agents from a sub-agent context.
 
 ## Arguments
 
@@ -136,21 +136,33 @@ an empty `requested_reviewers` as "the request did not land", and never treat a
 ### Step 2: Wait for a Review of the Current Head
 
 Run the bundled script **in the FOREGROUND**. The Bash tool caps `timeout` at
-`600000` ms, so pass an explicit script timeout below that and re-run to keep
-waiting:
+`600000` ms (600 s), so the script's budget must leave room for it to reach its own
+timeout path and *return* exit 1 — a script killed by the tool prints no exit code
+and no diagnostics, which makes the re-run protocol below unreachable:
 
 ```bash
-bash [SKILL_BASE_DIR]/skills/copilot-review/scripts/wait-for-copilot-review.sh <PR_NUMBER> 540
+bash [SKILL_BASE_DIR]/skills/copilot-review/scripts/wait-for-copilot-review.sh <PR_NUMBER> 480
 ```
 
-Use `timeout: 570000` on the Bash tool call. On **exit 1** (timeout) re-run the
-same command — up to **3 runs total** (~27 minutes), which comfortably covers the
-worst observed delivery time of 12 m 42 s. Escalate to the user only after that.
+Use `timeout: 540000` on the Bash tool call. The numbers are chosen to be
+consistent, and must stay that way if you change one:
+
+| Value | Setting | Why |
+|-------|---------|-----|
+| 480 s | script argument (also its default) | The script budgets this against the **wall clock**, so it covers poll sleeps *and* the 2+ network round-trips per poll |
+| 540 s | Bash tool `timeout: 540000` | 60 s of headroom over the script's budget, for the timeout diagnostics and API latency at the end |
+| 600 s | the tool's hard cap | Never exceed it; raise the run count, not the budget |
+
+On **exit 1** (timeout) re-run the same command — up to **3 runs total** (~24
+minutes), which comfortably covers the worst observed delivery time of 12 m 42 s.
+Escalate to the user only after that.
 
 **⚠️ CRITICAL: Run in FOREGROUND — do NOT use `run_in_background`.** The output must be directly available to determine the result.
 
 Script exit codes:
-- **Exit 0**: A review exists whose `commit_id` equals the current head → proceed to Step 2b. The script prints `REVIEWED_COMMIT_ID=<sha>` and `PR_HEAD_SHA=<sha>`; **verify they match yourself** rather than trusting the exit code alone.
+- **Exit 0**: A review exists whose `commit_id` equals the current head → proceed to Step 2b. The script prints three machine-readable lines and you MUST read all three — **exit 0 alone is not a pass**:
+  - `REVIEWED_COMMIT_ID=<sha>` and `PR_HEAD_SHA=<sha>` — **verify they match yourself** rather than trusting the exit code.
+  - `SUPPRESSED_COMMENTS=1|0` — **`1` means exit 0 is NOT a clean result.** At least one review of that commit carries a `Suppressed comments` block whose findings create no review thread (**D4**), so Step 2b is mandatory before the gate can pass. Branching on the exit code without reading this line is the exact historical failure: "gate passed" recorded against a review nobody read.
 - **Exit 1**: **Timeout** — no review of the current head arrived yet. This is *not* a failure and *not* a clean result. Re-run the script (up to 3 runs total). If it still has not arrived, STOP and report: "Copilot review has not arrived for PR #N head `<sha>`. Cannot merge without it." **Never** record this as "no findings".
 - **Exit 2**: **Retired — the script never returns it.** It used to mean "no review requested", derived from the broken `requested_reviewers` signal (**D1/D3**). Do not branch on it, and do not reinstate any "request again, then re-run" recovery keyed to it.
 - **Exit 3**: Environment/usage error — bad arguments, `gh` too old, PR head unresolvable → report error to user. The wait never started.
@@ -164,20 +176,28 @@ and those findings produce **no review thread**, so no thread query will ever
 surface them. A review can say "generated no new comments", report zero unresolved
 threads, and still carry substantive bugs in that block.
 
-The waiter prints the body and flags the block for you on exit 0. To fetch it
-directly — scoped to the reviewed head, so you do not read a stale review's body:
+The waiter prints the bodies, flags the block, and emits `SUPPRESSED_COMMENTS=1|0`
+for you on exit 0 — **check that line**; it is the machine-readable form of this
+step. To fetch the bodies directly — scoped to the reviewed head so you do not read
+a stale review's body, and across **every** review of that commit:
 
 ```bash
 REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
 HEAD_SHA=$(gh pr view <PR_NUMBER> --json headRefOid --jq '.headRefOid')
 
 gh api "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/reviews" \
-  --jq "[.[] | select(.user.login | startswith(\"copilot-pull-request-reviewer\")) | select(.commit_id == \"${HEAD_SHA}\") | .body] | last // empty"
+  --jq "[.[] | select(.user.login | startswith(\"copilot-pull-request-reviewer\")) | select(.commit_id == \"${HEAD_SHA}\") | .body] | join(\"\n\n----- (next review of this commit) -----\n\n\")"
 ```
+
+**Do not narrow that to `| last`.** Two Copilot reviews of a single commit are
+routine — the waiter nudges on every head move and this skill re-runs it up to 3
+times. If the newer one says "generated no new comments" and the older one carried
+the suppressed block, `last` reads the clean body and reports nothing to triage.
+Grep across **all** bodies for the commit.
 
 Then:
 
-1. `grep -i 'Suppressed comments'` the body. If present, **read the entire
+1. `grep -i 'Suppressed comments'` the bodies. If present, **read the entire
    `<details>` block** — every item, not just the summary count.
 2. Triage each item exactly like a thread comment: fix what is valid, apply the
    Scope Brief to what is out of scope.
@@ -203,7 +223,11 @@ This skill will:
 
 ### Step 4: Confirm Resolution
 
-After resolve-pr-feedback completes, verify zero unresolved threads remain:
+After resolve-pr-feedback completes, verify zero unresolved **Copilot** threads
+remain. The filter on the Copilot login is required, not cosmetic: this gate is
+scoped to Copilot, and `fx-dev:github` forbids touching human review threads at all
+— so counting every unresolved thread makes one open human comment permanently
+unsatisfiable and loops `resolve-pr-feedback` forever:
 
 ```bash
 OWNER="${REPO_NWO%%/*}"
@@ -222,7 +246,7 @@ query {
       }
     }
   }
-}" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length'
+}" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .comments.nodes[0].author.login == "copilot-pull-request-reviewer")] | length'
 ```
 
 A count of 0 is **necessary but not sufficient**. The gate is passed only when **all
@@ -257,10 +281,13 @@ REVIEWED=$(gh api "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/reviews" \
 
 This skill is complete when ALL of:
 - ✅ Copilot review has been received (script exited 0) **for the current head commit** — `REVIEWED_COMMIT_ID` equals `PR_HEAD_SHA`, checked by you, not for an earlier commit
-- ✅ The review body's suppressed-comments block has been read in full and every item triaged (Step 2b) — **or** the body was confirmed to contain no such block
-- ✅ All Copilot threads resolved (0 unresolved)
+- ✅ The script's `SUPPRESSED_COMMENTS=` line was read. If `1`, the suppressed-comments block has been read in full and every item triaged (Step 2b); if `0`, that was confirmed from the output rather than assumed
+- ✅ All Copilot threads resolved (0 unresolved, **filtered to the Copilot login**)
 - ✅ Any valid code concerns have been fixed and pushed — **and the resulting head was itself reviewed**
 
 **Never report this gate as passed on the grounds that polling found no new feedback.** Absence of a review is not a clean review, and a timeout (exit 1) is not a verdict. Silence here is an unasked question, not an answer.
 
-**Never report this gate as passed on a zero thread count alone.** Suppressed comments carry real findings and produce no threads (**D4**).
+**Never report this gate as passed on a zero thread count alone, and never on exit 0
+alone.** Suppressed comments carry real findings and produce no threads (**D4**) —
+`SUPPRESSED_COMMENTS=1` accompanies exit 0 precisely so that "the script succeeded"
+can never be mistaken for "the review was clean".

@@ -568,7 +568,7 @@ Agent tool:
 
 #### 6.3 Automated Reviewer Wait (Copilot + CodeRabbit + future)
 
-**MANDATORY: Wait for and resolve EVERY automated reviewer configured on the repo.** Copilot and CodeRabbit are the two we know about today; future integrations slot in here. Reviewers are **independent feedback channels** with different latencies (Copilot ≈30–90 s; CodeRabbit 2–10+ min and re-runs after every push).
+**MANDATORY: Wait for and resolve EVERY automated reviewer configured on the repo.** Copilot and CodeRabbit are the two we know about today; future integrations slot in here. Reviewers are **independent feedback channels** with different latencies (Copilot 85 s to 12 m 42 s observed — do not budget for it being quick; CodeRabbit 2–10+ min and re-runs after every push).
 
 > **CodeRabbit was attempted LOCALLY in Step 4.5** (`cr review --agent`). The PR-level handling here is a fallback for repos whose GitHub App auto-reviews PRs. Prefer a passing check and resolve received feedback; if either local or PR-level CodeRabbit rate-limits, record `skipped (rate-limited)` and continue without blocking.
 
