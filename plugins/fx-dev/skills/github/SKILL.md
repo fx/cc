@@ -460,9 +460,14 @@ gh api --method POST "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/requested_reviewers" 
 EOF
 ```
 
-A `422` means a review is already requested or already in flight — treat it as success. Prefer `fx-dev:copilot-review`, which wraps this together with a head-SHA-aware waiter.
+**The response to this POST is not evidence of anything.** It returns 200 with an
+empty `requested_reviewers` array regardless, and a `422` is equally
+uninformative — neither tells you whether a review is coming. Issue it and ignore
+the result. The only sound signal is a review whose `commit_id` equals the PR's
+current `headRefOid`; see `fx-dev:copilot-review` ("Known GitHub API Behaviour",
+D1–D3) and use that skill, which wraps this together with a head-SHA-aware waiter.
 
-**Do this again after every push to the PR branch.** Copilot will not look at new commits on its own, and a stale review must never be read as coverage for the current head.
+**Do this again after every push to the PR branch.** Copilot will not reliably look at new commits on its own, and a stale review must never be read as coverage for the current head.
 
 Other ways a review can be triggered, none of which replace the request above:
 

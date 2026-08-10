@@ -11,14 +11,62 @@ Request, wait for, and resolve GitHub Copilot's PR review on a pull request.
 
 **A Copilot review must be REQUESTED. Do not assume one will appear.** Some repos have a ruleset that auto-requests a review when a PR opens, which makes the first review look automatic — but that is a per-repo setting you cannot count on, and it is **not** the same as re-reviewing later pushes.
 
-**CRITICAL: Copilot does NOT re-review a PR when you push new commits** (unless the repo's ruleset enables "review new pushes"). After pushing fixes you MUST request a new review — go back to Step 1. Waiting without requesting will observe nothing, forever.
+**CRITICAL: Copilot does NOT reliably re-review a PR when you push new commits.** Some repos' rulesets enable "review new pushes" and it fires on some pushes and not others. After pushing fixes you MUST run this skill again for the new head SHA — the waiter re-issues the request and, crucially, re-scopes the wait to the new commit.
 
-- **A review of an earlier commit is NOT coverage for the current one.** Requesting is per-head-SHA. `wait-for-copilot-review.sh` enforces this: it matches reviews by `commit_id` against the PR head and exits 2 when the newest review is for an older commit.
-- **"No new feedback appeared" is NOT evidence that code is clean** unless a review was requested for that exact head SHA and received. Absence of a review you never asked for proves nothing. This is the single most common way this gate gets falsely reported as passed.
+- **A review of an earlier commit is NOT coverage for the current one.** Coverage is per-head-SHA. `wait-for-copilot-review.sh` enforces this: it only accepts a review whose `commit_id` equals the PR's current `headRefOid`, and it keeps waiting (then times out with exit 1) when the newest review is for an older commit.
+- **"No new feedback appeared" is NOT evidence that code is clean.** Only a *received* review whose `commit_id` equals the head SHA is evidence. Note the converse trap too: because the request API is inert (**D1**), you can never confirm a review "was requested" — so *never* gate your conclusion on that question, and never conclude "not requested, therefore nothing to wait for". Wait for the review itself. This is the single most common way this gate gets falsely reported as passed.
 - Copilot review is **completely independent of CI**. They are separate systems. CI passing has NOTHING to do with Copilot.
 - You MUST NOT merge ANY PR until Copilot has reviewed **the commit you intend to merge** and all feedback is resolved.
 - No exceptions — not for "first PRs", not for "small PRs", not because "CI isn't set up yet", not because "nothing is configured yet".
-- **NEVER hand-roll `gh api repos/.../reviews` or a GraphQL polling loop to check Copilot status.** Use the script provided by this skill. A hand-rolled loop can only *observe*; it never *requests*, and it will not notice that the review it found belongs to a superseded commit.
+- **NEVER hand-roll `gh api repos/.../reviews` or a GraphQL polling loop to check Copilot status.** Use the script provided by this skill. Hand-rolled loops reliably get three things wrong: they accept a review belonging to a superseded commit, they re-derive the broken `requested_reviewers` readiness check (**D1/D3**), and they read thread counts without reading suppressed comments (**D4**).
+
+## Known GitHub API Behaviour — Do Not Rediscover This
+
+These four are empirically confirmed against real PRs on this repo. They are the
+reason the workflow below looks the way it does. Do not "improve" the workflow
+back into depending on any of them.
+
+**D1 — the review request is inert as an evidence source.**
+`POST /repos/{owner}/{repo}/pulls/{n}/requested_reviewers` with the Copilot bot
+returns **200 with `requested_reviewers: []`** — observed 7 times out of 7, plus
+again on every later run. A follow-up `GET` is empty too. Sometimes the timeline
+*does* record a `review_requested` event and a review arrives minutes later, so
+the POST is worth issuing — but **its response and `requested_reviewers` are never
+evidence of anything.** An empty `requested_reviewers` does not mean the request
+failed, and a 200 does not mean it succeeded.
+
+**D2 — there is no GraphQL fallback.** `requestReviews` rejects the bot outright:
+
+```
+Could not resolve to User node with the global id of 'BOT_kgDOCnlnWA'
+```
+
+`userIds` does not accept Bot nodes. Do not add a GraphQL "fallback" for
+requesting a Copilot review; none exists.
+
+**D3 — readiness must never be keyed on `requested_reviewers`.** An earlier
+version of the waiter gated its poll on that field, so it reported
+"No Copilot review requested" against reviews that were genuinely delivered — on
+one PR it would have said so at every point in a 12 m 42 s window **including
+after the review landed**. And because the request itself is a no-op (D1), the
+old recovery advice ("go back to Step 1, request, re-run") looped forever on any
+repo without an auto-request ruleset.
+
+**The only sound readiness signal:** poll
+`GET /repos/{owner}/{repo}/pulls/{n}/reviews` for a review whose `commit_id`
+equals the PR's current `headRefOid`. Nothing needs to be "requested" for that to
+become true. Observed arrival times range from **85 seconds to 12 m 42 s**, and
+the auto-request ruleset fires on some pushes and not others — so waiting quietly
+for several minutes is normal, and silence is never a verdict.
+
+**D4 — a zero unresolved-thread count is not a clean review.** Copilot review
+bodies can say *"generated no new comments"* while carrying a
+`<details><summary>Suppressed comments (N)</summary>` block holding real, valid
+findings that create **no review thread at all**. Confirmed repeatedly, every time
+with a genuine finding — and one of those, applied exactly as Copilot suggested,
+would have introduced the very bug it claimed to report. So suppressed comments
+are mandatory to read (Step 2b) **and** mandatory to triage rather than apply on
+sight.
 
 ## MANDATORY: Triage Against the Scope Brief
 
@@ -63,49 +111,81 @@ This skill expects a PR number. Pass it as args: `skill='fx-dev:copilot-review',
 
 ## Workflow
 
-### Step 1: Request Copilot Review
+### Step 1: Request Copilot Review (fire-and-forget)
+
+The waiter issues this request itself, so you normally do **not** need to run it by
+hand. If you do run it standalone:
 
 ```bash
 # Get repo info
 REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
 
-# Request Copilot review using JSON body format (most reliable)
+# Nudge Copilot. Per D1 the response is NOT evidence — discard it.
 gh api --method POST "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/requested_reviewers" \
   --input - <<'EOF'
 {"reviewers":["copilot-pull-request-reviewer[bot]"]}
 EOF
 ```
 
-If the request fails with a 422 (already reviewed or already requested), that's fine — proceed to Step 2.
+**Do not interpret the response.** Per **D1** it comes back 200 with
+`requested_reviewers: []` regardless, a 422 is equally uninformative, and there is
+no GraphQL alternative (**D2**). Issue it, ignore it, move to Step 2. Never treat
+an empty `requested_reviewers` as "the request did not land", and never treat a
+200 as "a review is now guaranteed".
 
-### Step 2: Wait for Review
+### Step 2: Wait for a Review of the Current Head
 
-Run the bundled script **in the FOREGROUND** with `timeout: 660000` (11 minutes) on the Bash tool call:
+Run the bundled script **in the FOREGROUND**. The Bash tool caps `timeout` at
+`600000` ms, so pass an explicit script timeout below that and re-run to keep
+waiting:
 
 ```bash
-bash [SKILL_BASE_DIR]/skills/copilot-review/scripts/wait-for-copilot-review.sh <PR_NUMBER>
+bash [SKILL_BASE_DIR]/skills/copilot-review/scripts/wait-for-copilot-review.sh <PR_NUMBER> 540
 ```
+
+Use `timeout: 570000` on the Bash tool call. On **exit 1** (timeout) re-run the
+same command — up to **3 runs total** (~27 minutes), which comfortably covers the
+worst observed delivery time of 12 m 42 s. Escalate to the user only after that.
 
 **⚠️ CRITICAL: Run in FOREGROUND — do NOT use `run_in_background`.** The output must be directly available to determine the result.
 
 Script exit codes:
-- **Exit 0**: Review received **for the current head commit** → proceed to Step 3
-- **Exit 1**: Timeout after 15 minutes → STOP. Report to user: "Copilot review timed out on PR #N. Cannot merge without it."
-- **Exit 2**: No review requested for the current head commit → go back to Step 1 to request, then re-run this script. **This includes the case where Copilot already reviewed an earlier commit**; the script says which one. Do not read that as "already reviewed".
-- **Exit 3**: Invalid arguments or gh error → report error to user
+- **Exit 0**: A review exists whose `commit_id` equals the current head → proceed to Step 2b. The script prints `REVIEWED_COMMIT_ID=<sha>` and `PR_HEAD_SHA=<sha>`; **verify they match yourself** rather than trusting the exit code alone.
+- **Exit 1**: **Timeout** — no review of the current head arrived yet. This is *not* a failure and *not* a clean result. Re-run the script (up to 3 runs total). If it still has not arrived, STOP and report: "Copilot review has not arrived for PR #N head `<sha>`. Cannot merge without it." **Never** record this as "no findings".
+- **Exit 2**: **Retired — the script never returns it.** It used to mean "no review requested", derived from the broken `requested_reviewers` signal (**D1/D3**). Do not branch on it, and do not reinstate any "request again, then re-run" recovery keyed to it.
+- **Exit 3**: Environment/usage error — bad arguments, `gh` too old, PR head unresolvable → report error to user. The wait never started.
 
-### Step 2b: Read the Review BODY, Not Just the Thread Count
+### Step 2b: MANDATORY — Read the Suppressed Comments Block
 
-**Copilot hides some findings in a `<details><summary>Suppressed comments</summary>` block in the review body. Those are real findings and they produce NO review thread.** A review can say "generated no new comments", report zero unresolved threads, and still contain substantive bugs in that block — observed: an array-vs-object validation hole and a topological-ordering defect, both genuine, neither visible to a thread query.
+**This step is not optional. Skipping it fails the review**, no matter what the
+thread count says. Per **D4**, Copilot puts real findings in a
+`<details><summary>Suppressed comments (N)</summary>` block in the review body,
+and those findings produce **no review thread**, so no thread query will ever
+surface them. A review can say "generated no new comments", report zero unresolved
+threads, and still carry substantive bugs in that block.
 
-So a thread count of 0 is **not** a clean review. Always read the body:
+The waiter prints the body and flags the block for you on exit 0. To fetch it
+directly — scoped to the reviewed head, so you do not read a stale review's body:
 
 ```bash
+REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+HEAD_SHA=$(gh pr view <PR_NUMBER> --json headRefOid --jq '.headRefOid')
+
 gh api "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/reviews" \
-  --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer"))] | last | .body'
+  --jq "[.[] | select(.user.login | startswith(\"copilot-pull-request-reviewer\")) | select(.commit_id == \"${HEAD_SHA}\") | .body] | last // empty"
 ```
 
-Triage suppressed comments exactly like thread comments — fix what is valid, and say in the PR why anything was rejected. They cannot be "resolved" (there is no thread), so the commit message or PR body is the only place that record can live.
+Then:
+
+1. `grep -i 'Suppressed comments'` the body. If present, **read the entire
+   `<details>` block** — every item, not just the summary count.
+2. Triage each item exactly like a thread comment: fix what is valid, apply the
+   Scope Brief to what is out of scope.
+3. **Do not apply a suppressed suggestion on sight.** One observed suppressed
+   comment, applied as written, would have introduced the very bug it claimed to
+   report. Verify the finding against the code before changing anything.
+4. They cannot be "resolved" (there is no thread), so record the outcome in the
+   commit message or PR body — that is the only place the record can live.
 
 ### Step 3: Resolve Feedback
 
@@ -145,26 +225,42 @@ query {
 }" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length'
 ```
 
-If the count is 0, Copilot gate is PASSED **for the commit that was reviewed**. If > 0, re-invoke resolve-pr-feedback.
+A count of 0 is **necessary but not sufficient**. The gate is passed only when **all
+three** hold:
+
+1. A Copilot review exists whose `commit_id` equals the PR's current `headRefOid`.
+2. The suppressed-comments block for that review has been read in full and every
+   item triaged (Step 2b).
+3. Zero unresolved Copilot threads remain.
+
+If the count is > 0, re-invoke resolve-pr-feedback. If you cannot state (1) and (2)
+as facts you personally checked, the gate is **not** passed — a zero thread count
+on its own never passes it (**D4**).
 
 ### Step 5: If Fixes Were Pushed, Start Over
 
 Resolving feedback usually means pushing commits. Those commits are **unreviewed**, and Copilot will not look at them by itself.
 
-If the head SHA changed since the review in Step 2, go back to **Step 1** — request a review for the new head, wait, resolve. Repeat until a pass produces zero new threads *on a reviewed head*. Cap at 4 iterations and escalate to the user if it has not settled.
+If the head SHA changed since the review in Step 2, go back to **Step 1** — nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. Repeat until a pass produces zero new threads *and* an empty-or-triaged suppressed block *on a reviewed head*. Cap at 4 iterations and escalate to the user if it has not settled.
 
 ```bash
-# The gate is only passed when this review covers the current head.
-gh pr view <PR_NUMBER> --json headRefOid --jq '.headRefOid'
-gh api "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/reviews" \
-  --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer")) | .commit_id] | last'
+# The gate is only passed when the newest Copilot review covers the current head.
+HEAD_SHA=$(gh pr view <PR_NUMBER> --json headRefOid --jq '.headRefOid')
+REVIEWED=$(gh api "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/reviews" \
+  --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer")) | .commit_id] | last // empty')
+[[ -n "$REVIEWED" && "$REVIEWED" == "$HEAD_SHA" ]] \
+  && echo "covered: $HEAD_SHA" \
+  || echo "NOT covered — head=$HEAD_SHA reviewed=${REVIEWED:-none}"
 ```
 
 ## Success Criteria
 
 This skill is complete when ALL of:
-- ✅ Copilot review has been received (script exited 0) **for the current head commit** — not for an earlier one
+- ✅ Copilot review has been received (script exited 0) **for the current head commit** — `REVIEWED_COMMIT_ID` equals `PR_HEAD_SHA`, checked by you, not for an earlier commit
+- ✅ The review body's suppressed-comments block has been read in full and every item triaged (Step 2b) — **or** the body was confirmed to contain no such block
 - ✅ All Copilot threads resolved (0 unresolved)
 - ✅ Any valid code concerns have been fixed and pushed — **and the resulting head was itself reviewed**
 
-**Never report this gate as passed on the grounds that polling found no new feedback, if no review was requested for the current head.** That is an unasked question, not an answer.
+**Never report this gate as passed on the grounds that polling found no new feedback.** Absence of a review is not a clean review, and a timeout (exit 1) is not a verdict. Silence here is an unasked question, not an answer.
+
+**Never report this gate as passed on a zero thread count alone.** Suppressed comments carry real findings and produce no threads (**D4**).
