@@ -1,0 +1,298 @@
+# Duvet Adoption
+
+**This file is the single owner of the duvet adoption procedure.** `fx-dev:setup`
+and `fx-dev:upgrade` each offer adoption and defer here for every detail. Neither
+skill restates the steps, and nothing else in fx-dev may describe how to adopt
+duvet — a second copy is a second thing to drift.
+
+## What adoption buys, and what it costs
+
+[duvet](https://github.com/awslabs/duvet) traces every normative requirement in
+`docs/specs/` to the source that implements it, and fails CI when a requirement
+has no trace or when the committed snapshot disagrees with the code. The cost is
+one annotation per requirement, forever, plus a red check until it lands.
+
+`.duvet/` at the repository root is the whole switch: its existence is what makes
+`fx-dev:spec-writer` write specs in duvet mode. That is why the directory is
+created only once duvet is verified runnable, and why a failed adoption must be
+reported loudly rather than left in place.
+
+## The gate — identical wording in every caller
+
+```bash
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+test -d "$repo_root/.duvet" && echo "duvet: adopted" || echo "duvet: not adopted"
+```
+
+The gate is defined at the **repository root**, so the check MUST resolve the
+root explicitly. A bare `test -d .duvet` is cwd-relative and reports "not
+adopted" for a duvet repo whenever the session's working directory is a
+subdirectory — which would offer adoption to a repo that already has it.
+
+**If `.duvet/` exists, the repo has adopted duvet: do nothing and say nothing.**
+Do not re-offer, do not verify, do not nag. An adopted repo is not this
+procedure's business.
+
+## The offer
+
+Ask **once**, with `AskUserQuestion`:
+
+```
+AskUserQuestion:
+  question: "Adopt duvet requirements traceability for this repo? Specs get machine-checked traces to the code implementing them, enforced in CI, at the cost of maintaining one annotation per requirement."
+  header: "Duvet"
+  options:
+    - label: "Adopt duvet"
+      description: "Install duvet, scaffold .duvet/, bootstrap the snapshot, and wire the CI gate"
+    - label: "Not now"
+      description: "Change nothing. Specs stay untraced and spec-writer keeps its normal mode"
+```
+
+If the user declines, **proceed with the rest of the calling skill normally and
+do not raise duvet again during that run.** Nothing is written on a decline —
+not a marker file, not a TODO, not a note in `AGENTS.md`.
+
+A caller that runs many times in one session — `fx-dev:setup`, invoked by every
+`/spec-writer` and `/project-management` call — must widen "that run" to the
+whole session: once declined, skip the offer silently for the rest of it. An
+optional tool asked about repeatedly is nagging, and nagging is how a prompt
+stops being read.
+
+Every write below happens only after this approval. That is what keeps adoption
+inside `fx-dev:setup`'s create-only contract: the user reviewed the change at the
+prompt, so it is not a change made behind their back.
+
+## On acceptance — in this order
+
+### 1. Install duvet
+
+**If `mise.toml` or `.mise.toml` exists at the repo root**, add to `[tools]`:
+
+```toml
+[tools]
+rust = "latest"
+"cargo:duvet" = "0.4.3"
+```
+
+then run `mise install`.
+
+- The `cargo:` prefix is **required**. duvet is not in mise's registry, so a
+  plain `mise use duvet` does not resolve. `cargo:duvet` goes through mise's
+  cargo backend and works (verified installing 0.4.3).
+- `rust` is needed because that backend needs a cargo toolchain.
+- **Pin the duvet version explicitly.** `latest` would let one contributor
+  regenerate the snapshot with a different duvet than CI verifies it with.
+
+**If no mise config exists**, do not assume — ask:
+
+```
+AskUserQuestion:
+  question: "This repo has no mise config. How should duvet be installed?"
+  header: "Install"
+  options:
+    - label: "Create mise.toml"
+      description: "Minimal mise.toml pinning rust + cargo:duvet. Reproducible for every contributor, but introduces mise to a repo that does not use it"
+    - label: "cargo install"
+      description: "cargo install duvet --locked. No new tooling, but the version is pinned nowhere in-repo, so contributors can drift and regenerate the snapshot inconsistently"
+    - label: "Abort adoption"
+      description: "Change nothing and continue without duvet"
+```
+
+### 2. Verify duvet actually runs — before writing anything else
+
+```bash
+duvet --version
+```
+
+If the binary is not on `PATH`, try `"$HOME/.cargo/bin/duvet" --version` (the
+`cargo install` path) or `mise exec -- duvet --version` (the mise path).
+
+**If duvet does not run, ERROR and stop.** Report the command that failed, its
+output, and exactly what exists so far: at this point that is the `[tools]`
+entries from step 1 and **no `.duvet/` at all**, so `fx-dev:spec-writer` is
+unaffected and the only thing to revert is the mise edit. Do not continue to
+step 3 hoping it resolves itself.
+
+### 3. Scaffold `<root>/.duvet/config.toml`
+
+Create it with exactly this content — a header comment documenting regeneration,
+the schema pin, and the two reports:
+
+```toml
+# Regenerating the snapshot
+# -------------------------
+# `.duvet/snapshot.txt` is committed and `duvet report --ci` fails whenever the
+# re-derived report disagrees with it. After editing a spec or any annotation,
+# regenerate with:
+#
+#     rm -rf .duvet/requirements && duvet report
+#
+# The `rm -rf` is not optional. `duvet report` writes one TOML file per current
+# spec section into `.duvet/requirements/` and never deletes stale ones, so
+# renaming or removing a requirement heading leaves an orphan TOML behind. That
+# orphan makes duvet fail locally with `missing section "..."` while CI — which
+# runs from a fresh checkout, where `.duvet/requirements/` is gitignored —
+# passes. Deleting the directory first keeps local and CI results identical.
+
+'$schema' = "https://awslabs.github.io/duvet/config/v0.4.0.json"
+
+# No [[specification]] entries yet: this repo has no traced specs. fx-dev:spec-writer
+# reports the stanza to add for each new spec — `source` plus a MANDATORY
+# `format = "markdown"`, without which duvet applies its default IETF parser and
+# silently extracts zero requirements.
+
+[report.snapshot]
+enabled = true
+path = ".duvet/snapshot.txt"
+
+[report.json]
+enabled = true
+path = ".duvet/reports/report.json"
+```
+
+**Write no `[[specification]]` entries.** The repo has no specs yet, and
+`spec-writer` reports one stanza per spec as they are written.
+
+This step is the point of no return for tooling behaviour: the moment `.duvet/`
+exists, `spec-writer` switches to duvet mode.
+
+### 4. Bootstrap the snapshot
+
+```bash
+duvet report        # writes .duvet/snapshot.txt (and .duvet/reports/)
+duvet report --ci   # must exit 0
+```
+
+**Bootstrapping is mandatory, not optional.** On a repo with no snapshot,
+`duvet report --ci` exits 1 with "Could not read report snapshot. This is
+required to enforce CI checks." — so skipping this step guarantees the user's
+first CI run fails.
+
+A bootstrapped **empty** snapshot is valid and expected here: with no
+specifications configured, `duvet report` writes a 0-byte `snapshot.txt`, after
+which both `duvet report --ci` and `duvet query -c implementation` exit 0.
+Adoption on a spec-less repo is clean.
+
+### 5. Gitignore the regenerated artifacts
+
+Append to `.gitignore` (create it if absent):
+
+```gitignore
+# Duvet generated artifacts. Both are re-derived from the specs on every
+# `duvet report`, so committing them would duplicate the spec text and let it
+# drift. The snapshot at .duvet/snapshot.txt IS committed — it is what
+# `duvet report --ci` verifies against.
+.duvet/reports/
+.duvet/requirements/
+```
+
+**`.duvet/snapshot.txt` MUST be committed.** It is the CI gate's reference; an
+ignored snapshot makes `--ci` fail on every fresh checkout.
+
+### 6. Wire CI
+
+**If `<root>/.github/workflows/` exists**, add the job below. Prefer creating a
+new `.github/workflows/duvet.yml` over editing an existing workflow — creation
+stays inside `fx-dev:setup`'s contract, and a standalone job is easier to name
+as a required check. If the repo has one obvious checks workflow and the user
+wants the job there instead, adding it there is equally correct, but say in the
+report that an existing workflow was modified.
+
+```yaml
+name: Requirements traceability
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  duvet:
+    name: Requirements traceability
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Two independent pins. The action ref must be immutable like every other
+      # `uses:`; v0.4.2 is the newest tag awslabs/duvet has — there is no
+      # v0.4.3 tag even though crate 0.4.3 exists on crates.io. The action is a
+      # thin wrapper that installs the duvet crate at `version:`, so its own ref
+      # does not constrain that version. Pin `version:` explicitly: the action's
+      # default input is a stale 0.3.0.
+      - name: Install duvet
+        uses: awslabs/duvet@v0.4.2
+        with:
+          version: 0.4.3
+
+      # The actual coverage gate. `duvet report --ci` only diffs the committed
+      # snapshot — duvet skips its own coverage enforcement whenever a snapshot
+      # path is configured — so without this step a requirement with no citing
+      # annotation would pass CI unnoticed.
+      - name: Verify every requirement is implemented
+        run: duvet query -c implementation
+
+      # Re-derives the report and diffs it against the committed snapshot,
+      # failing if annotations and .duvet/snapshot.txt disagree.
+      - name: Verify requirement coverage snapshot
+        run: duvet report --ci
+```
+
+- **The `awslabs/duvet` action only installs the binary.** Running duvet is a
+  separate step; the action alone gates nothing.
+- **Both commands are needed.** `duvet report --ci` does not check coverage when
+  a snapshot is configured; `duvet query -c implementation` is the real coverage
+  gate.
+- **Do not add a `~/.cargo` cache step.** Measured, the whole job takes ~9
+  seconds — the action fetches a prebuilt artifact rather than compiling.
+- A new job is not a **required** check until branch protection says so. Report
+  that, since an unrequired duvet job blocks nothing.
+
+**If the repo uses other CI, or none**, do not guess at its config. Report the
+two commands — `duvet query -c implementation` and `duvet report --ci` — and say
+they must run on every pull request, plus that `.duvet/snapshot.txt` has to be in
+the checkout for `--ci` to work.
+
+### 7. Any failure at any step is an ERROR
+
+Never continue past a failing step, and never report success over one. State
+precisely which files were written and which were not, so the user can either
+finish or revert with `git status` in hand.
+
+**Do not commit.** Leave every file in the working tree for the user to review,
+the same way `fx-dev:upgrade` leaves its migrations.
+
+## The half-adoption hazard — say this out loud
+
+`.duvet/` existing is what flips `fx-dev:spec-writer` into duvet mode. A repo
+where `.duvet/` was created but CI was never wired therefore gets **stricter spec
+authoring with nothing enforcing it** — the worst of both trades.
+
+So:
+
+- Create `.duvet/` only after step 2 has verified duvet runs.
+- If any step after 3 fails, say plainly that `.duvet/` now exists, that
+  spec-writer will treat the repo as duvet-mode from now on, and exactly what
+  remains (`duvet report` bootstrap, gitignore entries, CI job).
+- Offer removing `.duvet/` as the clean revert if the user does not want to
+  finish.
+
+## Report
+
+On success:
+
+```
+Duvet adopted:
+  mise.toml           + rust, cargo:duvet 0.4.3      (or: cargo install duvet --locked)
+  .duvet/config.toml  created (snapshot + JSON report, no specifications yet)
+  .duvet/snapshot.txt bootstrapped (empty — no specs registered yet)
+  .gitignore          + .duvet/reports/, .duvet/requirements/
+  .github/workflows/duvet.yml  created (duvet query -c implementation; duvet report --ci)
+
+Nothing committed — review with git status.
+Next: /fx-dev:spec-writer now writes specs in duvet mode, and reports the
+[[specification]] stanza to add to .duvet/config.toml for each new spec.
+Make the "Requirements traceability" job a required check for it to gate merges.
+```
+
+On decline: say nothing beyond continuing the calling skill's normal work.

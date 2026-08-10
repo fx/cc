@@ -363,6 +363,24 @@ Patterns are case-sensitive: `review.md` does not match `**/REVIEW.md`.
 
 ---
 
+### Step 9.5: Offer Duvet Adoption (only if not already adopted)
+
+```bash
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+test -d "$repo_root/.duvet" && echo "duvet: adopted" || echo "duvet: not adopted"
+```
+
+The gate is the **repository root**, so resolve it explicitly — a bare `test -d .duvet` is cwd-relative and would offer adoption to a duvet repo whenever setup runs from a subdirectory.
+
+- **`duvet: adopted`** → do nothing and say nothing. Never re-offer, never nag.
+- **`duvet: not adopted`** → offer adoption once, and on acceptance follow **`references/duvet-adoption.md`**. That file is the canonical procedure — read it before offering, and do not restate or reinvent any of its steps here.
+
+**This stays inside setup's create-only contract**: the offer is a single `AskUserQuestion`, every write happens only after the user approves it at that prompt, and a decline changes nothing at all. Because setup runs automatically on every `/spec-writer` and `/project-management` invocation, the reference's offer rule applies at **session** scope here — once the user has declined, skip this step silently for the rest of the session.
+
+Adoption creates `.duvet/`, which is what flips `fx-dev:spec-writer` into duvet mode, so a failure part-way through is not a silent no-op. Any failure is an ERROR: report it, name what was written, and do not report setup as clean over it. The procedure file spells out the ordering that keeps that safe.
+
+---
+
 ### Step 10: Report
 
 If any files were created or modified, report what was done:
@@ -393,6 +411,7 @@ If Step 5.5 found a legacy layout, always end the report with the specific findi
 - **Never migrate** — no moves, merges, deletions, or symlink resolution. Detect and defer to `/fx-dev:upgrade`
 - **Never flip an existing config value** — an explicit `enabled: false` is someone's decision. Adding a missing key is creation; changing a set one is not
 - **Never delete convention content** — setup deletes nothing, ever
+- **Duvet is offered, never assumed** — if `.duvet/` is absent, ask once (Step 9.5); if it exists, stay silent. The procedure lives only in `references/duvet-adoption.md`
 - **Offer migration** if PROJECT.md exists
 - **Keep it minimal** — bare templates, not example content
 - **Idempotent** — safe to run multiple times; repeated runs MUST NOT duplicate content

@@ -115,7 +115,7 @@ fi
 
 `.coderabbit.yaml` is printed rather than grepped because both halves matter and a filename match proves neither. **M1.5 applies unless both are true:** `knowledge_base.code_guidelines.enabled` is `true` (or absent, which defaults to enabled) **and** `**/REVIEW.md` appears in `filePatterns`. A config that lists the pattern under `enabled: false` still needs migrating.
 
-**If no migration applies**, report "Already current — nothing to migrate" and stop. Do not proceed to Step 2.
+**If no migration applies**, report "Already current — nothing to migrate" and skip straight to Step 7 — the duvet offer runs whether or not a migration applied. Do not proceed to Step 2.
 
 ### Step 2: Build the plan
 
@@ -219,6 +219,35 @@ Nothing has been committed.
 
 If anything could not be migrated automatically, say so explicitly and name the
 file — never report a clean upgrade over a partial one.
+
+### Step 7: Offer duvet adoption (only if not already adopted)
+
+Runs on every invocation, including when Step 1 found nothing to migrate — an
+already-current repo can still be missing requirements traceability.
+
+```bash
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+test -d "$repo_root/.duvet" && echo "duvet: adopted" || echo "duvet: not adopted"
+```
+
+The gate is the **repository root**, so resolve it explicitly — a bare
+`test -d .duvet` is cwd-relative and would offer adoption to a duvet repo
+whenever upgrade runs from a subdirectory.
+
+- **`duvet: adopted`** → do nothing and say nothing. Never re-offer, never nag.
+- **`duvet: not adopted`** → offer adoption once, and on acceptance follow
+  **`fx-dev:setup` → `references/duvet-adoption.md`**. That file is the canonical
+  procedure, shared with setup: read it before offering, and do not restate or
+  reinvent any of its steps here.
+
+Adoption is **not** part of M1 and not an instruction-file migration, so it never
+appears in the Step 3 plan and never blocks it. It is its own approval: one
+`AskUserQuestion`, and a decline changes nothing. If the user declines, finish
+the run normally and do not raise duvet again during it.
+
+Like everything else this skill does, nothing is committed — adoption leaves its
+files in the working tree for review. Any failure part-way through is an ERROR:
+report it, name what was written, and do not report a clean upgrade over it.
 
 ---
 
@@ -348,5 +377,6 @@ Section deletion is the reason this lives here and not in setup: removing anythi
 - **Never delete convention content** — move it, or report it as dropped
 - **Never copy from a symlink that escapes the repo** — privacy boundary, no exceptions
 - **Never commit** — leave changes in the working tree for review
+- **Duvet is offered, never assumed** — if `.duvet/` is absent, ask once (Step 7); if it exists, stay silent. The procedure lives only in `fx-dev:setup` → `references/duvet-adoption.md`
 - **Idempotent** — a second run on a migrated repo reports "already current" and changes nothing
 - **Partial is reported** — if a migration could not complete, name the file and say so
