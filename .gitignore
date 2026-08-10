@@ -17,3 +17,10 @@ build/
 
 # Dependencies
 node_modules/
+
+# Duvet generated artifacts. Both are re-derived from the markdown spec on
+# every `duvet report`, so committing them would duplicate the spec text and
+# let it drift. The snapshot at .duvet/snapshot.txt IS committed — it is what
+# `duvet report --ci` verifies against.
+.duvet/reports/
+.duvet/requirements/
