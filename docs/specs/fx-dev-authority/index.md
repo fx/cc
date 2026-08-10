@@ -2,7 +2,7 @@
 
 ## Overview
 
-Three `fx-dev` skills act on a repository with materially different powers. `fx-dev:dev` drives a single change to a merge-ready pull request but stops short of merging it. `fx-dev:team` runs unattended across a backlog and merges its own pull requests. `fx-dev:spec-writer` writes documentation and nothing else.
+Three `fx-dev` skills act on a repository with materially different powers. `fx-dev:dev` drives a single change to a merge-ready pull request but does not merge it without the user's approval. `fx-dev:team` runs unattended across a backlog the user approved up front and merges its own pull requests within that approved scope. `fx-dev:spec-writer` writes documentation and nothing else.
 
 This spec states the **authority boundaries** of those three skills: who may merge a pull request without asking, what must be true before anyone merges at all, and who may write files and commit. It describes behavior the skills already define today.
 
