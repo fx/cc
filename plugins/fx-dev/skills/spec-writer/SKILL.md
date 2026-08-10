@@ -256,7 +256,7 @@ test -d "$(git rev-parse --show-toplevel)/.duvet" && echo "duvet mode: ON" || ec
 
 The gate is defined at the **repository root**, so the check MUST resolve the root explicitly. A bare `test -d .duvet` is cwd-relative and reports "off" for a duvet repo whenever the session's working directory is a subdirectory — silently skipping every rule below.
 
-If `.duvet/` exists, **every rule in "Duvet Mode — Requirements Traceability" above applies for the rest of this run** — REQ IDs for newly created requirements only, one self-contained statement per section, RFC 2119 keywords confined to requirement sections, the extraction check, and the registration and snapshot items you REPORT rather than apply. Record this in your working notes so it is not forgotten by Phase 6.
+If `.duvet/` exists, **every rule in "Duvet Mode — Requirements Traceability" above applies for the rest of this run** — REQ IDs for newly created requirements only, one self-contained statement per requirement section, RFC 2119 keywords confined to requirement sections, the extraction check, and the registration and snapshot items you REPORT rather than apply. Record this in your working notes so it is not forgotten by Phase 6.
 
 If it does not exist, proceed normally and do not raise duvet at all. Adopting duvet is `fx-dev:setup`'s decision to offer, not this skill's.
 
@@ -367,7 +367,7 @@ Read the template at `references/spec-index-template.md` and write `docs/specs/<
 - Verify every claim against the actual code — do not guess or assume.
 - NO task lists in specs. Tasks belong in change documents.
 - Initialize the Changelog with a creation entry.
-- **In duvet mode:** head every requirement `### REQ-NNN: Title`, write one self-contained normative sentence per section, and keep RFC 2119 keywords out of every other section — Overview, Background, Design, Constraints, and Scenario blocks are plain prose. Then run the `duvet extract` check before moving on. See "Duvet Mode — Requirements Traceability".
+- **In duvet mode:** head every requirement `### REQ-NNN: Title`, write one self-contained normative sentence per requirement section, and keep RFC 2119 keywords out of every other section — Overview, Background, Design, Constraints, and Scenario blocks are plain prose. Then run the `duvet extract` check before moving on. See "Duvet Mode — Requirements Traceability".
 
 #### 3.3 Scope Analysis
 
