@@ -210,10 +210,20 @@ pass and step 4 would die with command-not-found — *after* step 3 created
 `.duvet/config.toml`, leaving `fx-dev:spec-writer` in duvet mode with no
 snapshot. That is precisely the half-adopted state this ordering exists to avoid.
 
-The one exception is the CI workflow written in step 6, which deliberately calls a
-bare `duvet`: the `awslabs/duvet` action installs the binary onto the runner's
-`PATH`, so `$duvet` — a path or `mise exec` prefix valid only on this machine —
-must **not** be substituted there.
+There are exactly two exceptions, and both are text written *for somewhere else* —
+neither is this procedure running a command:
+
+1. **The CI workflow** in step 6 deliberately calls a bare `duvet`: the
+   `awslabs/duvet` action installs the binary onto the runner's `PATH`, so
+   `$duvet` — a path or `mise exec` prefix valid only on this machine — must
+   **not** be substituted there.
+2. **The regeneration comment** in the `.duvet/config.toml` header written in
+   step 3e, for the same reason: it is instructions for every future
+   contributor on every machine, so pinning it to this machine's `$duvet` would
+   be wrong. Because a bare `duvet` is not universal either, that comment names
+   the `mise exec -- duvet` and `~/.cargo/bin/duvet` forms alongside it, so a
+   contributor in a non-activated shell is not left with command-not-found from
+   the one command the config tells them to run.
 
 **If duvet does not run, ERROR and stop.** Report the command that failed, its
 output, and exactly what exists so far: at this point that is the `[tools]`
@@ -333,6 +343,11 @@ the schema pin, the confirmed `[[source]]` block(s), and the two reports:
 # regenerate from the REPOSITORY ROOT with:
 #
 #     cd "$(git rev-parse --show-toplevel)" && rm -rf .duvet/requirements && duvet report
+#
+# If `duvet` is not on your PATH, substitute the invocation your install
+# provides — `mise exec -- duvet report` when this repo pins cargo:duvet with
+# mise and the shell is not activated, or `~/.cargo/bin/duvet report` after a
+# `cargo install duvet --locked`.
 #
 # The `cd` is not decoration. duvet resolves this config, every specification
 # source, and every source pattern relative to the current working directory and
@@ -476,6 +491,13 @@ jobs:
         run: duvet report --ci
 ```
 
+- **`main` in the `push` trigger is a placeholder** — substitute the repo's
+  actual default branch (`gh repo view --json defaultBranchRef -q
+  .defaultBranchRef.name`), the same way step 1's `1.97.1` is substituted. The
+  `pull_request:` trigger is branch-agnostic, so the merge gate is correct either
+  way; a wrong `push` branch fails silently instead, dropping snapshot-drift
+  verification for direct pushes to the default branch on any repo that is not on
+  `main`.
 - **The `awslabs/duvet` action only installs the binary.** Running duvet is a
   separate step; the action alone gates nothing.
 - **Both commands are needed.** `duvet report --ci` does not check coverage when

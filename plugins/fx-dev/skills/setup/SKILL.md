@@ -408,8 +408,8 @@ Instruction files:
 **If Step 9.5 adopted duvet, the report MUST include it**, using the report block from `references/duvet-adoption.md`:
 
 ```
-Duvet adopted:
-  <the reference's report block — every line conditional on what was written>
+<include the reference's report block here, verbatim from its own header line
+ down — every line of it is conditional on what was actually written>
 ```
 
 If everything in `docs/` and the instruction files was already current **and Step 9.5 wrote nothing**, report briefly: "Docs structure and instruction files verified — no changes needed."

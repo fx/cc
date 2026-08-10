@@ -409,7 +409,7 @@ Legacy instruction files often carry task rules that predate `/project-managemen
 | References to `PROJECT.md` or `docs/specs/` **as the place tasks live** | References to `docs/specs/` as the place specs live |
 | A heading whose body is *entirely* obsolete task rules | A heading with any surviving content |
 
-If a section is mixed, edit the lines and leave the heading. If you cannot tell whether a rule is task-tracking, **keep it** and mention it in the Step 6 report — a stale rule is recoverable, a deleted one is not.
+If a section is mixed, edit the lines and leave the heading. If you cannot tell whether a rule is task-tracking, **keep it** and mention it in the Step 7 report — a stale rule is recoverable, a deleted one is not.
 
 Then let Step 5 insert the current `/project-management` block.
 
