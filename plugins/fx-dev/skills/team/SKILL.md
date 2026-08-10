@@ -5,6 +5,12 @@ description: "Spawn a coordinated sub-agent team to implement a spec or multi-ta
 
 # Team (Coordinated Sub-Agent Implementation)
 
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#the-team-coordinator-delegates-all-implementation
+duvet= type=implication
+duvet# The `fx-dev:team` coordinator MUST NOT implement a task's code itself and MUST route all implementation work through agents it spawns.
+-->
+
 Spawn a coordinated sub-agent team to implement a spec or multi-task feature. The main session (you) acts strictly as coordinator — no code, no commits, only delegation and quality control.
 
 ## ⛔ Critical Architecture Rule: Coordinator Owns the SDLC
@@ -63,6 +69,12 @@ Before spawning anything, write down the **Scope Brief**. It is what every teamm
 **Every coder prompt, every verify prompt, and every reviewer invocation MUST include this brief verbatim.** A reviewer that does not know what was asked for reports the work the team deliberately did not do, and the coordinator pays for it in filtering time on every PR.
 
 ### The sprawl STOP rule for autonomous runs
+
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#team-runs-may-merge-within-approved-scope
+duvet= type=implication
+duvet# A `fx-dev:team` run MAY merge a pull request it produced without seeking further user approval, provided that pull request's work falls within the scope the user already approved.
+-->
 
 `/team` exists to run unattended for a long time, so **duration, task count, PR count, and effort are NEVER reasons to stop**. Working through an approved backlog is the job — do not check in between waves, and do not ask permission for the next approved task.
 
@@ -214,6 +226,18 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 
 **BEFORE running `gh pr merge` on ANY PR — no matter how small — you MUST verify ALL of the following. This is non-negotiable. A single unmet condition means DO NOT MERGE.**
 
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#required-checks-gate-every-merge
+duvet= type=implication
+duvet# A pull request MUST NOT be merged while any required check on it is failing or has not completed.
+-->
+
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#unresolved-reviewer-threads-gate-every-merge
+duvet= type=implication
+duvet# A pull request MUST NOT be merged while any review thread on it from a configured automated reviewer remains unresolved.
+-->
+
 | # | Gate | How to verify | Blocking? |
 |---|------|--------------|-----------|
 | 1 | **Required CI checks green** | `gh pr checks <NUMBER>` — every required non-CodeRabbit check must pass | YES |
@@ -263,6 +287,12 @@ Agent tool:
 ```
 
 **Why this gate exists:** CI does NOT catch runtime-only errors like circular dependencies, SSR failures, or broken module initialization.
+
+<!--
+duvet= docs/specs/fx-dev-authority/index.md#merge-gates-apply-regardless-of-change-size
+duvet= type=implication
+duvet# The size, triviality, or follow-up status of a pull request MUST NOT be treated as grounds for waiving any merge gate.
+-->
 
 **If a "small" or "follow-up" PR:** Same rules. No exceptions. PR size is NEVER a reason to skip merge gates.
 

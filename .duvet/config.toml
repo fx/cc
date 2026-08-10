@@ -22,6 +22,12 @@
 source = "docs/specs/marketplace-structure/index.md"
 format = "markdown"
 
+# The fx-dev authority spec is likewise prose markdown and needs the same
+# explicit `format` for the same reason.
+[[specification]]
+source = "docs/specs/fx-dev-authority/index.md"
+format = "markdown"
+
 # These citations are `implication`, not `test`. Each one sits on a bash
 # assertion that both enforces the invariant and verifies it: the assertion is
 # the only implementation the invariant has, and because it gates every pull
@@ -40,6 +46,25 @@ format = "markdown"
 pattern = ".github/workflows/*.yml"
 type = "implication"
 comment-style = { meta = "#=", content = "#%" }
+
+# The fx-dev authority requirements are `implication` for a different reason:
+# the skills ARE the implementation. Each requirement is a rule stated in a
+# prompt document and honored by the agent that loads it — there is no hook, CI
+# job, or runtime guard to cite, and nothing to unit-test. The citation marks
+# the sentence in the skill that carries the rule.
+#
+# SKILL.md files are markdown, which has no line-comment syntax, so these
+# citations live inside HTML comments. That forces a different comment style
+# from the workflow source above: `duvet=`/`duvet#` are used instead of the
+# `//=`/`//#` defaults because a bare `//` prefix inside an HTML comment is
+# indistinguishable from ordinary prose. The `<!--` and `-->` delimiters MUST
+# sit on their own lines — duvet reads the whole line after the meta prefix, so
+# a single-line `<!--= ... -->` folds the trailing delimiter into the value and
+# fails to parse.
+[[source]]
+pattern = "plugins/fx-dev/skills/**/SKILL.md"
+type = "implication"
+comment-style = { meta = "duvet=", content = "duvet#" }
 
 [report.snapshot]
 enabled = true

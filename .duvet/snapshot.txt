@@ -1,3 +1,28 @@
+SPECIFICATION: [fx-dev Agent Authority](docs/specs/fx-dev-authority/index.md)
+  SECTION: [Dev Runs Require User Approval Before Merge](#dev-runs-require-user-approval-before-merge)
+    TEXT[!MUST,implication]: A `fx-dev:dev` run MUST obtain explicit approval from the user before merging any pull request it produced.
+
+  SECTION: [Team Runs May Merge Within Approved Scope](#team-runs-may-merge-within-approved-scope)
+    TEXT[!MAY,implication]: A `fx-dev:team` run MAY merge a pull request it produced without seeking further user approval, provided that pull request's work falls within the scope the user already approved.
+
+  SECTION: [Required Checks Gate Every Merge](#required-checks-gate-every-merge)
+    TEXT[!MUST,implication]: A pull request MUST NOT be merged while any required check on it is failing or has not completed.
+
+  SECTION: [Unresolved Reviewer Threads Gate Every Merge](#unresolved-reviewer-threads-gate-every-merge)
+    TEXT[!MUST,implication]: A pull request MUST NOT be merged while any review thread on it from a configured automated reviewer remains unresolved.
+
+  SECTION: [Merge Gates Apply Regardless of Change Size](#merge-gates-apply-regardless-of-change-size)
+    TEXT[!MUST,implication]: The size, triviality, or follow-up status of a pull request MUST NOT be treated as grounds for waiving any merge gate.
+
+  SECTION: [The Dev Coordinator Delegates All Writes](#the-dev-coordinator-delegates-all-writes)
+    TEXT[!MUST,implication]: The `fx-dev:dev` coordinator MUST NOT write code, create files, or make commits itself, and MUST delegate that work to sub-agents.
+
+  SECTION: [The Team Coordinator Delegates All Implementation](#the-team-coordinator-delegates-all-implementation)
+    TEXT[!MUST,implication]: The `fx-dev:team` coordinator MUST NOT implement a task's code itself and MUST route all implementation work through agents it spawns.
+
+  SECTION: [Spec Writer Touches Only the Docs Tree](#spec-writer-touches-only-the-docs-tree)
+    TEXT[!MUST,implication]: The `fx-dev:spec-writer` skill MUST NOT create or modify any file outside the `docs/` tree.
+
 SPECIFICATION: [Marketplace Structure](docs/specs/marketplace-structure/index.md)
   SECTION: [Marketplace Manifest Is Parseable](#marketplace-manifest-is-parseable)
     TEXT[!MUST,implication]: The repository MUST contain a `.claude-plugin/marketplace.json` file that parses as valid JSON.

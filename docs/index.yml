@@ -6,6 +6,10 @@ specs:
     path: specs/marketplace-structure/
     description: Structural invariants of the marketplace manifest and the plugins/ tree, as enforced by CI
     status: active
+  - name: fx-dev-authority
+    path: specs/fx-dev-authority/
+    description: Merge and write authority boundaries for the fx-dev dev, team, and spec-writer skills
+    status: active
 
 changes:
   # - id: "NNNN"
