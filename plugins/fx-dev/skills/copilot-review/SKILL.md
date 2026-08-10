@@ -22,7 +22,7 @@ Request, wait for, and resolve GitHub Copilot's PR review on a pull request.
 
 ## Known GitHub API Behaviour — Do Not Rediscover This
 
-These four are empirically confirmed against real PRs on this repo. They are the
+These five are empirically confirmed against real PRs on this repo. They are the
 reason the workflow below looks the way it does. Do not "improve" the workflow
 back into depending on any of them.
 
@@ -67,6 +67,18 @@ with a genuine finding — and one of those, applied exactly as Copilot suggeste
 would have introduced the very bug it claimed to report. So suppressed comments
 are mandatory to read (Step 2b) **and** mandatory to triage rather than apply on
 sight.
+
+**D5 — a failed body fetch is not a clean body.** The suppressed-comments check has
+**three** outcomes, not two. The waiter's body fetch used to end in `|| true`, so a
+transient `gh api` error produced an empty string, the `Suppressed comments` grep
+matched nothing, and the script reported `SUPPRESSED_COMMENTS=0` with
+*"(review has an empty body)"* — certifying the gate clean on a check that never ran.
+It now fails closed: `1` = block present, `0` = fetch succeeded and no block,
+`unknown` = fetch failed. The distinction comes from `gh`'s **exit status**, never
+from whether the output is empty, because a Copilot review with a genuinely empty
+body is legal and observed — "empty" and "never fetched" are different facts that
+look identical on stdout. When you fetch bodies by hand (Step 2b), apply the same
+rule: check that the command succeeded before concluding anything from its silence.
 
 ## MANDATORY: Triage Against the Scope Brief
 
@@ -162,7 +174,14 @@ Escalate to the user only after that.
 Script exit codes:
 - **Exit 0**: A review exists whose `commit_id` equals the current head → proceed to Step 2b. The script prints three machine-readable lines and you MUST read all three — **exit 0 alone is not a pass**:
   - `REVIEWED_COMMIT_ID=<sha>` and `PR_HEAD_SHA=<sha>` — **verify they match yourself** rather than trusting the exit code.
-  - `SUPPRESSED_COMMENTS=1|0` — **`1` means exit 0 is NOT a clean result.** At least one review of that commit carries a `Suppressed comments` block whose findings create no review thread (**D4**), so Step 2b is mandatory before the gate can pass. Branching on the exit code without reading this line is the exact historical failure: "gate passed" recorded against a review nobody read.
+  - `SUPPRESSED_COMMENTS=1|0|unknown` — three states, and **only a definite `0` is clean.** Branching on the exit code without reading this line is the exact historical failure: "gate passed" recorded against a review nobody read.
+    - **`1`** — at least one review of that commit carries a `Suppressed comments` block whose findings create no review thread (**D4**). Exit 0 is NOT a clean result; Step 2b is mandatory before the gate can pass.
+    - **`0`** — the body fetch **succeeded** and no such block appears in any review of that commit.
+    - **`unknown`** — the body fetch **FAILED**, so the check could not be performed at all (**D5**). This is **not** `0` and must never be recorded as one: the script cannot tell you whether findings exist. Treat the gate as unsatisfied — re-run the script, or fetch the bodies by hand (Step 2b) and triage them yourself.
+
+  **Anything other than a definite `0` means the gate is NOT clean.** Never collapse
+  `unknown` into `0`, and never treat "the line was not `1`" as "there was no block" —
+  a failed check and a passed check are different facts.
 - **Exit 1**: **Timeout** — no review of the current head arrived yet. This is *not* a failure and *not* a clean result. Re-run the script (up to 3 runs total). If it still has not arrived, STOP and report: "Copilot review has not arrived for PR #N head `<sha>`. Cannot merge without it." **Never** record this as "no findings".
 - **Exit 2**: **Retired — the script never returns it.** It used to mean "no review requested", derived from the broken `requested_reviewers` signal (**D1/D3**). Do not branch on it, and do not reinstate any "request again, then re-run" recovery keyed to it.
 - **Exit 3**: Environment/usage error — bad arguments, `gh` too old, PR head unresolvable → report error to user. The wait never started.
@@ -176,10 +195,11 @@ and those findings produce **no review thread**, so no thread query will ever
 surface them. A review can say "generated no new comments", report zero unresolved
 threads, and still carry substantive bugs in that block.
 
-The waiter prints the bodies, flags the block, and emits `SUPPRESSED_COMMENTS=1|0`
-for you on exit 0 — **check that line**; it is the machine-readable form of this
-step. To fetch the bodies directly — scoped to the reviewed head so you do not read
-a stale review's body, and across **every** review of that commit:
+The waiter prints the bodies, flags the block, and emits
+`SUPPRESSED_COMMENTS=1|0|unknown` for you on exit 0 — **check that line**; it is the
+machine-readable form of this step, and only a definite `0` clears it (**D5**). To
+fetch the bodies directly — scoped to the reviewed head so you do not read a stale
+review's body, and across **every** review of that commit:
 
 ```bash
 REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
@@ -281,7 +301,7 @@ REVIEWED=$(gh api "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/reviews" \
 
 This skill is complete when ALL of:
 - ✅ Copilot review has been received (script exited 0) **for the current head commit** — `REVIEWED_COMMIT_ID` equals `PR_HEAD_SHA`, checked by you, not for an earlier commit
-- ✅ The script's `SUPPRESSED_COMMENTS=` line was read. If `1`, the suppressed-comments block has been read in full and every item triaged (Step 2b); if `0`, that was confirmed from the output rather than assumed
+- ✅ The script's `SUPPRESSED_COMMENTS=` line was read, and it is a definite `0` or a `1` whose block has been read in full and every item triaged (Step 2b). A `0` must be confirmed from the output rather than assumed, and **`unknown` does not satisfy this criterion at all** — the check failed to run (**D5**), so re-run the waiter or triage the bodies by hand before claiming the gate
 - ✅ All Copilot threads resolved (0 unresolved, **filtered to the Copilot login**)
 - ✅ Any valid code concerns have been fixed and pushed — **and the resulting head was itself reviewed**
 
@@ -290,4 +310,6 @@ This skill is complete when ALL of:
 **Never report this gate as passed on a zero thread count alone, and never on exit 0
 alone.** Suppressed comments carry real findings and produce no threads (**D4**) —
 `SUPPRESSED_COMMENTS=1` accompanies exit 0 precisely so that "the script succeeded"
-can never be mistaken for "the review was clean".
+can never be mistaken for "the review was clean". `SUPPRESSED_COMMENTS=unknown`
+carries the same weight for the same reason (**D5**): the check did not run, so
+there is nothing to report as passed.

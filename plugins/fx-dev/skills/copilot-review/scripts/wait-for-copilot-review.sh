@@ -22,13 +22,15 @@
 #       head SHA. stdout carries machine-readable
 #           REVIEWED_COMMIT_ID=<sha>
 #           PR_HEAD_SHA=<sha>
-#           SUPPRESSED_COMMENTS=1|0
+#           SUPPRESSED_COMMENTS=1|0|unknown
 #       so the caller can re-verify the match itself rather than trusting this
 #       script's word for it. `SUPPRESSED_COMMENTS=1` means at least one review of
 #       that commit carries a `Suppressed comments` block whose findings create NO
 #       review thread (D4): exit 0 is then NOT a clean result, and the caller MUST
 #       read and triage the printed body before treating the gate as passed.
-#       Exit 0 alone never establishes a clean review.
+#       `unknown` means the body fetch FAILED and the check could not be performed
+#       at all (D5). ONLY a definite `0` means "no block found" — treat `1` and
+#       `unknown` alike as NOT clean. Exit 0 alone never establishes a clean review.
 #   1 - TIMEOUT. No review covering the current head arrived within TIMEOUT
 #       seconds. This is NOT a failure and NOT evidence that anything is wrong:
 #       observed delivery times range from 85 s to 12 m 42 s, and the repo ruleset
@@ -86,6 +88,17 @@
 #     Two reviews of one commit are routine (this script nudges on every head
 #     move, and the skill re-runs it up to 3 times), so a later "generated no new
 #     comments" review would otherwise mask an earlier one's suppressed block.
+#
+# D5. The suppressed-comments check has THREE outcomes, and a failed fetch is not 0.
+#     `review_bodies` used to end in `|| true`, so a transient `gh api` error
+#     produced an empty string, the `Suppressed comments` grep matched nothing, and
+#     the script printed SUPPRESSED_COMMENTS=0 plus "(review has an empty body)" —
+#     certifying the gate clean on a check that never ran. That is the same
+#     fail-open shape as the head re-read above, and it must fail closed the same
+#     way: 1 = block present, 0 = fetch succeeded and no block, `unknown` = fetch
+#     FAILED. Distinguish the last two by `gh`'s EXIT STATUS, never by empty
+#     output — a Copilot review with a genuinely empty body is legal and observed,
+#     so "empty" and "unfetched" are different facts that look identical on stdout.
 #
 # HEAD-SHA AWARENESS (do not remove):
 #     Copilot does NOT re-review automatically when new commits are pushed unless
@@ -181,20 +194,33 @@ check_review_submitted() {
 # because the findings that matter most may live only in a Suppressed comments
 # block (D4) — and taking only the newest review hid that block whenever a later
 # review of the same commit reported "generated no new comments".
+#
+# FAILS CLOSED (D5). Deliberately carries NO `|| true` and NO `2>/dev/null`:
+#   * the EXIT STATUS is the only sound signal of whether the check could run, and
+#     `|| true` destroyed it — a transient API error became an empty string, the
+#     grep below found no block, and the script certified SUPPRESSED_COMMENTS=0;
+#   * stderr is left attached so the failure is LOUD in the caller's output.
+# Callers MUST branch on the exit status (`if bodies=$(review_bodies ...)`), never
+# on whether the output is empty: an empty body is a LEGAL, observed Copilot
+# result, so emptiness cannot distinguish "no findings" from "never fetched".
 review_bodies() {
     local sha="$1"
     gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" --jq \
-        "[.[] | select(.user.login | startswith(\"${COPILOT_LOGIN_PREFIX}\")) | select(.commit_id == \"${sha}\") | .body] | join(\"\n\n----- (next Copilot review of this same commit) -----\n\n\")" \
-        2>/dev/null || true
+        "[.[] | select(.user.login | startswith(\"${COPILOT_LOGIN_PREFIX}\")) | select(.commit_id == \"${sha}\") | .body] | join(\"\n\n----- (next Copilot review of this same commit) -----\n\n\")"
 }
 
 # The commit of the newest Copilot review of ANY commit. Diagnostic only — used to
 # explain a timeout ("Copilot reviewed this PR, but not this code" reads very
 # differently from "Copilot has never looked at this PR"). Never a success signal.
+#
+# Also carries no `|| true` (D5): with one, a failed read returned empty and the
+# timeout path below stated "Copilot has never submitted a review on this PR" as
+# fact — an assertion about the PR derived from an API error. Empty output now means
+# "the read succeeded and there are no Copilot reviews"; a non-zero status means
+# "unknown", and the caller says so instead of guessing.
 latest_review_commit() {
     gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" --jq \
-        "[.[] | select(.user.login | startswith(\"${COPILOT_LOGIN_PREFIX}\")) | .commit_id] | last // empty" \
-        2>/dev/null || true
+        "[.[] | select(.user.login | startswith(\"${COPILOT_LOGIN_PREFIX}\")) | .commit_id] | last // empty"
 }
 
 # Best-effort nudge. See D1: the response is discarded on purpose. Issued because
@@ -252,16 +278,31 @@ count_copilot_threads() {
 # the caller's equality check exists to catch.
 report_success() {
     local reviewed_sha="$1" state="$2" head_now="$3"
-    local bodies thread_count suppressed=0
+    local bodies thread_count suppressed fetch_ok=1
 
     if [[ -z "$head_now" ]]; then
         echo "Internal error: refusing to emit a SHA pair from an unconfirmed head read" >&2
         exit 3
     fi
 
-    bodies=$(review_bodies "$reviewed_sha")
-    if printf '%s' "$bodies" | grep -qi 'Suppressed comments'; then
-        suppressed=1
+    # THREE states, not two (D5). `gh`'s exit status — never the emptiness of its
+    # output — decides whether the suppressed-comments check actually ran:
+    #   fetch OK + block present -> 1
+    #   fetch OK + no block      -> 0
+    #   fetch FAILED             -> unknown   (never 0: that reads as "clean")
+    # A genuinely empty review body is legal and observed, so inferring failure from
+    # empty output would false-alarm on clean reviews and inferring success from it
+    # would certify a review nobody fetched. Only the status separates the two.
+    if bodies=$(review_bodies "$reviewed_sha"); then
+        if printf '%s' "$bodies" | grep -qi 'Suppressed comments'; then
+            suppressed=1
+        else
+            suppressed=0
+        fi
+    else
+        fetch_ok=0
+        bodies=""
+        suppressed="unknown"
     fi
 
     echo ""
@@ -272,14 +313,23 @@ report_success() {
 
     echo ""
     echo "=== Copilot Review Body (every review of ${reviewed_sha:0:7}) ==="
-    if [[ -n "$bodies" ]]; then
+    if (( fetch_ok == 0 )); then
+        echo "(COULD NOT BE FETCHED — the API read FAILED; see the gh error above)"
+    elif [[ -n "$bodies" ]]; then
         printf '%s\n' "$bodies"
     else
-        echo "(review has an empty body)"
+        echo "(the fetch SUCCEEDED and every review of this commit has an empty body)"
     fi
 
     echo ""
-    if [[ "$suppressed" -eq 1 ]]; then
+    if (( fetch_ok == 0 )); then
+        echo "!! SUPPRESSED_COMMENTS=unknown — THE SUPPRESSED-COMMENTS CHECK DID NOT RUN."
+        echo "!! Fetching the review bodies FAILED, so this script CANNOT say whether a"
+        echo "!! 'Suppressed comments' block exists. This is NOT a clean result and it is"
+        echo "!! NOT equivalent to 0 — only a definite 0 means 'no block found'."
+        echo "!! Treat the gate as UNSATISFIED: re-run this script, or fetch the bodies by"
+        echo "!! hand (skill Step 2b) and triage them yourself before merging (D4/D5)."
+    elif [[ "$suppressed" == "1" ]]; then
         echo "!! SUPPRESSED_COMMENTS=1 — a 'Suppressed comments' block is PRESENT above."
         echo "!! Those are real findings and they create NO review thread. You MUST read"
         echo "!! the <details> block in full and triage every item in it. The gate is NOT"
@@ -372,12 +422,16 @@ done
 
 echo ""
 echo "TIMEOUT: no Copilot review of ${head_sha:0:7} arrived within ${TIMEOUT}s (${SECONDS}s wall clock elapsed)."
-stale=$(latest_review_commit)
-if [[ -n "$stale" && "$stale" != "$head_sha" ]]; then
-    echo "Newest Copilot review on this PR covers ${stale:0:7}, which is NOT the current head."
-    echo "That review is not coverage for ${head_sha:0:7}."
-elif [[ -z "$stale" ]]; then
-    echo "Copilot has never submitted a review on this PR."
+if stale=$(latest_review_commit); then
+    if [[ -n "$stale" && "$stale" != "$head_sha" ]]; then
+        echo "Newest Copilot review on this PR covers ${stale:0:7}, which is NOT the current head."
+        echo "That review is not coverage for ${head_sha:0:7}."
+    elif [[ -z "$stale" ]]; then
+        echo "Copilot has never submitted a review on this PR."
+    fi
+else
+    echo "Could not read this PR's reviews, so whether Copilot has ever reviewed it is"
+    echo "UNKNOWN — that API read failed. Do not read this as 'never reviewed'."
 fi
 echo "This is a timeout, not a verdict: re-run to keep waiting. Do NOT read it as"
 echo "'no findings' — nothing has reviewed ${head_sha:0:7} yet."

@@ -97,9 +97,10 @@ Verify the Copilot gate with a **head-SHA-scoped** query — an unscoped one acc
 review of a superseded commit as coverage for the code you are about to merge:
 
 ```bash
+PR_NUMBER=$(gh pr view --json number --jq '.number')          # or set it explicitly: PR_NUMBER=123
 REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
-HEAD_SHA=$(gh pr view <NUMBER> --json headRefOid --jq '.headRefOid')
-gh api "/repos/${REPO_NWO}/pulls/<NUMBER>/reviews" \
+HEAD_SHA=$(gh pr view "$PR_NUMBER" --json headRefOid --jq '.headRefOid')
+gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" \
   --jq "[.[] | select(.user.login | startswith(\"copilot-pull-request-reviewer\")) | select(.commit_id == \"${HEAD_SHA}\")] | length"
 ```
 
@@ -471,8 +472,9 @@ GitHub Copilot can automatically review pull requests. This section covers how t
 **A Copilot review CAN be requested via the API** — add the bot as a requested reviewer:
 
 ```bash
+PR_NUMBER=$(gh pr view --json number --jq '.number')          # or set it explicitly: PR_NUMBER=123
 REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
-gh api --method POST "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/requested_reviewers" \
+gh api --method POST "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/requested_reviewers" \
   --input - <<'EOF'
 {"reviewers":["copilot-pull-request-reviewer[bot]"]}
 EOF
@@ -518,16 +520,17 @@ This is the real check. Note the `commit_id` scoping — without it you learn on
 Copilot reviewed *something*, which says nothing about the code in front of you:
 
 ```bash
+PR_NUMBER=$(gh pr view --json number --jq '.number')          # or set it explicitly: PR_NUMBER=123
 REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
-HEAD_SHA=$(gh pr view PR_NUMBER --json headRefOid --jq '.headRefOid')
+HEAD_SHA=$(gh pr view "$PR_NUMBER" --json headRefOid --jq '.headRefOid')
 
 # Reviews of the CURRENT head — this is coverage.
-gh api "/repos/${REPO_NWO}/pulls/PR_NUMBER/reviews" \
+gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" \
   --jq "[.[] | select(.user.login | startswith(\"copilot-pull-request-reviewer\")) | select(.commit_id == \"${HEAD_SHA}\") | {state, submitted_at}]"
 
 # Every Copilot review with its commit — diagnostic, to see whether a review exists
 # but covers an older commit. NOT a pass signal.
-gh api "/repos/${REPO_NWO}/pulls/PR_NUMBER/reviews" \
+gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" \
   --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer")) | {commit_id, state, submitted_at}]'
 ```
 
@@ -535,6 +538,9 @@ Or via GraphQL — include `commit { oid }`, otherwise the result is unscoped an
 cannot answer the question:
 
 ```bash
+# Replace OWNER, REPO, PR_NUMBER with actual values. `-f query='...'` is single-quoted,
+# so nothing inside it is shell-expanded — these are literal substitutions, not shell
+# variables. The `$head` in the --jq below is a *jq* variable and stays as written.
 gh api graphql -f query='
 query {
   repository(owner: "OWNER", name: "REPO") {
@@ -565,6 +571,7 @@ it only invites the "no request → nobody asked" misreading. `headRefOid` and
 `commit { oid }` are what make the result answerable.
 
 ```bash
+# Replace OWNER, REPO, PR_NUMBER with actual values (GraphQL body — no shell expansion here)
 gh api graphql -f query='
 query {
   repository(owner: "OWNER", name: "REPO") {

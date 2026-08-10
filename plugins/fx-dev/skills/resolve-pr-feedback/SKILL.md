@@ -78,10 +78,19 @@ gh pr view --json number -q '.number'
 
 ### 2. Query All Unresolved Review Threads
 
-**IMPORTANT:** Use inline values, NOT `$variable` syntax. The `$` character causes shell escaping issues.
+**IMPORTANT — this applies to the GraphQL query bodies only:** substitute inline
+values, NOT `$variable` syntax. `-f query='...'` is single-quoted so the shell never
+expands anything inside it, and `$` is GraphQL's own variable sigil, so a `$name`
+there is a GraphQL variable you have not declared rather than a value.
+
+**Plain `gh api` / `gh pr view` snippets are the opposite:** they use real shell
+variables (`PR_NUMBER`, `REPO_NWO`, `HEAD_SHA`), assigned at the top of each snippet
+so it is copy-pasteable as-is. Never mix the two styles inside one snippet — a bare
+`PR_NUMBER` sitting next to a real `${HEAD_SHA}` reads as though it were defined, and
+silently builds a request against a repo path containing the literal text.
 
 ```bash
-# Replace OWNER, REPO, PR_NUMBER with actual values
+# Replace OWNER, REPO, PR_NUMBER with actual values (GraphQL body — no shell expansion here)
 gh api graphql -f query='
 query {
   repository(owner: "OWNER", name: "REPO") {
@@ -113,14 +122,22 @@ Parse the response and categorize unresolved threads by author:
 **⛔ Threads are not the whole review.** Copilot puts some findings in a `<details><summary>Suppressed comments</summary>` block in the **review body**, where they create no thread at all. A review that reports "generated no new comments" with zero unresolved threads can still contain real bugs there. Read the bodies of the Copilot reviews **of the current head commit** — scoping by `commit_id` is required, or after a push you grep the PREVIOUS commit's body and record this check as satisfied for code that review never covered:
 
 ```bash
-HEAD_SHA=$(gh pr view PR_NUMBER --json headRefOid --jq '.headRefOid')
-gh api "/repos/OWNER/REPO/pulls/PR_NUMBER/reviews" \
+PR_NUMBER=$(gh pr view --json number --jq '.number')          # or set it explicitly: PR_NUMBER=123
+REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+HEAD_SHA=$(gh pr view "$PR_NUMBER" --json headRefOid --jq '.headRefOid')
+
+gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" \
   --jq "[.[] | select(.user.login | startswith(\"copilot-pull-request-reviewer\")) | select(.commit_id == \"${HEAD_SHA}\") | .body] | join(\"\n\n----- (next review of this commit) -----\n\n\")"
 ```
 
 Empty output means **no Copilot review covers the current head** — that is an unreviewed head, not a clean one. Note this reads *every* review of that commit, not `| last`: two reviews of one commit are routine, and if the newer says "generated no new comments" while the older carried the suppressed block, `last` reads the clean body and finds nothing.
 
-`fx-dev:copilot-review`'s waiter does this for you and emits `SUPPRESSED_COMMENTS=1|0`; prefer it over this snippet.
+`fx-dev:copilot-review`'s waiter does this for you and emits
+`SUPPRESSED_COMMENTS=1|0|unknown`; prefer it over this snippet. Only a definite `0`
+is clean — `unknown` means the fetch failed and the check never ran (its **D5**). If
+you run the snippet above by hand, apply the same rule: confirm the command
+succeeded, because empty output from a failed fetch looks exactly like empty output
+from a review with no findings.
 
 Triage those the same way as thread comments. They cannot be resolved (no thread exists), so record the outcome in the commit message or PR body instead.
 
@@ -129,13 +146,16 @@ Triage those the same way as thread comments. They cannot be resolved (no thread
 Codecov uses PR comments and commit statuses, NOT review threads. Query separately:
 
 ```bash
+PR_NUMBER=$(gh pr view --json number --jq '.number')          # or set it explicitly: PR_NUMBER=123
+REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+HEAD_SHA=$(gh pr view "$PR_NUMBER" --json headRefOid --jq '.headRefOid')
+
 # Check for Codecov commit statuses
-HEAD_SHA=$(gh pr view PR_NUMBER --json headRefOid --jq '.headRefOid')
-gh api "/repos/OWNER/REPO/commits/$HEAD_SHA/statuses" \
+gh api "/repos/${REPO_NWO}/commits/${HEAD_SHA}/statuses" \
   --jq '[.[] | select(.context | startswith("codecov/"))] | {count: length, statuses: [.[] | {context, state, description}]}'
 
 # Check for Codecov PR comments
-gh api "/repos/OWNER/REPO/issues/PR_NUMBER/comments" \
+gh api "/repos/${REPO_NWO}/issues/${PR_NUMBER}/comments" \
   --jq '[.[] | select(.user.login == "codecov[bot]" or .user.login == "codecov-commenter")] | length'
 ```
 
@@ -180,8 +200,11 @@ After invoking resolver skills, re-query to confirm all threads are resolved AND
 Verify before declaring the loop converged:
 
 ```bash
-HEAD_SHA=$(gh pr view <PR> --json headRefOid --jq '.headRefOid')
-REVIEWED=$(gh api "/repos/OWNER/REPO/pulls/<PR>/reviews" \
+PR_NUMBER=$(gh pr view --json number --jq '.number')          # or set it explicitly: PR_NUMBER=123
+REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+
+HEAD_SHA=$(gh pr view "$PR_NUMBER" --json headRefOid --jq '.headRefOid')
+REVIEWED=$(gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" \
   --jq '[.[] | select(.user.login | startswith("copilot-pull-request-reviewer")) | .commit_id] | last // empty')
 [[ -n "$REVIEWED" && "$REVIEWED" == "$HEAD_SHA" ]] \
   && echo "covered: $HEAD_SHA" \
@@ -197,7 +220,7 @@ review threads at all, so an unfiltered query makes one open human comment
 permanently unsatisfiable and loops this skill against work it must not do:
 
 ```bash
-# Replace OWNER, REPO, PR_NUMBER with actual values
+# Replace OWNER, REPO, PR_NUMBER with actual values (GraphQL body — no shell expansion here)
 gh api graphql -f query='
 query {
   repository(owner: "OWNER", name: "REPO") {
