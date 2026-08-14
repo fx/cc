@@ -295,9 +295,11 @@ Brief:
 CONVERGENCE PASS <N>. Prior passes found <count> issues; all fixed except <the
 rejected ones and why>. Do not re-report them.
 
-Report only findings that would change behaviour, break a build or test, make
-the artifact unimplementable, or state something false. Wording, formatting,
-and counts nothing keys on: one closing note, not findings.
+Report findings that would change behaviour, break a build or test, make the
+artifact unimplementable, state something false, or expose a security, privacy,
+or data-loss problem — including a leaked credential, internal URL, or private
+identifier in documentation or examples. Wording, formatting, and counts nothing
+keys on: one closing note, not findings.
 
 Where this artifact declares a list illustrative and a rule authoritative,
 assess the RULE. A further missing list entry is not a finding.
@@ -312,9 +314,10 @@ If the artifact is internally consistent and matches the tree, say so plainly.
 - **Cap at 4 iterations.** If Codex keeps flagging the same design decision after
   4 passes, that is a human call, not more edits — escalate it **by name** and
   stop.
-- Watch the shape, not just the count. Falling with new categories each pass →
-  keep going. Flat or oscillating and all immaterial → converged, stop. The same
-  disagreement twice → escalate.
+- Watch the shape, and count only the tiers that block. Material or substantive
+  findings still arriving → keep going. A pass with none → converged, however
+  many immaterial observations it produced. The same disagreement twice →
+  escalate.
 - When you stop, **report the per-pass trend** (`9, 4, 1, 0 material`) and say
   whether the last round's fixes were themselves reviewed.
 

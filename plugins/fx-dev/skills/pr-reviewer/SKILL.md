@@ -89,6 +89,8 @@ count at each tier so the author knows what to act on first.
 
 2. **Apply project rules as BLOCKING issues.** These files define project-specific requirements that override general best practices. Violations are BLOCKING, not suggestions.
 
+   **Precedence with the materiality bar:** a project-rule violation is blocking **by virtue of being a project rule** — the bar does not filter it out. The project has already decided the rule matters; that decision is not yours to re-make per finding. The bar governs findings you originate from your own judgment, not rules the project wrote down. If a project rule genuinely produces noise, say so once as feedback on the rule, and still report the violation.
+
 ### Vendor Code Reuse Check (BLOCKING)
 
 For projects with vendor submodules (e.g., `vendor/` directory):

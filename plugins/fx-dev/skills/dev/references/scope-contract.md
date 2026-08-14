@@ -100,8 +100,8 @@ When unsure which tier something is, ask: *if this shipped uncorrected, what bre
 
 Track findings per pass and watch the shape, not just the count:
 
-- **Falling, with new categories each pass** — keep going. The review is still working.
-- **Flat or oscillating, all immaterial** — converged. Stop, and say so: report the count trend and what remains below the bar.
+- **Material or substantive findings still arriving, in new categories** — keep going. The review is still working.
+- **No material or substantive findings this pass** — converged, whatever the immaterial count did. Stop, and say so: report the trend and what remains below the bar. A pass that falls from five immaterial observations to three *different* immaterial observations has converged; the drop is churn, not progress.
 - **The same disagreement in successive passes** — stop. That is a human decision, not a review outcome. Escalate it by name.
 
 Report the trend when you stop, so the operator can see the shape rather than take "clean" on trust: *"Findings per pass: 9, 4, 1, 0 material. Stopping — three immaterial wording items remain, listed below."*

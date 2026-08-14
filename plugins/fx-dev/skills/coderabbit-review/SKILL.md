@@ -113,7 +113,7 @@ Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until a pass p
 **Converged does NOT mean zero output.** Waiting for silence spends full review cycles on wording. Stop when what remains would change nothing if it shipped uncorrected, and list those items once, non-blocking.
 
 - **Cap at 4 iterations.** If CodeRabbit keeps flagging the same design decision after 4 passes, that is a human call, not more code edits — escalate it **by name** and stop.
-- Watch the shape, not just the count: falling with new categories → keep going; flat or oscillating and all immaterial → converged; the same disagreement twice → escalate.
+- Watch the shape, and count only the tiers that block: material or substantive findings still arriving → keep going; a pass with none → converged, however many immaterial observations it produced; the same disagreement twice → escalate.
 - **Rate-limit exception:** stop immediately on throttling; do not consume iterations waiting for cooldowns.
 - When you stop, report the per-pass trend and whether the last round's fixes were themselves reviewed.
 
