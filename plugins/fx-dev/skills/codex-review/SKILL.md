@@ -7,7 +7,10 @@ description: Run OpenAI Codex's AI code review LOCALLY via the `codex` CLI BEFOR
 
 This skill runs OpenAI Codex's AI code review **locally, one-shot**, against the
 current branch. Run it as part of pre-PR self-review — after `coderabbit-review`,
-before opening the PR — fix everything it finds, and only then open the PR.
+before opening the PR — fix every **material or substantive** finding, and open
+the PR once a pass produces none. Immaterial observations get one closing note
+and do not hold the PR: see the materiality bar in
+`fx-dev/skills/dev/references/scope-contract.md`.
 
 It complements (does not replace) `coderabbit-review`: CodeRabbit and Codex are
 independent reviewers and each catches issues the other misses.
@@ -335,11 +338,13 @@ A run that produces **zero** out-of-scope findings is the signal the brief was
 well built. Persistent out-of-scope noise means the brief is too thin — tighten
 it before the next iteration rather than filtering by hand again.
 
-### Step 4: Open the PR only when clean
+### Step 4: Open the PR once it has converged
 
-A clean Codex review (alongside a clean CodeRabbit review) is the gate to PR
-creation in the SDLC (`fx-dev:dev` Step 4.5 → Step 5). Do not open the PR with
-unresolved actionable Codex findings.
+A **converged** Codex review — a pass with no material or substantive findings —
+alongside a converged CodeRabbit review is the gate to PR creation in the SDLC
+(`fx-dev:dev` Step 4.5 → Step 5). Do not open the PR with unresolved material or
+substantive Codex findings. Outstanding **immaterial** observations do not hold
+the PR; carry them into its description as a closing note.
 
 ## When to Use This Skill
 
