@@ -100,9 +100,10 @@ not handed it.
   on it.
 
 Triage by **materiality** as well as scope — see the materiality bar in the same
-reference. An in-scope finding that would change nothing if it shipped
-uncorrected is **resolved by replying with that reasoning**, not by editing. The
-gate is zero *unresolved* Copilot threads, not zero observations acted on.
+reference. An in-scope item that would change nothing if it shipped uncorrected
+is an **observation, not a finding**, and is **resolved by replying with that
+reasoning** rather than by editing. The gate is zero *unresolved* Copilot
+threads, not zero observations acted on.
 
 This matters more here than anywhere else in the loop: **every push re-opens the
 gate.** Copilot must then re-review the new head (Step 5), so editing for an

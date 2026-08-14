@@ -23,7 +23,7 @@ Security, data-loss, and correctness problems **inside** the change are always i
 
 Scope decides whether a finding is *ours*. Materiality decides whether it is *worth a fix* — see the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`, which also fixes the order: **scope, then contract, then materiality**. An out-of-scope finding is deferred however material it looks, and a project-rule or security violation blocks regardless of the bar. Materiality ranks only what survives both.
 
-An in-scope finding that would change nothing if it shipped uncorrected — wording, formatting, a count nothing keys on, an entry missing from a list the artifact itself declares non-exhaustive — is **resolved by replying with that reasoning**, not by editing. Every thread still ends resolved; the gate is zero *unresolved* threads, not zero observations acted on.
+An in-scope item that would change nothing if it shipped uncorrected — wording, formatting, a count nothing keys on, an entry missing from a list the artifact itself declares non-exhaustive — is an **observation, not a finding**, and is **resolved by replying with that reasoning** rather than by editing. Every thread still ends resolved; the gate is zero *unresolved* threads, not zero observations acted on.
 
 This matters most in the loop below. Each fix push triggers another reviewer pass, so actioning immaterial findings does not converge — it manufactures the next round's input. Push fixes for material and substantive findings; reply-and-resolve the rest in the same cycle.
 
