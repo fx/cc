@@ -208,8 +208,8 @@ Never call the Agent tool from inside a sub-agent context.
 ## Success Criteria
 
 **Mode 1 (local, primary):**
-- ✅ `cr review --agent` reports no actionable findings after fixes, **or** the service rate-limited and the pass is recorded as `skipped (rate-limited)`
-- ✅ All actionable findings received before any limit are resolved and committed
+- ✅ `cr review --agent` reports **no material or substantive findings** after fixes, **or** the service rate-limited and the pass is recorded as `skipped (rate-limited)`. Remaining immaterial observations do not block — they are carried as one closing note, per the materiality bar
+- ✅ All material and substantive findings received before any limit are resolved and committed
 - ✅ No cooldown waits or retries remain when the rate-limit exception applies
 
 **Mode 2 (PR-level, fallback / optional merge gate):**
