@@ -76,6 +76,16 @@ State the **reason** each exclusion is deliberate. "Do not flag missing tests" i
 
 This is not a licence to ignore problems. It is a ranking rule: report what clears the bar, and put what does not in one closing note rather than in the blocking list.
 
+### Three filters, in this order
+
+Materiality is the **last** of three, and applying it out of order produces the wrong verdict:
+
+1. **Scope** — is this finding ours at all? An out-of-scope finding is deferred with the exclusion that covers it, **however material it looks in isolation**. A valid improvement to work this change deliberately did not do is still out of scope. Materiality never promotes something back into scope.
+2. **Contract** — is it a violation of a project rule, security or privacy invariant, or another mandatory requirement the project wrote down? Those are **blocking by virtue of being rules**, and the bar does not filter them. The project already decided they matter; that decision is not a reviewer's to re-make per finding.
+3. **Materiality** — for everything left, which is findings a reviewer originates from its own judgment: does acting on it change anything?
+
+A finding that fails filter 1 is deferred. One that passes filter 2 is blocking. Only what reaches filter 3 is ranked by the bar below.
+
 ### The bar
 
 | Tier | Examples | Treatment |
@@ -90,7 +100,9 @@ When unsure which tier something is, ask: *if this shipped uncorrected, what bre
 
 **A missing entry in a list the artifact declares non-exhaustive.** If a document says "for example" or "this list is illustrative; the rule is authoritative", then supplying entry N+1 does not improve it — the rule already covers N+1. Assess whether the *rule* is correct and sufficient. Reporting further missing entries against a declared-open list is the single most common way a review loop fails to terminate, because the supply of such entries never runs out.
 
-**A decision already made, recorded, and reasoned.** Once an artifact states a decision with its rationale — including a rationale that says "we do not know, and here is how we will find out" — re-arguing it is not a review finding. If you believe the decision is *wrong*, say so once, plainly, as a single escalation to the human; do not re-raise it on the next pass in different words. A decision re-litigated across passes is a signal that it needs a person, not another round.
+**A decision already made, recorded, and reasoned — where the disagreement is about preference.** Once an artifact states a decision with its rationale, including a rationale that says "we do not know, and here is how we will find out", re-arguing it is not a review finding. Say so once as a single escalation; do not re-raise it on the next pass in different words. A preference re-litigated across passes needs a person, not another round.
+
+**But a recorded rationale does not make a decision safe.** If the decision *itself* is the defect — it leaks a credential, loses data, violates a security or privacy invariant, or contradicts a contract the project mandates — it is a **Material finding and stays blocking until resolved**, however carefully it is reasoned. Writing down why you did an unsafe thing does not make it safe. The distinction is whether you disagree with the choice or the choice is wrong: the first is an escalation, the second is a finding.
 
 **An artifact that admits a limit.** "This is verified by X at implementation time", "this is an open question gated on Y" — those are dispositions, not gaps. Check the gate is real and sequenced before the thing that depends on it; do not report the limit itself.
 

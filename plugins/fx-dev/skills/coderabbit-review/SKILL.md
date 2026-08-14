@@ -100,7 +100,7 @@ Use `cr review --agent --base main` to scope to the branch's diff against `main`
 
 Treat findings like self-review feedback:
 
-- **Triage by the materiality bar first** (`fx-dev/skills/dev/references/scope-contract.md`). Material and substantive findings are fixed; immaterial ones — wording, formatting, a count nothing keys on, an entry missing from a list the artifact declares non-exhaustive — go in one closing note and MUST NOT drive another iteration. CodeRabbit's own `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an input to that judgment, not a substitute for it.
+- **Triage in the contract's order — scope, then contract, then materiality** (`fx-dev/skills/dev/references/scope-contract.md`). An out-of-scope finding is deferred however material it looks, per the triage rules above; project rules and security/privacy invariants block regardless of the bar; only what remains is ranked. Material and substantive findings are fixed; immaterial ones — wording, formatting, a count nothing keys on, an entry missing from a list the artifact declares non-exhaustive — go in one closing note and MUST NOT drive another iteration. CodeRabbit's own `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an input to that judgment, not a substitute for it.
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
 - **Nitpicks** may be applied or consciously skipped — don't churn on style the project doesn't care about.
 - **Verify before fixing.** A finding's premise can be wrong. Check any claim it makes about the tree; when it does not hold, reject the finding with the evidence rather than changing working code to satisfy a misreading.

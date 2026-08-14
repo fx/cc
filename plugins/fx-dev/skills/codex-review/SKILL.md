@@ -253,11 +253,14 @@ than waiting it out.
 
 ### Step 2: Resolve every actionable finding
 
-- **Triage by the materiality bar first** (see
-  `fx-dev/skills/dev/references/scope-contract.md`). Material and substantive
-  findings are fixed. Immaterial ones — wording, formatting, a count nothing keys
-  on, an entry missing from a list the artifact declares non-exhaustive — are
-  collected into one closing note and MUST NOT drive another iteration.
+- **Triage in the contract's order — scope, then contract, then materiality**
+  (see `fx-dev/skills/dev/references/scope-contract.md`). Scope first: an
+  out-of-scope finding is deferred however material it looks (Step 3.5). Then
+  project rules and security/privacy invariants, which block regardless of the
+  bar. Only what remains is ranked: material and substantive findings are fixed;
+  immaterial ones — wording, formatting, a count nothing keys on, an entry
+  missing from a list the artifact declares non-exhaustive — go into one closing
+  note and MUST NOT drive another iteration.
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
 - **Nitpicks** may be applied or consciously skipped — don't churn on style the
   project doesn't care about. There are no PR threads to resolve here (this is
