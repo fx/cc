@@ -1,13 +1,14 @@
 # The Scope Contract
 
-Canonical definition of the **Scope Brief** and the **sprawl stop rule**. Both are mandatory across fx-dev workflow and review skills.
+Canonical definition of the **Scope Brief**, the **materiality bar**, and the **sprawl stop rule**. All three are mandatory across fx-dev workflow and review skills.
 
-Two failures motivate this document:
+Three failures motivate this document:
 
 1. **Reviewers flagging work nobody asked for.** A reviewer handed a bare diff has no idea what was requested. It reports missing implementation for a docs-only change, missing tests for a spec, or absent dependencies that a later phase adds. Every one of those is noise the operator must hand-filter, and each round of noise costs a full review cycle.
-2. **Work quietly outgrowing the request.** A user says "just fix the typo real quick" and gets a refactor. The user's own phrasing is the scope signal, and it is routinely discarded the moment the first sub-agent is launched.
+2. **Reviewers never finishing.** A review loop that treats every observation as a finding does not converge: each pass fixes what the last one raised and surfaces a fresh crop of smaller ones. The findings get less important, the passes keep costing the same, and the loop ends only when someone gives up. Scope answers *what to review*; materiality answers *what is worth reporting and when to stop*.
+3. **Work quietly outgrowing the request.** A user says "just fix the typo real quick" and gets a refactor. The user's own phrasing is the scope signal, and it is routinely discarded the moment the first sub-agent is launched.
 
-Both have the same root cause: the user's original words stop travelling. The Scope Brief makes them travel.
+The first and third have the same root cause: the user's original words stop travelling. The Scope Brief makes them travel. The second needs its own rule, below.
 
 ## The Scope Brief
 
@@ -68,6 +69,44 @@ State the **reason** each exclusion is deliberate. "Do not flag missing tests" i
 **A reviewer invoked without a brief MUST reconstruct one** from the conversation before reviewing, and say that it did. Reviewing a diff with no idea what was asked for is the failure mode this contract exists to prevent — never proceed as if the diff speaks for itself.
 
 **Never use the brief to suppress real findings.** It excludes work that was deliberately not done. It does not excuse defects in the work that *was* done. Security, data-loss, and correctness problems inside the change are always in scope, whatever the brief says. If a reviewer flags something excluded and is *right* — the exclusion was wrong — fix the work and correct the brief.
+
+## The materiality bar
+
+**A finding is worth reporting when acting on it would change what the artifact does, or change how a competent reader acts on it. Everything else is an observation, not a finding.**
+
+This is not a licence to ignore problems. It is a ranking rule: report what clears the bar, and put what does not in one closing note rather than in the blocking list.
+
+### The bar
+
+| Tier | Examples | Treatment |
+|---|---|---|
+| **Material** | Wrong behaviour, data loss, security, a build/CI/test that will fail, a contradiction that makes the artifact unimplementable, a stated fact that is false | Report individually. Blocks convergence. |
+| **Substantive** | A genuine ambiguity a reader could act on two ways; a missing step that would be discovered late and cost a cycle | Report individually. Blocks convergence. |
+| **Immaterial** | Wording that is merely improvable; a count off by one where nothing keys on the count; a list entry missing from a list nothing enumerates exhaustively; formatting; a synonym that reads better | **One closing note, unnumbered, non-blocking.** Never a separate finding, never a reason for another pass. |
+
+When unsure which tier something is, ask: *if this shipped uncorrected, what breaks?* If the honest answer is "nothing, it is just not as good as it could be", it is immaterial.
+
+### Three things that are not findings
+
+**A missing entry in a list the artifact declares non-exhaustive.** If a document says "for example" or "this list is illustrative; the rule is authoritative", then supplying entry N+1 does not improve it — the rule already covers N+1. Assess whether the *rule* is correct and sufficient. Reporting further missing entries against a declared-open list is the single most common way a review loop fails to terminate, because the supply of such entries never runs out.
+
+**A decision already made, recorded, and reasoned.** Once an artifact states a decision with its rationale — including a rationale that says "we do not know, and here is how we will find out" — re-arguing it is not a review finding. If you believe the decision is *wrong*, say so once, plainly, as a single escalation to the human; do not re-raise it on the next pass in different words. A decision re-litigated across passes is a signal that it needs a person, not another round.
+
+**An artifact that admits a limit.** "This is verified by X at implementation time", "this is an open question gated on Y" — those are dispositions, not gaps. Check the gate is real and sequenced before the thing that depends on it; do not report the limit itself.
+
+### Convergence
+
+**A review has converged when a pass produces no material or substantive findings — not when it produces zero output.** Zero is usually unreachable and waiting for it burns cycles on immaterial churn.
+
+Track findings per pass and watch the shape, not just the count:
+
+- **Falling, with new categories each pass** — keep going. The review is still working.
+- **Flat or oscillating, all immaterial** — converged. Stop, and say so: report the count trend and what remains below the bar.
+- **The same disagreement in successive passes** — stop. That is a human decision, not a review outcome. Escalate it by name.
+
+Report the trend when you stop, so the operator can see the shape rather than take "clean" on trust: *"Findings per pass: 9, 4, 1, 0 material. Stopping — three immaterial wording items remain, listed below."*
+
+**State honestly what the last pass did not cover.** If you stop after applying fixes that were never themselves reviewed, say so.
 
 ## The sprawl stop rule
 

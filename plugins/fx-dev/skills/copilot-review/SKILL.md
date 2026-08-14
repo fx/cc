@@ -99,6 +99,17 @@ not handed it.
   Implementing its out-of-scope suggestions is scope creep with a reviewer's name
   on it.
 
+Triage by **materiality** as well as scope — see the materiality bar in the same
+reference. An in-scope finding that would change nothing if it shipped
+uncorrected is **resolved by replying with that reasoning**, not by editing. The
+gate is zero *unresolved* Copilot threads, not zero observations acted on.
+
+This matters more here than anywhere else in the loop: **every push re-opens the
+gate.** Copilot must then re-review the new head (Step 5), so editing for an
+immaterial finding costs a full wait cycle and produces a fresh commit for it to
+comment on. Push fixes for material and substantive findings; reply-and-resolve
+the rest without a commit.
+
 ## When to Use
 
 - After creating a PR (SDLC Step 6.3)

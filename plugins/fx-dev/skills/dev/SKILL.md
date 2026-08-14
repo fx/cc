@@ -316,6 +316,8 @@ Fix only findings classified `required-by-contract` or `regression-caused-by-cha
 
 Do not restart the full matrix merely because `HEAD` changed. Deduplicate repeated or reworded findings against the ledger; they do not start a new cycle. When `/dev` invokes reviewer subskills, this contract classification and bounded stopping policy takes precedence over generic instructions to resolve every actionable finding or rerun until clean.
 
+**A finding must clear the materiality bar before it can be classified at all** (`references/scope-contract.md`). An observation that would change nothing if it shipped uncorrected is neither `required-by-contract` nor `regression-caused-by-change` — it is recorded in the ledger as immaterial and never triggers a rerun. Two shapes in particular are non-findings and MUST NOT enter the ledger as blocking: a missing entry in a list the artifact declares non-exhaustive, and a decision the artifact records with its rationale. The second, raised twice, is an escalation to the user rather than a third cycle.
+
 #### PR-Ready Stopping Condition
 
 Proceed to Step 5 when all of the following are true:

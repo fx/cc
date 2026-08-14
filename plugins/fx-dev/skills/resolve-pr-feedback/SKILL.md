@@ -19,6 +19,16 @@ Pass it into every resolver you invoke, and classify each finding before acting:
 
 Security, data-loss, and correctness problems **inside** the change are always in scope, whatever the brief says. Resolving out-of-scope suggestions is scope creep with a reviewer's name on it.
 
+## Also triage by materiality
+
+Scope decides whether a finding is *ours*. Materiality decides whether it is *worth a fix* — see the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
+
+An in-scope finding that would change nothing if it shipped uncorrected — wording, formatting, a count nothing keys on, an entry missing from a list the artifact itself declares non-exhaustive — is **resolved by replying with that reasoning**, not by editing. Every thread still ends resolved; the gate is zero *unresolved* threads, not zero observations acted on.
+
+This matters most in the loop below. Each fix push triggers another reviewer pass, so actioning immaterial findings does not converge — it manufactures the next round's input. Push fixes for material and substantive findings; reply-and-resolve the rest in the same cycle.
+
+**Verify before fixing.** A finding's premise can be wrong. Check any claim it makes about the code, and when it does not hold, reply with the evidence and resolve rather than changing working code to satisfy a misreading.
+
 ## WHEN TO USE THIS SKILL
 
 **USE THIS SKILL** when ANY of the following occur:

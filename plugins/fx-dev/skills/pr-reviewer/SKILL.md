@@ -39,6 +39,34 @@ Then review within it:
   have built. "This should also handle X" is out of scope unless the request,
   the spec, or a genuine regression demands it.
 
+## Rank by materiality, and say where the bar fell
+
+Scope decides whether a finding is the author's problem. **Materiality decides
+whether it is worth their time** — see the materiality bar in the same reference.
+
+- **Report material and substantive findings individually.** Wrong behaviour,
+  data loss, security, a build or test that will fail, a contradiction that makes
+  the change unimplementable, a stated fact that is false, or a genuine ambiguity
+  a reader could act on two ways.
+- **Collect everything else into one closing note**, unnumbered and explicitly
+  non-blocking. Wording, formatting, naming preference, a count nothing keys on.
+- When unsure of the tier, ask: *if this shipped uncorrected, what breaks?* If
+  the honest answer is "nothing, it is just not as good as it could be", it
+  belongs in the closing note.
+
+Three things are **not findings**, and raising them is how a review becomes
+noise the author learns to skim:
+
+- a missing entry in a list the change itself declares illustrative — assess the
+  rule instead, since the supply of such entries never runs out;
+- a decision the change records with its rationale — if you think it is wrong,
+  say so once as an escalation rather than re-arguing it;
+- a limit the change admits and gates ("verified at implementation time",
+  "open question gated on X") — check the gate is real and sequenced, and move on.
+
+**A review that reports twenty things equally has reported nothing.** State the
+count at each tier so the author knows what to act on first.
+
 ## CRITICAL: Project-Specific Rules (Read First!)
 
 **BEFORE reviewing any code, you MUST:**

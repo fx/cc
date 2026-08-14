@@ -100,16 +100,22 @@ Use `cr review --agent --base main` to scope to the branch's diff against `main`
 
 Treat findings like self-review feedback:
 
+- **Triage by the materiality bar first** (`fx-dev/skills/dev/references/scope-contract.md`). Material and substantive findings are fixed; immaterial ones — wording, formatting, a count nothing keys on, an entry missing from a list the artifact declares non-exhaustive — go in one closing note and MUST NOT drive another iteration. CodeRabbit's own `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an input to that judgment, not a substitute for it.
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
 - **Nitpicks** may be applied or consciously skipped — don't churn on style the project doesn't care about.
+- **Verify before fixing.** A finding's premise can be wrong. Check any claim it makes about the tree; when it does not hold, reject the finding with the evidence rather than changing working code to satisfy a misreading.
 - There are no PR threads to resolve here — this is local. Resolution = the code is fixed (or the finding is a deliberate non-issue).
 
-### Step 3: Re-run until clean (REQUIRED)
+### Step 3: Re-run until it converges (REQUIRED)
 
-Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until the review reports no actionable findings.**
+Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until a pass produces no material or substantive findings.**
 
-- **Cap at 4 iterations.** If CodeRabbit keeps flagging the same design decision after 4 passes, that is a human call, not more code edits — escalate to the user.
+**Converged does NOT mean zero output.** Waiting for silence spends full review cycles on wording. Stop when what remains would change nothing if it shipped uncorrected, and list those items once, non-blocking.
+
+- **Cap at 4 iterations.** If CodeRabbit keeps flagging the same design decision after 4 passes, that is a human call, not more code edits — escalate it **by name** and stop.
+- Watch the shape, not just the count: falling with new categories → keep going; flat or oscillating and all immaterial → converged; the same disagreement twice → escalate.
 - **Rate-limit exception:** stop immediately on throttling; do not consume iterations waiting for cooldowns.
+- When you stop, report the per-pass trend and whether the last round's fixes were themselves reviewed.
 
 ### Step 4: Open the PR when clean or correctly degraded
 
@@ -182,6 +188,8 @@ query {
 If this count is 0 AND the CodeRabbit check is `success`, the gate is PASSED.
 
 **Cap the loop at 4 iterations** — if CodeRabbit is still posting new feedback after 4 wait+resolve cycles, escalate to the user. Almost always this means CodeRabbit and the codebase disagree on a design decision that needs human input.
+
+**Threads must all be resolved, but resolution is not the same as a fix.** An immaterial thread is resolved by replying with the reason it is not being actioned — the gate is zero *unresolved* threads, not zero observations acted on. Re-pushing for another CodeRabbit pass to chase immaterial items is exactly the churn the materiality bar exists to stop.
 
 ## Concurrency With Other Reviewers (Mode 2)
 

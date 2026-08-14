@@ -253,30 +253,70 @@ than waiting it out.
 
 ### Step 2: Resolve every actionable finding
 
+- **Triage by the materiality bar first** (see
+  `fx-dev/skills/dev/references/scope-contract.md`). Material and substantive
+  findings are fixed. Immaterial ones — wording, formatting, a count nothing keys
+  on, an entry missing from a list the artifact declares non-exhaustive — are
+  collected into one closing note and MUST NOT drive another iteration.
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
 - **Nitpicks** may be applied or consciously skipped — don't churn on style the
   project doesn't care about. There are no PR threads to resolve here (this is
   local); resolution = the code is fixed (or the finding is a deliberate
   non-issue).
+- **Verify before fixing.** A reviewer's premise can be wrong. When a finding
+  rests on a claim about the tree, check it — and when it does not hold, reject
+  the finding with the evidence and put it in the next prompt's do-not-re-report
+  list. Fixing a phantom finding is worse than leaving it: it changes working
+  artifacts to satisfy a misreading.
 - **Incorrect findings** — when Codex flags a pattern that is a deliberate project
   convention, document it in `REVIEW.md` at the repo root, the same as the PR
   feedback resolvers do. One entry stops Codex, Copilot, CodeRabbit, and Claude
   Code Review from raising it again. Never write it into
   the obsolete `.github/copilot-instructions.md`.
 
-### Step 3: Re-run until clean (REQUIRED)
+### Step 3: Re-run until it converges (REQUIRED)
 
 Run the review again after fixes, **carrying the same Scope Brief prompt plus
 anything newly established**. Note the iteration number in the prompt and add
 facts verified since the last pass, so Codex does not relitigate settled ground.
-**Repeat Steps 1 → 2 until the review reports no actionable findings.**
+**Repeat Steps 1 → 2 until a pass produces no material or substantive findings**
+— per the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
+
+**Converged does NOT mean zero output.** Codex will keep producing immaterial
+observations indefinitely; waiting for silence spends full review cycles on
+wording. Stop when what remains would change nothing if it shipped uncorrected,
+and list those items once, non-blocking.
+
+**Tell Codex the bar and the settled ground in the prompt**, so it spends the
+pass where it pays. Every re-run prompt MUST carry, in addition to the Scope
+Brief:
+
+```
+CONVERGENCE PASS <N>. Prior passes found <count> issues; all fixed except <the
+rejected ones and why>. Do not re-report them.
+
+Report only findings that would change behaviour, break a build or test, make
+the artifact unimplementable, or state something false. Wording, formatting,
+and counts nothing keys on: one closing note, not findings.
+
+Where this artifact declares a list illustrative and a rule authoritative,
+assess the RULE. A further missing list entry is not a finding.
+
+Where it records a decision with its rationale — including "unknown, gated on
+X" — that is settled. If you believe it is wrong, say so once as an escalation;
+do not re-argue it.
+
+If the artifact is internally consistent and matches the tree, say so plainly.
+```
 
 - **Cap at 4 iterations.** If Codex keeps flagging the same design decision after
-  4 passes, that is a human call, not more code edits — escalate to the user.
-- The cap targets a reviewer stuck on one disagreement. When each pass is instead
-  surfacing genuinely new material and the finding count is falling, say so when
-  you stop, and tell the user that the last round's fixes went unverified so they
-  can ask for one more pass.
+  4 passes, that is a human call, not more edits — escalate it **by name** and
+  stop.
+- Watch the shape, not just the count. Falling with new categories each pass →
+  keep going. Flat or oscillating and all immaterial → converged, stop. The same
+  disagreement twice → escalate.
+- When you stop, **report the per-pass trend** (`9, 4, 1, 0 material`) and say
+  whether the last round's fixes were themselves reviewed.
 
 ### Step 3.5: Report out-of-scope findings, never silently apply them
 
