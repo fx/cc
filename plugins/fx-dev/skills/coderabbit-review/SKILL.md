@@ -14,7 +14,7 @@ CodeRabbit reviews code with AI. The **primary** way to use it is **locally, via
 Catch CodeRabbit's feedback **before** a PR exists, using the `cr` CLI on your local changes:
 
 - Run `cr` during pre-PR self-review (alongside `/simplify` and `/review`), fix every **material or substantive** finding, and re-run until a pass produces none. Immaterial observations get one closing note and do not buy another run — see the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
-- Open the PR once the local review has **converged** — no material or substantive findings — **or is correctly degraded as `skipped (rate-limited)`**. Resolve all actionable findings already received before proceeding.
+- Open the PR once the local review has **converged** — no material or substantive findings — **or is correctly degraded as `skipped (rate-limited)`**. Resolve the material and substantive findings already received before proceeding; immaterial ones travel as a closing note.
 - A clean local review does NOT remove the merge gates — but it usually means CodeRabbit's PR-level review (when the GitHub App is configured) lands clean on the first pass, and often there is nothing left to resolve on the PR at all.
 
 ## The `cr` CLI
