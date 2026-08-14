@@ -61,7 +61,7 @@ The prompt MUST contain, in this order:
    so Codex does not relitigate it.
 
 ```bash
-codex review "SCOPE — READ CAREFULLY BEFORE REVIEWING.
+codex review "${MCP_OFF[@]}" "SCOPE — READ CAREFULLY BEFORE REVIEWING.
 
 The user asked: \"<verbatim request>\"
 
@@ -89,15 +89,89 @@ the work and correct the brief.
 ## How to Run (one-shot, branch vs main)
 
 Codex has a dedicated non-interactive review subcommand. From the repo root, on
-your working branch, pass the Scope Brief prompt built above:
+your working branch, pass the Scope Brief prompt built above **and disable the
+user's MCP servers** (see the next section — this is mandatory):
 
 ```bash
-codex review "<scope prompt>"
+codex review "${MCP_OFF[@]}" "<scope prompt>"
 ```
 
 This picks the current branch, diffs it against its base, and prints the review
 (highest-risk findings first) to stdout — no interactive session, no edits to
 your tree (review is read-only).
+
+### ⛔ ALWAYS disable MCP servers — otherwise the run can hang forever
+
+**A `codex review` that inherits the user's MCP servers can block indefinitely on
+its very first action, producing zero output** — not slow, not partial: stalled
+at ~0% CPU until something kills it. Observed twice on 0.147.0, each time sitting
+16+ minutes having emitted nothing.
+
+The mechanism: a review invoked non-interactively still reaches for MCP tools,
+and a tool call that stalls, fails, or wants an answer has **nobody to answer
+it** — there is no TTY, and `codex review` has no approval-policy flag of its
+own. The call never settles, so the turn never advances. Two things make this the
+normal case rather than an edge case:
+
+- A global `~/.codex/AGENTS.md` that tells every session to do something through
+  an MCP tool at startup guarantees the first action is an MCP call, before any
+  review work happens.
+- Codex's **code mode** batches those calls (`tools.mcp__*` inside a
+  `Promise.all`), so one unsettled call strands the whole batch.
+
+A code reviewer needs no MCP servers: it reads a diff and reports findings.
+Disabling them removes the whole failure class instead of dodging one trigger,
+and it starts faster. Do not "try without it first."
+
+#### The override that works — per server, by name
+
+**`-c 'mcp_servers={}'` does NOT work. Do not use it.** Verified on 0.147.0: the
+map is merged, not replaced, so every server stays loaded and every tool stays
+available. It looks like it worked because a run that happens not to call a tool
+shows no MCP output — the servers are still there. Setting `CODEX_HOME` to a
+sanitized directory does not work either; servers survive that too.
+
+What works is disabling each server **individually** by name:
+
+```bash
+# Build one -c per configured server, then pass "${MCP_OFF[@]}" to codex review.
+CODEX_CFG="${CODEX_HOME:-$HOME/.codex}/config.toml"
+MCP_OFF=()
+while read -r name; do
+  [ -n "$name" ] && MCP_OFF+=(-c "mcp_servers.${name}.enabled=false")
+done < <(sed -n 's/^\[mcp_servers\.\([^]]*\)\].*/\1/p' "$CODEX_CFG" 2>/dev/null)
+```
+
+Verified: with those flags, tools from every configured server disappear
+completely from the session's registry. Enumerate the names rather than
+hard-coding any — every machine's set differs.
+
+Codex may also expose its own hosted tools that are not declared in
+`config.toml`; those survive this and are expected to. Leave them alone — the
+hazard is the locally-configured servers, which is exactly what the loop above
+covers.
+
+These are per-invocation config overrides. **Never** "fix" this by editing the
+user's `~/.codex/config.toml` or their global `~/.codex/AGENTS.md` — those are
+theirs, they are machine-wide, and a review has no business rewriting them.
+
+#### Diagnosing a stalled review
+
+If a review produces no output for several minutes, it is stalled, not slow, and
+it will never recover. Do not wait it out:
+
+```bash
+# 1. Confirm: near-0% CPU with no output is the signature.
+ps -o pid,etime,stat,pcpu,wchan:20 -p "$(pgrep -f 'codex review' | head -1)"
+
+# 2. Find its last action — the newest rollout records every step.
+ls -t ~/.codex/sessions/*/*/*/rollout-*.jsonl | head -1
+```
+
+In that rollout, a `custom_tool_call` with **no matching `custom_tool_call_output`
+after it** is the stalled call, and its `input` field names the tool that never
+returned. Kill the run, re-invoke with the per-server flags above, and tell the
+user what stalled rather than silently retrying.
 
 **⛔ Scope flags and a custom prompt are mutually exclusive.** In current CLI
 versions (verified on 0.146.0), `codex review --base main "<prompt>"` and
@@ -115,20 +189,32 @@ uncommitted, commit it to a branch first (never review from a bare `main` with a
 dirty tree); tell the user you did so and why.
 
 Scope flags remain available only for a **prompt-less** run, which should be a
-last resort — you will then filter out-of-scope findings by hand:
-- `codex review --base main` — explicit base branch
-- `codex review --uncommitted` — staged + unstaged + untracked
+last resort — you will then filter out-of-scope findings by hand (`-c
+"${MCP_OFF[@]}"` still applies):
+- `codex review "${MCP_OFF[@]}" --base main` — explicit base branch
+- `codex review "${MCP_OFF[@]}" --uncommitted` — staged + unstaged + untracked
 
 Capture output for later reference with shell redirection:
-`codex review "<scope prompt>" | tee /tmp/codex-review.md`
+`codex review "${MCP_OFF[@]}" "<scope prompt>" | tee /tmp/codex-review.md`
+
+**Run it in the background and let the completion notification wake you.** A
+review of a real branch takes many minutes, and `codex` buffers — the capture
+file stays empty until it finishes, so polling it teaches you nothing. Start it
+backgrounded, do other work, and read the output when it lands. Do not chain
+sleeps waiting on it.
 
 (Run `codex review --help` for the exact flags your CLI version supports — there is no dedicated `--json`/`-o` flag, so use shell redirection to capture output.)
 
 Notes:
 - Review scope should match what the PR will contain.
-- If the workspace is externally sandboxed and Codex prompts for approvals in a
-  non-interactive context, add `--dangerously-bypass-approvals-and-sandbox`
-  (review is read-only, so this is safe here). Try without it first.
+- `codex review` has **no** `--dangerously-bypass-approvals-and-sandbox` or
+  approval-policy flag of its own — that is `codex exec`. If a sandbox or
+  approval prompt is what is blocking a review, the per-server MCP overrides
+  above plus other `-c` config overrides are the lever you have. Verified on
+  0.147.0, `codex review` accepts exactly nine options: `--strict-config`,
+  `-c/--config`, `--uncommitted`, `--base`, `--enable`, `--commit`, `--disable`,
+  `--title`, `-h/--help`. Check `codex review --help` before reaching for a flag
+  that subcommand does not accept.
 - Requires the `codex` CLI to be installed and already authenticated. The workspace is expected to be authed; if it is not, STOP and report to the user — do NOT run `codex login` (it is interactive).
 
 ## Workflow (fix → re-run → converge)
@@ -138,12 +224,20 @@ Treat Codex's findings like self-review feedback and loop until the review is cl
 ### Step 1: Run the review with the Scope Brief prompt
 
 ```bash
-codex review "<scope prompt>"
+codex review "${MCP_OFF[@]}" "<scope prompt>"
 ```
+
+Build `MCP_OFF` first (see "How to Run") — a review that inherits the user's MCP
+servers can stall forever with no output. Background it — reviews take many minutes and the output is buffered until the
+end (see "How to Run").
 
 If the `codex` CLI is **unavailable or not authenticated**, report to the user
 once and skip this pass — NEVER run `codex login` (it is interactive; the
 workspace is expected to be authed already).
+
+If the run produces **no output for several minutes at near-0% CPU**, it is
+stalled, not slow — diagnose it with the rollout check in "How to Run" rather
+than waiting it out.
 
 ### Step 2: Resolve every actionable finding
 
