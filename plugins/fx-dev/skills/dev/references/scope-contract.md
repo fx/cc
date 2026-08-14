@@ -72,7 +72,7 @@ State the **reason** each exclusion is deliberate. "Do not flag missing tests" i
 
 ## The materiality bar
 
-**Of the findings a reviewer originates from its own judgment — that is, what survives the scope and contract filters below — one is worth reporting when acting on it would change what the artifact does, or change how a competent reader acts on it. Everything else is an observation, not a finding.**
+**This bar applies to findings a reviewer originates from its own judgment — what survives the scope and contract filters below. Such a finding is worth reporting when acting on it would change what the artifact does, or change how a competent reader acts on it. Everything else is an observation, not a finding.**
 
 This is not a licence to ignore problems. It is a ranking rule: report what clears the bar, and put what does not in one closing note rather than in the blocking list.
 
