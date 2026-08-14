@@ -21,7 +21,7 @@ Security, data-loss, and correctness problems **inside** the change are always i
 
 ## Also triage by materiality
 
-Scope decides whether a finding is *ours*. Materiality decides whether it is *worth a fix* — see the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`, which also fixes the order: **scope, then contract, then materiality**. An out-of-scope finding is deferred however material it looks, and a project-rule or security violation blocks regardless of the bar. Materiality ranks only what survives both.
+Scope decides whether a finding is *ours*. Materiality decides whether it is *worth a fix* — see the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`, which also fixes the order: **scope, then contract, then materiality**. An out-of-scope finding is deferred however material it looks, and a violation of a project rule or a security or privacy invariant blocks regardless of the bar. Materiality ranks only what survives both.
 
 An in-scope item that would change nothing if it shipped uncorrected — wording, formatting, a count nothing keys on, an entry missing from a list the artifact itself declares non-exhaustive — is an **observation, not a finding**, and is **resolved by replying with that reasoning** rather than by editing. Every thread still ends resolved; the gate is zero *unresolved* threads, not zero observations acted on.
 

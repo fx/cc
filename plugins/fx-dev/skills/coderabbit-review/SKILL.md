@@ -119,7 +119,7 @@ Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until a pass p
 
 ### Step 4: Open the PR when clean or correctly degraded
 
-A clean local CodeRabbit review is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once all findings already received are addressed. Do not open the PR with known unresolved actionable findings.
+A **converged** local CodeRabbit review — no material or substantive findings — is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once the material and substantive findings already received are addressed. Do not open the PR with known unresolved material or substantive findings; immaterial observations travel as a closing note in the PR description.
 
 ---
 
