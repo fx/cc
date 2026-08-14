@@ -135,16 +135,28 @@ What works is disabling each server **individually** by name:
 
 ```bash
 # Build one -c per configured server, then pass "${MCP_OFF[@]}" to codex review.
-CODEX_CFG="${CODEX_HOME:-$HOME/.codex}/config.toml"
 MCP_OFF=()
 while read -r name; do
   [ -n "$name" ] && MCP_OFF+=(-c "mcp_servers.${name}.enabled=false")
-done < <(sed -n 's/^\[mcp_servers\.\([^]]*\)\].*/\1/p' "$CODEX_CFG" 2>/dev/null)
+done < <(codex mcp list --json 2>/dev/null | jq -r '.[].name')
 ```
 
 Verified: with those flags, tools from every configured server disappear
 completely from the session's registry. Enumerate the names rather than
 hard-coding any — every machine's set differs.
+
+**Enumerate with `codex mcp list --json`, never by parsing `config.toml`.** Not
+every active server is declared there — servers can also arrive from
+project-scoped or managed configuration, and a `config.toml` scrape silently
+misses those. It produces a *partial* flag set, which is the worst outcome: the
+command looks correct, most servers are disabled, and the one it missed hangs the
+run exactly as before. `codex mcp list` is the resolved, authoritative view, and
+the `-c mcp_servers.<name>.enabled=false` override works for a server however it
+was configured.
+
+Echo the built flags before running. An empty or short `MCP_OFF` against a
+machine you know has servers means the enumeration failed — fix that before
+starting a long review.
 
 Codex may also expose its own hosted tools that are not declared in
 `config.toml`; those survive this and are expected to. Leave them alone — the
