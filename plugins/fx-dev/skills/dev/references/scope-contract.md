@@ -160,6 +160,16 @@ The failure is invisible from inside a single pass. Each finding is real, each f
 
 **A finding is an instance of a class until you have proved it unique.** Before fixing, name the class — the defect *pattern*, stated without reference to any location — then find every site in this change's surface that exhibits it, and fix them together in one commit.
 
+#### Reporting a class — the reviewer's half of the same rule
+
+The fixer can only close a class the reviewer described as one, so this half is canonical too, and every reviewer is bound by it:
+
+**When a finding is one instance of a pattern you can see elsewhere, say so, list every other site you found, and count the whole thing as ONE finding that names the class.** Not one finding per site, and not a single site with the rest left unsaid.
+
+Both failure modes cost cycles, in opposite ways. A reviewer that reports one occurrence of a defect visible in eleven places has handed the author ten future review cycles — each one genuinely productive, and the loop still never ending. A reviewer that reports the same defect as eleven findings has hidden that they are one defect, so the author fixes eleven symptoms instead of the cause, and the count says the review is diverging when it is not.
+
+Where a reviewer reports a class, the fixer's sweep above is what discharges it, and the class is not closed until every listed site is fixed.
+
 #### The sibling axes
 
 A class rarely lives at one altitude or in one file. Check each axis before declaring a sweep complete:
@@ -186,7 +196,11 @@ Past a handful of sites, stop syncing copies and remove the need for them: defin
 
 #### Scope still binds
 
-Sweeping a class is **not** a licence to widen the change. The class is bounded by this change's blast radius: the files it touches, plus files it made inconsistent (`regression-caused-by-change`). A sibling outside that radius is a deferred follow-up, reported and not fixed — the sprawl stop rule governs here exactly as elsewhere.
+Sweeping a class is **not** a licence to widen the change. **The class is bounded by the Scope Brief's interpreted scope** — and for a request that did not ask to reach further, that is this change's blast radius: the files it touches, plus files it made inconsistent (`regression-caused-by-change`).
+
+Do not read the bound as "the files already edited", which would be circular: when the request is itself class-wide — "make every reviewer skill do X" — a file this change has not touched *yet* is inside the brief, so it is inside the class, and deferring it leaves the requested work unfinished. The touched-file set describes where a class usually lives; the brief decides where it may go.
+
+A sibling outside the brief is a deferred follow-up, reported and not fixed — the sprawl stop rule governs here exactly as elsewhere.
 
 #### Close the class before re-running
 

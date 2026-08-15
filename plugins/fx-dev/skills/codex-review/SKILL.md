@@ -307,10 +307,10 @@ of low-value findings, so omitting it there costs the most; on re-runs the
 CONVERGENCE PASS line and the do-not-re-report list are added on top.
 
 > **This block is a MIRROR** of `fx-dev/skills/dev/references/scope-contract.md`
-> § Blocking and § Three things that are not findings — the one case the
-> define-once rule exempts, because `codex review` receives a string and cannot
-> follow a link. Keep it a faithful restatement, never an independent edit, and
-> update it in the same commit that changes the canonical text.
+> § Blocking, § Reporting a class, and § Three things that are not findings — the
+> one case the define-once rule exempts, because `codex review` receives a string
+> and cannot follow a link. Keep it a faithful restatement, never an independent
+> edit, and update it in the same commit that changes the canonical text.
 
 ```
 CONVERGENCE PASS <N>. Prior passes found <count> issues; all fixed except <the
@@ -345,8 +345,9 @@ not as one finding per site and not as a single site. A class reported whole is
 fixed in one pass; a class reported one instance at a time takes as many passes
 as it has members.
 
-Where this artifact declares a list illustrative and a rule authoritative,
-assess the RULE. A further missing list entry is not a finding.
+Where this artifact marks a list as open — it says "for example", or it declares
+the list illustrative and the rule authoritative — assess the RULE. A further
+missing list entry is not a finding.
 
 Where the artifact admits a limit and gates it — "verified by X at
 implementation time", "open question gated on Y" — that is a disposition, not a

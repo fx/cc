@@ -153,9 +153,43 @@ Script exit codes:
 - **Exit 2**: No CodeRabbit check present after a one-cycle grace period → the CodeRabbit GitHub App is not configured for this repo. Report once and proceed without the PR-level gate.
 - **Exit 3**: Invalid arguments or gh error → report error to user. If the error specifically identifies a CodeRabbit rate/quota limit, report once and proceed without CodeRabbit.
 
+### Step 1b: Fetch the Threads and Assign a Disposition to Each
+
+**The waiter emits a count, not the threads.** Step 2 hands the resolver a
+disposition per thread, and a count cannot be triaged — so fetch the thread
+bodies first and run the filters over them yourself (scope, then contract, then
+materiality: `fx-dev/skills/dev/references/scope-contract.md` § Three filters).
+Skipping this leaves only two options at Step 2, and both are wrong: invent
+dispositions, or invoke the resolver bare and let it re-derive triage it cannot
+see.
+
+```bash
+# Replace OWNER, REPO, PR_NUMBER with actual values (GraphQL body — no shell expansion here)
+gh api graphql -f query='
+query {
+  repository(owner: "OWNER", name: "REPO") {
+    pullRequest(number: PR_NUMBER) {
+      reviewThreads(first: 100) {
+        nodes {
+          id
+          isResolved
+          path
+          line
+          comments(first: 10) { nodes { author { login } body } }
+        }
+      }
+    }
+  }
+}' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and (.comments.nodes[0].author.login | tostring | contains("coderabbitai")))]'
+```
+
+Assign each thread exactly one of `blocking`, `immaterial`, or `deferred`
+(`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions). Yours
+is authoritative — you hold the Scope Brief; the resolver does not.
+
 ### Step 2: Resolve Feedback
 
-If the script reports unresolved CodeRabbit threads (count > 0), invoke the rabbit-feedback-resolver:
+If the script reports unresolved CodeRabbit threads (count > 0), invoke the rabbit-feedback-resolver with the dispositions from Step 1b:
 
 ```
 Skill tool: skill="fx-dev:rabbit-feedback-resolver",
@@ -168,7 +202,7 @@ That skill handles per-thread categorisation, pushes any code fixes, replies, an
 
 CodeRabbit re-reviews after every push. Once Step 2 pushes fixes, the `CodeRabbit` check goes pending again — go back to Step 1.
 
-**Repeat Steps 1 → 2 until BOTH hold:**
+**Repeat Steps 1 → 1b → 2 until BOTH hold:**
 
 1. The most-recent CodeRabbit check is in a terminal state with conclusion `success` (or `skipped` / `neutral` if the repo configures it that way).
 2. Re-querying review threads shows 0 unresolved CodeRabbit threads.

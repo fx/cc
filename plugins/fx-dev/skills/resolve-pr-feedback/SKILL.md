@@ -25,7 +25,7 @@ Scope decides whether a finding is *ours*. Materiality decides whether it is *wo
 
 An in-scope item that would change nothing if it shipped uncorrected — wording, formatting, a count nothing keys on, an entry missing from a list the artifact itself declares non-exhaustive — is an **observation, not a finding**, and is **resolved by replying with that reasoning** rather than by editing. Every thread still ends resolved; the gate is zero *unresolved* threads, not zero observations acted on.
 
-This matters most in the loop below. Each fix push triggers another reviewer pass, so actioning immaterial findings does not converge — it manufactures the next round's input. Push fixes for blocking findings (`fx-dev/skills/dev/references/scope-contract.md` § Blocking); reply-and-resolve only the immaterial rest in the same cycle. A contract blocker is never discharged by a reply explaining it: the artifact has to change.
+This matters most in the loop below. Each fix push **requires** another reviewer pass before the loop can converge — CodeRabbit re-runs on its own, Copilot has to be asked (step 1 of the loop) — so actioning immaterial findings does not converge — it manufactures the next round's input. Push fixes for blocking findings (`fx-dev/skills/dev/references/scope-contract.md` § Blocking); reply-and-resolve only the immaterial rest in the same cycle. A contract blocker is never discharged by a reply explaining it: the artifact has to change.
 
 **Fix the class, not the instance.** A reviewer reports the site it read. Fixing exactly that site means the next pass finds its siblings and reports them as new findings — every pass productive, the loop never ending. Sweep the class across this change's surface before pushing (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance), and do not trigger another reviewer pass with a class half-closed: each push buys a full cycle, and spending one to be told about siblings you already knew about is the most expensive way to make no progress.
 
@@ -111,9 +111,12 @@ query {
         nodes {
           id
           isResolved
-          comments(first: 1) {
+          path
+          line
+          comments(first: 10) {
             nodes {
               author { login }
+              body
             }
           }
         }
@@ -122,6 +125,13 @@ query {
   }
 }'
 ```
+
+**Fetch `path`, `line`, and `body`, not just the author.** Step 4 requires a
+disposition per thread, and a disposition cannot be derived from an ID and a
+login: the filters need to see what the thread actually says and where. A query
+that returns only `id`/`isResolved`/`author` forces the dispatch step to hand out
+dispositions it has not reasoned about, or to omit them — which is the bare
+invocation Step 4 forbids.
 
 ### 3. Identify Unresolved Feedback by Source
 

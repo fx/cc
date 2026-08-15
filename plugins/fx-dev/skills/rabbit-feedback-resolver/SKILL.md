@@ -249,8 +249,13 @@ produces the push that reopens the loop.
 
 1. Read the feedback carefully
 2. Determine if it's valid or conflicts with project conventions
-3. If valid: Delegate to coder sub-agent with context
-4. If conflicts with project conventions (INCORRECT):
+3. If valid **and blocking** (`fx-dev/skills/dev/references/scope-contract.md`
+   § Blocking): delegate to coder sub-agent with context
+4. If valid but **immaterial** — correct, and yet nothing would break if it
+   shipped uncorrected: reply with that reasoning and resolve. **Do not delegate
+   and do not edit**; a fix push reopens the review loop for an item that changes
+   nothing. Validity is not the gate here, materiality is
+5. If conflicts with project conventions (INCORRECT):
    - Reply with explanation and resolve
    - **Update `REVIEW.md`** to document the correct pattern
    - This prevents Copilot, CodeRabbit, Codex, AND Claude Code Review from flagging it again — they all resolve to the same file
@@ -259,12 +264,12 @@ produces the push that reopens the loop.
 
 **When feedback is valid but out of scope for the current PR:**
 
-1. **Load the `fx-dev:project-management` skill** to track the follow-up work
-2. **Return the follow-up to the coordinator** — the finding ledger or the PR
-   description. **Do not edit or commit anything in this PR**: the canonical
-   `deferred` disposition is reply-and-resolve with no edit, and a tracker commit
-   widens the change and reopens the review loop. Running standalone with no
-   coordinator, propose the entry to the user rather than committing it.
+1. **Return the follow-up to the coordinator** — the finding ledger or the PR
+   description. **Do not edit or commit anything in this PR**, and do not load
+   `fx-dev:project-management` to track it here: the canonical `deferred`
+   disposition is reply-and-resolve with no edit, and a tracker commit widens the
+   change and reopens the review loop. Running standalone with no coordinator,
+   propose the entry to the user rather than committing it.
 3. **Reply to the thread** explaining the deferral:
    - "Valid suggestion, but out of scope for this PR: <the exclusion that covers it>. Returned as a follow-up rather than tracked here, so this PR is not widened."
 4. **Resolve the thread**
@@ -323,7 +328,7 @@ echo "$COMMENT_BODY" | sed -n '/🤖 Prompt for AI Agents/,/<\/details>/p' | sed
 2. All code changes pushed to the PR branch
 3. **EVERY addressed thread resolved via GraphQL mutation**
 4. **For INCORRECT feedback:** `REVIEW.md` updated to prevent recurrence
-5. **For DEFERRED feedback:** Task added to `docs/PROJECT.md` via project-management skill
+5. **For DEFERRED feedback:** the follow-up is recorded outside this PR — returned to the coordinator, or proposed to the user when running standalone. **No `docs/PROJECT.md` commit on this branch**
 6. Re-query confirms `isResolved: true` for all processed threads
 7. Output summary table
 
@@ -335,7 +340,8 @@ echo "$COMMENT_BODY" | sed -n '/🤖 Prompt for AI Agents/,/<\/details>/p' | sed
 | PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | ✅ Resolved |
 | PRRT_yyy  | src/bar.ts:15 | AI Prompt | Applied JSDoc fix | ✅ Resolved |
 | PRRT_zzz  | lib/util.js:8 | Committable | Applied suggestion | ✅ Resolved |
-| PRRT_aaa  | src/ui.tsx:20 | Deferred | Tracked in PROJECT.md | ✅ Resolved |
+| PRRT_aaa  | src/ui.tsx:20 | Deferred | Returned to coordinator, no edit | ✅ Resolved |
+| PRRT_bbb  | src/api.ts:88 | Immaterial | Replied, no edit | ✅ Resolved |
 ```
 
 ## Error Handling

@@ -251,8 +251,23 @@ Then:
 After the review is received, invoke the resolve-pr-feedback skill to process all automated review threads (Copilot, CodeRabbit, Codecov):
 
 ```
-Skill tool: skill="fx-dev:resolve-pr-feedback", args="<PR_NUMBER>"
+Skill tool: skill="fx-dev:resolve-pr-feedback",
+            args="<PR_NUMBER> — <Scope Brief verbatim> — dispositions already assigned: <suppressed item or thread id> blocking | immaterial | deferred (<exclusion>)"
 ```
+
+**Never invoke it with only the PR number.** The Scope Brief must travel into
+every downstream review call (`fx-dev/skills/dev/references/scope-contract.md`
+§ Injecting the brief into reviews), and a resolver handed a bare number
+re-derives triage from the PR description — losing the exact exclusions and
+known-and-accepted decisions, and editing for threads you classified immaterial
+or deferred.
+
+Pass dispositions only for what you have actually triaged — in this skill that is
+the suppressed items read in Step 2b, since this skill never fetches the thread
+list. `fx-dev:resolve-pr-feedback` fetches the threads and triages the rest (its
+Steps 2 → 4). **Do not invent a disposition for a thread you have not read**; an
+absent one is filled in downstream, a wrong one is authoritative and overrides
+the resolver's own reading.
 
 This skill will:
 1. Find all unresolved Copilot threads
