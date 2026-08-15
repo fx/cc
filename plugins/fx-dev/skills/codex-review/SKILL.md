@@ -268,8 +268,11 @@ than waiting it out.
   missing from a list the artifact declares non-exhaustive — go into one closing
   note and MUST NOT drive another iteration.
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
-- **Nitpicks** may be applied or consciously skipped — don't churn on style the
-  project doesn't care about. There are no PR threads to resolve here (this is
+- **Nitpicks are immaterial by definition, so do not apply them.** They go in
+  the closing note. Applying one produces a commit and Step 3 reruns against it,
+  manufacturing the next pass to change something that changes nothing. If a
+  nitpick turns out to clear the bar, it was never a nitpick: fix it as the
+  blocking finding it is. There are no PR threads to resolve here (this is
   local); resolution = the code is fixed (or the finding is a deliberate
   non-issue).
 - **Verify before fixing.** A reviewer's premise can be wrong. When a finding
@@ -330,6 +333,11 @@ note, not findings.
 
 Where this artifact declares a list illustrative and a rule authoritative,
 assess the RULE. A further missing list entry is not a finding.
+
+Where the artifact admits a limit and gates it — "verified by X at
+implementation time", "open question gated on Y" — that is a disposition, not a
+gap. Check the gate is real and sequenced before the thing that depends on it,
+and do not report the limit itself as a missing step.
 
 Where it records a decision with its rationale — including "unknown, gated on
 X" — and your disagreement is about preference, that is settled: say so once as

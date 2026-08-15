@@ -104,7 +104,7 @@ Treat findings like self-review feedback:
 
 - **Triage in the contract's order — scope, then contract, then materiality** (`fx-dev/skills/dev/references/scope-contract.md`). An out-of-scope finding is deferred however material it looks, per the triage rules above; project rules and security/privacy invariants block regardless of the bar; only what remains is ranked. Blocking findings are fixed; immaterial ones — wording, formatting, a count nothing keys on, an entry missing from a list the artifact declares non-exhaustive — go in one closing note and MUST NOT drive another iteration. CodeRabbit's own `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an input to that judgment, not a substitute for it.
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
-- **Nitpicks** may be applied or consciously skipped — don't churn on style the project doesn't care about.
+- **Nitpicks are immaterial by definition, so do not apply them.** They go in the closing note. Applying one produces a commit, and Step 3 then reruns against it — manufacturing the next pass to change something that changes nothing. If a nitpick turns out to clear the bar, it was never a nitpick: fix it as the blocking finding it is.
 - **Verify before fixing.** A finding's premise can be wrong. Check any claim it makes about the tree; when it does not hold, reject the finding with the evidence rather than changing working code to satisfy a misreading.
 - There are no PR threads to resolve here — this is local. Resolution = the code is fixed (or the finding is a deliberate non-issue).
 
@@ -190,6 +190,13 @@ query {
 If this count is 0 AND the CodeRabbit check is `success`, the gate is PASSED.
 
 **Cap the loop at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) — if CodeRabbit is still posting new blocking feedback at the bound, escalate to the user and say the loop did not converge. Almost always a loop that runs that long means CodeRabbit and the codebase disagree on a design decision that needs human input — which the same-disagreement-twice rule should have caught far earlier. Escalate when you see it, not at iteration 15.
+
+**Hand the resolver the brief and a disposition per thread.** Invoking
+`fx-dev:rabbit-feedback-resolver` with only a PR number makes it re-derive triage
+it cannot see, and it will edit for threads you classified immaterial or
+deferred. Pass `args="<PR_NUMBER> — <Scope Brief verbatim> — dispositions: <thread
+id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>)"`, per
+`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions.
 
 **Threads must all be resolved, but resolution is not the same as a fix.** An immaterial thread is resolved by replying with the reason it is not being actioned — the gate is zero *unresolved* threads, not zero observations acted on. Re-pushing for another CodeRabbit pass to chase immaterial items is exactly the churn the materiality bar exists to stop.
 

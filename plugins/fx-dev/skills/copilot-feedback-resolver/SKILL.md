@@ -209,7 +209,15 @@ mutation {
 ### 4. Handle Each Category
 
 #### Nitpicks (`[nitpick]` prefix)
-- Resolve immediately without changes
+
+The prefix is Copilot's label, not a verdict. **Run the filters first** (scope →
+contract → materiality, `fx-dev/skills/dev/references/scope-contract.md`): a
+project-rule, security, privacy or correctness defect carrying this prefix is
+blocking and is fixed. Only once it clears none of the filters is it a nitpick.
+
+Then:
+- Resolve without changes — no edit, because an edit reopens the loop for
+  something that changes nothing
 - Optional brief acknowledgment reply
 
 #### Outdated/Incorrect Copilot Comments
@@ -276,11 +284,17 @@ non-exhaustive.
 
 **When feedback is valid but out of scope for the current PR:**
 
-1. **Load the `fx-dev:project-management` skill** to track the follow-up work
-2. **Add task to PROJECT.md** under the appropriate feature/section:
-   - Read current PROJECT.md structure
-   - Add a concise task describing the improvement
-   - Commit the PROJECT.md update
+**Do not edit or commit anything in this PR.** The canonical `deferred`
+disposition (`fx-dev/skills/dev/references/scope-contract.md` § Resolver
+dispositions) is reply-and-resolve with no edit; committing a tracker update
+widens the change and reopens the review loop for work this PR deliberately is
+not doing.
+
+1. **Return the follow-up to the coordinator** so it is recorded outside this
+   PR — in the finding ledger, the PR description, or a tracker updated in a
+   separate change. When this skill runs standalone with no coordinator and the
+   repo tracks follow-ups in `PROJECT.md`, propose the entry to the user rather
+   than committing it here.
 3. **Reply to the thread** explaining the deferral:
    - "Valid suggestion. Tracked as follow-up task in PROJECT.md for a future PR."
 4. **Resolve the thread**
