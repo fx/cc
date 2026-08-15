@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Personal Claude Code plugins, skills, and subagents",
-    "version": "0.25.3",
+    "version": "0.25.4",
     "homepage": "https://cc.fx.gd"
   },
   "plugins": [

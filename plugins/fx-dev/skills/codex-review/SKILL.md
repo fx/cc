@@ -265,7 +265,8 @@ than waiting it out.
   project rules and security/privacy invariants, which block regardless of the
   bar. Only what remains is ranked. Blocking findings are fixed;
   immaterial ones — wording, formatting, a count nothing keys on, an entry
-  missing from a list the artifact declares non-exhaustive — go into one closing
+  missing from a list the artifact does not present as exhaustive, whether it says
+  "for example" or declares the list illustrative — go into one closing
   note and MUST NOT drive another iteration.
 - **Fix the class, not the instance** (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance). Codex reports the site it read; treat it as one instance until you have proved it unique, sweep the lexical, altitude, symmetry and enumeration axes across this change's surface, and fix them in one commit. Prove the sweep with a search whose empty result is the evidence — normalising whitespace, and never filtering out the file under review. **Do not re-run with a class half-closed**: the next pass will spend itself reporting siblings you already knew about.
 - **Fix real issues** in code and tests; make atomic commits for the fixes.

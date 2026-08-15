@@ -58,8 +58,9 @@ whether it is worth their time** — see the materiality bar in the same referen
 Three things are **not findings**, and raising them is how a review becomes
 noise the author learns to skim:
 
-- a missing entry in a list the change itself declares illustrative — assess the
-  rule instead, since the supply of such entries never runs out;
+- a missing entry in a list the change does not present as exhaustive — "for
+  example" counts, not just an explicit declaration — assess the rule instead,
+  since the supply of such entries never runs out;
 - a decision the change records with its rationale, **where your disagreement is
   about preference** — say so once as an escalation rather than re-arguing it.
   This never applies when the decision is itself the defect: a recorded rationale

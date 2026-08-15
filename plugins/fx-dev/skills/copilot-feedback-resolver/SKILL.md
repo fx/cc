@@ -283,8 +283,9 @@ being ranked by the bar, so "did it clear the bar" is the wrong question for one
 #### Valid — immaterial
 
 Correct, but would change nothing if it shipped uncorrected: wording, formatting,
-a count nothing keys on, an entry missing from a list the artifact declares
-non-exhaustive.
+a count nothing keys on, an entry missing from a list the artifact does not
+present as exhaustive — whether it says "for example" or declares the list
+illustrative.
 
 1. **Do not delegate and do not edit.** A fix push reopens the review loop for an
    item that changes nothing, and Copilot must then re-review the new head.

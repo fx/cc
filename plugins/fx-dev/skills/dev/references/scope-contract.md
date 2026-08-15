@@ -130,7 +130,7 @@ When unsure which tier something is, ask: *if this shipped uncorrected, what bre
 
 ### Three things that are not findings
 
-**A missing entry in a list the artifact declares non-exhaustive.** If a document says "for example" or "this list is illustrative; the rule is authoritative", then supplying entry N+1 does not improve it — the rule already covers N+1. Assess whether the *rule* is correct and sufficient. Reporting further missing entries against a declared-open list is the single most common way a review loop fails to terminate, because the supply of such entries never runs out.
+**A missing entry in a list the artifact does not present as exhaustive.** If a document says "for example" or "this list is illustrative; the rule is authoritative", then supplying entry N+1 does not improve it — the rule already covers N+1. Assess whether the *rule* is correct and sufficient. Reporting further missing entries against a declared-open list is the single most common way a review loop fails to terminate, because the supply of such entries never runs out.
 
 **A decision already made, recorded, and reasoned — where the disagreement is about preference.** Once an artifact states a decision with its rationale, including a rationale that says "we do not know, and here is how we will find out", re-arguing it is not a review finding. Say so once as a single escalation; do not re-raise it on the next pass in different words. A preference re-litigated across passes needs a person, not another round.
 

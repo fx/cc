@@ -102,7 +102,7 @@ Use `cr review --agent --base main` to scope to the branch's diff against `main`
 
 Treat findings like self-review feedback:
 
-- **Triage in the contract's order — scope, then contract, then materiality** (`fx-dev/skills/dev/references/scope-contract.md`). An out-of-scope finding is deferred however material it looks, per the triage rules above; project rules and security/privacy invariants block regardless of the bar; only what remains is ranked. Blocking findings are fixed; immaterial ones — wording, formatting, a count nothing keys on, an entry missing from a list the artifact declares non-exhaustive — go in one closing note and MUST NOT drive another iteration. CodeRabbit's own `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an input to that judgment, not a substitute for it.
+- **Triage in the contract's order — scope, then contract, then materiality** (`fx-dev/skills/dev/references/scope-contract.md`). An out-of-scope finding is deferred however material it looks, per the triage rules above; project rules and security/privacy invariants block regardless of the bar; only what remains is ranked. Blocking findings are fixed; immaterial ones — wording, formatting, a count nothing keys on, an entry missing from a list the artifact does not present as exhaustive, whether it says "for example" or declares the list illustrative — go in one closing note and MUST NOT drive another iteration. CodeRabbit's own `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an input to that judgment, not a substitute for it.
 - **Fix the class, not the instance** (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance). CodeRabbit reports the site it read; sweep the siblings across this change's surface and fix them together, then prove the sweep with a search that would fail if one remained. **Do not re-run with a class half-closed.**
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
 - **Nitpicks are immaterial by definition, so do not apply them.** They go in the closing note. Applying one produces a commit, and Step 3 then reruns against it — manufacturing the next pass to change something that changes nothing. If a nitpick turns out to be blocking — it violates a rule the project wrote down, or it clears the bar — it was never a nitpick: fix it as the blocking finding it is.
@@ -206,10 +206,11 @@ That skill handles per-thread categorisation, pushes any code fixes, replies, an
 
 CodeRabbit re-reviews after every push. Once Step 2 pushes fixes, the `CodeRabbit` check goes pending again — go back to Step 1.
 
-**Repeat Steps 1 → 1b → 2 until BOTH hold:**
+**Repeat Steps 1 → 1b → 2 until ALL THREE hold:**
 
 1. The most-recent CodeRabbit check is in a terminal state with conclusion `success` (or `skipped` / `neutral` if the repo configures it that way).
 2. Re-querying review threads shows 0 unresolved CodeRabbit threads.
+3. **No blocking finding is left unresolved, across every pass** — the ledger test in `fx-dev/skills/dev/references/scope-contract.md` § Convergence, the same one Mode 1 applies. A blocker an earlier pass raised and this one did not still blocks, and resolving its thread does not discharge it: a thread is closed by a reply, a blocker only by a fix. Conditions 1 and 2 describe the latest check; this one describes the ledger, and a quiet check over a carried blocker is not convergence.
 
 ```bash
 gh api graphql -f query='
@@ -227,7 +228,7 @@ query {
 }' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and (.comments.nodes[0].author.login | tostring | contains("coderabbitai")))] | length'
 ```
 
-If this count is 0 AND the CodeRabbit check is `success`, the gate is PASSED.
+If this count is 0, the CodeRabbit check is `success`, **and no blocking finding from any pass is still unresolved**, the gate is PASSED. Two of the three are observable from the API; the third is yours to track, and it is the one that a zero count cannot stand in for.
 
 **Cap the loop at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) — if CodeRabbit is still posting new blocking feedback at the bound, escalate to the user and say the loop did not converge. Almost always a loop that runs that long means CodeRabbit and the codebase disagree on a design decision that needs human input — which the same-disagreement-twice rule should have caught far earlier. Escalate when you see it, not at iteration 15.
 
