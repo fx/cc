@@ -68,7 +68,7 @@ State the **reason** each exclusion is deliberate. "Do not flag missing tests" i
 
 **A reviewer invoked without a brief MUST reconstruct one** from the conversation before reviewing, and say that it did. Reviewing a diff with no idea what was asked for is the failure mode this contract exists to prevent — never proceed as if the diff speaks for itself.
 
-**Never use the brief to suppress real findings.** It excludes work that was deliberately not done. It does not excuse defects in the work that *was* done. Security, **privacy**, data-loss, and correctness problems inside the change are always in scope, whatever the brief says — a brief cannot exclude them, because filter 2 would make them blocking anyway and filter 1 must not get the chance to defer them first. If a reviewer flags something excluded and is *right* — the exclusion was wrong — fix the work and correct the brief.
+**Never use the brief to suppress real findings.** It excludes work that was deliberately not done. It does not excuse defects in the work that *was* done. Security, **privacy**, data-loss, and correctness problems inside the change are always in scope, whatever the brief says — a brief cannot exclude them, because filter 2 would make them blocking anyway and filter 1 must not get the chance to defer them first. If a reviewer flags something excluded and the exclusion turns out to be invalid — see § Three filters, filter 1, for the only two things that re-open scope — fix the work and correct the brief. Being *correct* is not one of them: a true observation about work the change deliberately did not do stays deferred.
 
 ## The materiality bar
 
@@ -98,7 +98,9 @@ A finding that fails filter 1 is deferred. One that passes filter 2 is a **contr
 
 **An immaterial finding is never blocking.** That is the whole vocabulary: *blocking* or *immaterial*.
 
-Every downstream rule is written in terms of **blocking**, deliberately. Fix blocking findings; push for blocking findings; keep going while blocking findings arrive; converge when a pass produces none. Skills MUST NOT re-enumerate the three constituents in their own stopping rules — an enumeration copied to a dozen sites silently goes stale the moment this list changes, and every copy then under-blocks. Say "blocking" and point here.
+Every downstream rule is written in terms of **blocking**, deliberately. Fix blocking findings; push for blocking findings; keep going while blocking findings arrive; converge when none is left unresolved.
+
+**This generalises, and it is the rule that keeps this document workable: every normative rule here is defined once and referenced, never restated.** That covers the blocking definition, the convergence test, the iteration bound, the two conditions that re-open scope, and the resolver dispositions. A skill that paraphrases one of them creates a copy that goes stale the moment the original changes — and a stale copy is always the *narrower* one, so it under-blocks, under-converges, or re-opens scope it should not. Name the rule and link the section. If a skill genuinely needs different behaviour, change it here, for everyone.
 
 ### The bar
 
@@ -129,7 +131,7 @@ When unsure which tier something is, ask: *if this shipped uncorrected, what bre
 Track findings per pass and watch the shape, not just the count:
 
 - **Blocking findings still arriving, in new categories** — keep going. The review is still working.
-- **No blocking findings this pass** — converged, whatever the immaterial count did. Stop, and say so: report the trend and what remains below the bar. A pass that falls from five immaterial observations to three *different* immaterial observations has converged; the drop is churn, not progress.
+- **No blocking finding left unresolved** — converged, whatever the immaterial count did. Note the test is *unresolved*, not *new*: a blocker carried from an earlier pass still blocks even if this pass did not repeat it, and a finding that produces no thread (a suppressed Copilot item) is never discharged by a thread count. Track them and clear the list. Stop, and say so: report the trend and what remains below the bar. A pass that falls from five immaterial observations to three *different* immaterial observations has converged; the drop is churn, not progress.
 - **The same disagreement in successive passes** — stop. That is a human decision, not a review outcome. Escalate it by name.
 
 Report the trend when you stop, so the operator can see the shape rather than take "clean" on trust: *"Findings per pass: 9, 4, 1, 0 blocking. Stopping — three immaterial wording items remain, listed below."*

@@ -86,8 +86,10 @@ an incomplete pass; rerun it with one rather than filtering the output by hand.
 
 **Do not use the brief to silence real findings.** It excludes work deliberately
 not done — it does not excuse defects in the work that *was* done. If Codex
-flags an "excluded" item and turns out to be right, the exclusion was wrong: fix
-the work and correct the brief.
+flags an "excluded" item and one of the two conditions in
+`fx-dev/skills/dev/references/scope-contract.md` § Three filters, filter 1 holds,
+the exclusion was invalid: fix the work and correct the brief. Being merely right
+is not one of them.
 
 ## How to Run (one-shot, branch vs main)
 
@@ -285,7 +287,7 @@ than waiting it out.
 Run the review again after fixes, **carrying the same Scope Brief prompt plus
 anything newly established**. Note the iteration number in the prompt and add
 facts verified since the last pass, so Codex does not relitigate settled ground.
-**Repeat Steps 1 → 2 until a pass produces no blocking findings**
+**Repeat Steps 1 → 2 until no blocking finding is left unresolved** — including any carried from an earlier pass, not merely none new this pass —
 — per the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
 
 **Converged does NOT mean zero output.** Codex will keep producing immaterial
@@ -352,7 +354,7 @@ If the artifact is internally consistent and matches the tree, say so plainly.
 
 If Codex reports something the Scope Brief excluded, do NOT fix it and do NOT
 quietly drop it. Record it as deferred, with the exclusion that covers it. The
-one exception: if the finding is *correct* and the exclusion was wrong, fix the
+one exception: if the exclusion was *invalid* under § Three filters, filter 1, fix the
 work and correct the brief — then say that the brief was wrong.
 
 A run that produces **zero** out-of-scope findings is the signal the brief was

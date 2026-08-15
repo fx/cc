@@ -70,8 +70,10 @@ coordinator's ledger.
 **The brief never suppresses a real finding.** It excludes work deliberately not
 done; it does not excuse defects in the work that *was* done. Security,
 **privacy**, data-loss, and correctness problems inside the change are always in scope. If a
-finding the brief excluded turns out to be correct, the exclusion was wrong — fix
-the work and correct the brief.
+finding the brief excluded meets one of the two conditions in
+`fx-dev/skills/dev/references/scope-contract.md` § Three filters, filter 1, the
+exclusion was invalid — fix the work and correct the brief. Being merely correct
+is not one of them.
 
 Persistent out-of-scope noise across passes means the brief is too thin. Tighten
 it rather than filtering the same findings by hand every round.
@@ -108,7 +110,7 @@ Treat findings like self-review feedback:
 
 ### Step 3: Re-run until it converges (REQUIRED)
 
-Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until a pass produces no blocking findings.**
+Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until no blocking finding is left unresolved** — including any carried from an earlier pass, not merely none new this pass.
 
 **Converged does NOT mean zero output.** Waiting for silence spends full review cycles on wording. Stop when what remains would change nothing if it shipped uncorrected, and list those items once, non-blocking.
 

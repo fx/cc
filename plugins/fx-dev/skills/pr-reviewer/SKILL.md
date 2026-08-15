@@ -33,8 +33,10 @@ Then review within it:
 - **The brief never suppresses a real finding.** It excludes work deliberately
   not done; it does not excuse defects in the work that *was* done. Security,
   **privacy**, data-loss, and correctness problems inside the change are always blocking,
-  whatever the brief says. If an excluded finding turns out to be correct, the
-  exclusion was wrong — say so plainly.
+  whatever the brief says. An excluded finding re-enters scope only on the two
+  conditions in `fx-dev/skills/dev/references/scope-contract.md` § Three filters,
+  filter 1 — being merely correct is not one of them. When one of them holds, say
+  so plainly.
 - Judge the change against **what was asked for**, not against what you would
   have built. "This should also handle X" is out of scope unless the request,
   the spec, or a genuine regression demands it.
@@ -125,7 +127,7 @@ For projects with vendor submodules (e.g., `vendor/` directory):
 3. **Code review**: bugs, security, performance
 
 ## Standards
-- BLOCK: every **blocking** finding — contract blockers (project rules, security, privacy, **vendor reuse violations**), Material, and Substantive. The canonical definition is in `fx-dev/skills/dev/references/scope-contract.md`; do not narrow it here.
+- BLOCK: every **blocking** finding, as defined in `fx-dev/skills/dev/references/scope-contract.md` § Blocking. Do not restate or narrow that definition here — **vendor reuse violations** are a project rule and therefore blocking under it.
 - APPROVE despite immaterial observations — they belong in the closing note, never in the decision
 - Ship good code, not perfect
 

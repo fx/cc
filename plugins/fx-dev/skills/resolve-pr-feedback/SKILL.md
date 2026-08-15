@@ -15,7 +15,7 @@ Pass it into every resolver you invoke, and classify each finding before acting:
 
 - **In scope** → resolve it.
 - **Covered by the brief's out-of-scope list** → resolve the thread as deferred, citing the exclusion. Never silently fix it, never silently drop it, and never widen the PR to satisfy it.
-- **Excluded but correct** → the exclusion was wrong. Fix the work and say the brief was wrong.
+- **Excluded, and the exclusion was invalid** → per `fx-dev/skills/dev/references/scope-contract.md` § Three filters, filter 1, only two things re-open scope: it is a defect in work this change actually did, or the exclusion covered something a brief may not exclude. Being merely correct is not one of them. When one holds, fix the work and say the brief was wrong.
 
 Security, **privacy**, data-loss, and correctness problems **inside** the change are always in scope, whatever the brief says. Resolving out-of-scope suggestions is scope creep with a reviewer's name on it.
 
@@ -186,22 +186,27 @@ its argument:
    (reply with the reasoning and resolve — no edit), or `deferred` (reply citing
    the exclusion and resolve — no edit).
 
-`skill="fx-dev:copilot-feedback-resolver", args="<Scope Brief> — dispositions: <thread id> blocking, <thread id> immaterial, …"`
-
 **If Copilot threads exist:**
 ```
-Skill tool: skill="fx-dev:copilot-feedback-resolver"
+Skill tool: skill="fx-dev:copilot-feedback-resolver",
+            args="<Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>)"
 ```
 
 **If CodeRabbit threads exist:**
 ```
-Skill tool: skill="fx-dev:rabbit-feedback-resolver"
+Skill tool: skill="fx-dev:rabbit-feedback-resolver",
+            args="<Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>)"
 ```
 
 **If Codecov coverage gaps detected:**
 ```
-Skill tool: skill="fx-dev:resolve-codecov-feedback"
+Skill tool: skill="fx-dev:resolve-codecov-feedback",
+            args="<Scope Brief verbatim> — uncovered lines in scope: <paths>; deliberately uncovered: <paths and why>"
 ```
+
+**No bare invocation.** A `Skill tool:` line with no `args` is an incomplete call
+here, not a shorthand — the resolver then re-derives triage it cannot see and
+edits for findings you classified immaterial or deferred.
 
 **If multiple exist:** Prefer running Copilot and CodeRabbit resolvers **in parallel** by spawning each as a sub-agent in the same message (see `fx-dev:dev` Step 6.3 for the exact pattern). Codecov is sequential after them since coverage fixes typically require code from the other resolvers to be in place first.
 

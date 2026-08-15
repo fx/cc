@@ -231,13 +231,30 @@ mutation {
    - Example: "- Do not suggest removing `.sr-only` classes - required accessibility utilities"
    - **Never create or edit `.github/copilot-instructions.md`** — obsolete; Copilot reads `REVIEW.md` directly
 
-#### Valid Concerns
+#### Valid — blocking
+
+Only for concerns that clear the bar (`fx-dev/skills/dev/references/scope-contract.md`
+§ Blocking): a project-rule, security or privacy violation, or a Material or
+Substantive finding.
+
 1. Delegate to coder sub-agent with:
    - PR number and title
    - File and line number
    - Copilot comment text
    - Thread ID for resolution after fix
 2. Ensure coder pushes changes and resolves thread
+
+#### Valid — immaterial
+
+Correct, but would change nothing if it shipped uncorrected: wording, formatting,
+a count nothing keys on, an entry missing from a list the artifact declares
+non-exhaustive.
+
+1. **Do not delegate and do not edit.** A fix push reopens the review loop for an
+   item that changes nothing, and Copilot must then re-review the new head.
+2. Reply with the reasoning — what the observation is, and why it is below the
+   bar — and resolve the thread. The gate is zero *unresolved* threads, not zero
+   observations acted on.
 
 #### Deferred (Out of Scope)
 
