@@ -195,7 +195,7 @@ own labels are an *input* to that judgment, never a verdict.
 
 | Category | Indicator | Action |
 |----------|-----------|--------|
-| **Nitpick/Trivial** | Carries `_🧹 Nitpick_` or `_🔵 Trivial_` **and clears none of the filters** | Reply and resolve, no edit |
+| **Nitpick/Trivial** | Carries `_🧹 Nitpick_` or `_🔵 Trivial_` **and reaches filter 3 and fails it** — in scope, violating no rule, and immaterial. An out-of-scope one exits at filter 1 and is **Deferred**, not this row | Reply with the materiality reasoning and resolve, no edit |
 | **Actionable with AI Prompt** | Has `🤖 Prompt for AI Agents` section **and is blocking** per `fx-dev/skills/dev/references/scope-contract.md` § Blocking | Verify the premise, then extract the prompt and delegate to coder |
 | **Actionable with Committable** | Has `📝 Committable suggestion` **and is blocking** per `fx-dev/skills/dev/references/scope-contract.md` § Blocking | Verify the suggestion against the code, then apply. Never apply on sight — a committable suggestion is still a claim about the tree |
 | **General Feedback** | No special sections | Triage first; delegate to coder only if **blocking**, otherwise reply and resolve with no edit |
@@ -222,11 +222,13 @@ zero-unresolved-threads gate open indefinitely.
 
 The label is CodeRabbit's, not a verdict. **Run the filters first**: a
 project-rule, security, privacy or correctness defect carrying it is blocking
-and is fixed. Only once it clears none of them is it a nitpick.
+and is fixed, and an out-of-scope one is **Deferred** — it exits at filter 1 and keeps the exclusion and the follow-up record that a nitpick has neither of. Only an item that reaches filter 3 and fails it is a nitpick.
 
-- Resolve without changes — an edit reopens the loop for something that changes
-  nothing
-- These are suggestions, not requirements
+- **Reply with the reasoning** — what the observation is and why it is below the
+  bar — then resolve. The reply is required
+  (`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions): a
+  silently closed thread leaves no record of why no edit was made
+- No edit — an edit reopens the loop for something that changes nothing
 
 #### Actionable with AI Prompt (PREFERRED)
 
@@ -361,7 +363,7 @@ echo "$COMMENT_BODY" | sed -n '/🤖 Prompt for AI Agents/,/<\/details>/p' | sed
 ```
 | Thread ID | File:Line | Category | Action Taken | Status |
 |-----------|-----------|----------|--------------|--------|
-| PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | ✅ Resolved |
+| PRRT_xxx  | src/foo.ts:42 | Nitpick | Replied with reasoning, no edit | ✅ Resolved |
 | PRRT_yyy  | src/bar.ts:15 | AI Prompt | Applied JSDoc fix | ✅ Resolved |
 | PRRT_zzz  | lib/util.js:8 | Committable | Applied suggestion | ✅ Resolved |
 | PRRT_aaa  | src/ui.tsx:20 | Deferred | Returned to coordinator, no edit | ✅ Resolved |

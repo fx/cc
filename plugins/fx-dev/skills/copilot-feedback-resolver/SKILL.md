@@ -194,7 +194,7 @@ carrying it is still blocking. Never auto-resolve on the prefix alone.
 
 | Category | Indicator | Action |
 |----------|-----------|--------|
-| **Nitpick** | Contains `[nitpick]` prefix **and clears none of the filters below** | Reply and resolve without editing |
+| **Nitpick** | Contains `[nitpick]` prefix **and reaches filter 3 and fails it** — in scope, violating no rule, and immaterial. An out-of-scope one exits at filter 1 and is **Deferred**, not this row | Reply with the materiality reasoning and resolve, without editing |
 | **Outdated** | Refers to code that no longer exists | Reply with explanation, resolve |
 | **Incorrect** | Misunderstands project conventions | Reply with explanation, resolve, update `REVIEW.md` |
 | **Valid — blocking** | **Is blocking** per `fx-dev/skills/dev/references/scope-contract.md` § Blocking — which includes a contract blocker, and those never pass through the bar at all. Do not narrow it here | Delegate to coder sub-agent to fix |
@@ -224,12 +224,14 @@ mutation {
 The prefix is Copilot's label, not a verdict. **Run the filters first** (scope →
 contract → materiality, `fx-dev/skills/dev/references/scope-contract.md`): a
 project-rule, security, privacy or correctness defect carrying this prefix is
-blocking and is fixed. Only once it clears none of the filters is it a nitpick.
+blocking and is fixed, and an out-of-scope one is **Deferred** — it exits at filter 1 and keeps the exclusion and the follow-up record that a nitpick has neither of. Only an item that reaches filter 3 and fails it is a nitpick.
 
 Then:
-- Resolve without changes — no edit, because an edit reopens the loop for
-  something that changes nothing
-- Optional brief acknowledgment reply
+- **Reply with the reasoning** — what the observation is and why it is below the
+  bar — then resolve. The reply is required, not an optional acknowledgment
+  (`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions): a
+  silently closed thread leaves no record of why no edit was made
+- No edit, because an edit reopens the loop for something that changes nothing
 
 #### Outdated/Incorrect Copilot Comments
 
@@ -350,7 +352,7 @@ This suggestion conflicts with our [convention name] convention. [Brief explanat
 ```
 | Thread ID | File:Line | Category | Action Taken | Status |
 |-----------|-----------|----------|--------------|--------|
-| PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | ✅ Resolved |
+| PRRT_xxx  | src/foo.ts:42 | Nitpick | Replied with reasoning, no edit | ✅ Resolved |
 | PRRT_yyy  | src/bar.ts:15 | Valid | Fixed null check | ✅ Resolved |
 | PRRT_zzz  | lib/util.js:8 | Outdated | Code refactored | ✅ Resolved |
 | PRRT_aaa  | src/ui.tsx:20 | Deferred | Returned to coordinator, no edit | ✅ Resolved |

@@ -275,7 +275,9 @@ than waiting it out.
   manufacturing the next pass to change something that changes nothing. If a
   nitpick turns out to be blocking — it violates a rule the project wrote down,
   or it clears the bar — it was never a nitpick: fix it as the blocking finding
-  it is. There are no PR threads to resolve here (this is
+  it is. And one that is out of scope exits at filter 1: it is **deferred** with
+  the exclusion that covers it, not folded into the closing note, which keeps no
+  exclusion and no follow-up record. There are no PR threads to resolve here (this is
   local); resolution = the code is fixed (or the finding is a deliberate
   non-issue).
 - **Verify before fixing.** A reviewer's premise can be wrong. When a finding
@@ -336,8 +338,8 @@ Report every BLOCKING finding. A finding is blocking if it is any of:
    requirement the project recorded, including a change document or a spec it
    links. Report these whatever their direct behavioural impact; the project
    already decided they matter, so do not weigh them against the bar below.
-2. Something that would change behaviour, break a build or test, make the
-   artifact unimplementable, or expose a security, privacy, or data-loss problem
+2. Something that would change behaviour, break a build, a CI check or a test,
+   make the artifact unimplementable, or expose a security, privacy, or data-loss problem
    — including a leaked credential, internal URL, or private identifier in
    documentation or examples. A false statement counts when a reader would act
    on it; a wrong number nothing keys on does not.

@@ -217,7 +217,7 @@ A sibling outside the brief is a deferred follow-up, reported and not fixed — 
 A loop should almost always end on one of the three signals above, all of which fire long before 15:
 
 - **Converged** — no blocking finding left unresolved, per § Convergence above. The only successful exit. Note that is the *ledger* test, not a property of the latest pass: a quiet pass with a carried blocker still open is not convergence.
-- **The same disagreement twice** — escalate by name. Do not spend the remaining iterations re-arguing it.
+- **The same disagreement in successive passes** — the trigger defined in § Convergence above, not a looser one. Escalate by name, and do not spend the remaining iterations re-arguing it.
 - **A rising count of one class** — the last fix is generating them. Fix the cause, or escalate the design choice.
 
 Those exits are what keep the loop short; the bound only catches a loop none of them caught. **Do not treat the headroom as licence to keep going** — an iteration that fixes only immaterial items is churn whether it is the 3rd or the 13th, and the convergence rule already forbids it.

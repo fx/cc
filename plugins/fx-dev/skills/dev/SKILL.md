@@ -190,7 +190,7 @@ The coordinator owns one in-memory finding ledger for the run; reviewer sub-agen
 - **regression-caused-by-change** — A demonstrable correctness, security, privacy, or data-loss regression caused by this branch anywhere within its behavioral impact, including downstream consumers or integrations.
 - **follow-up/out-of-scope** — A pre-existing issue, hardening, cleanup, product addition, architecture expansion, or improvement not required by either category above.
 
-Fix the first two classes, and any entry that is blocking by tier — a reviewer-originated Material or Substantive finding blocks even where no written rule names it (`references/scope-contract.md` § Blocking). Deduplicate repeated or reworded findings by fingerprint and update the existing ledger entry. Record follow-up/out-of-scope findings for the PR or later tracking; do not implement them. When reviewer resolvers are invoked by `/dev`, their deferred-feedback paths MUST return follow-ups to the coordinator instead of modifying task trackers in the implementation PR. To implement out-of-scope product or architecture work, first amend the change document and obtain user approval.
+Fix the first two classes, and any entry that is blocking by tier — a reviewer-originated Material or Substantive finding blocks even where no written rule names it (`references/scope-contract.md` § Blocking). Deduplicate repeated or reworded findings by fingerprint and update the existing ledger entry. Record every **non-blocking** entry for the PR or later tracking without implementing it — `follow-up/out-of-scope` at tier `n/a` or `immaterial`. An entry of that class that blocks by tier is fixed like any other blocker; the class name never decides remediation. When reviewer resolvers are invoked by `/dev`, their deferred-feedback paths MUST return follow-ups to the coordinator instead of modifying task trackers in the implementation PR. To implement out-of-scope product or architecture work, first amend the change document and obtain user approval.
 
 ---
 
@@ -215,7 +215,7 @@ Agent tool:
            - Determine test requirements
            - Flag if multiple PRs needed
            - Treat the approved change document as the implementation contract
-           - Do not include follow-up/out-of-scope work or expand product/architecture without an approved amendment
+           - Do not include non-blocking follow-up/out-of-scope work, or expand product/architecture, without an approved amendment
 
            Output: Numbered implementation steps"
   description: "Plan implementation"
@@ -255,7 +255,7 @@ Agent tool:
            - Follow existing patterns
            - Run tests
            - Treat the approved change document as the implementation contract
-           - Do not implement follow-up/out-of-scope findings or expand product/architecture without an approved amendment
+           - Do not implement non-blocking findings, or expand product/architecture, without an approved amendment (an entry blocking by tier is fixed whatever its class)
            - Do NOT create PR"
   description: "Implement changes"
 ```
@@ -657,7 +657,7 @@ If `Bash` `run_in_background` isn't available in your context, fall back to full
 
 ##### Bounded delta review (both modes)
 
-Fix only blocking-class findings. Record follow-up/out-of-scope feedback without implementing it, and settle its thread with the disposition that actually fits (`references/scope-contract.md` § Resolver dispositions): `deferred` — citing the exclusion — for a finding excluded by scope, and `immaterial` — replying with the materiality reasoning — for an in-scope observation that fails the bar. Both are no-edit, and they are not interchangeable: citing a scope exclusion for an in-scope observation invents an exclusion that does not exist. Each reviewer channel caps at the canonical bound in `references/scope-contract.md` § The iteration bound, which counts the initial pass as iteration 1 and which no local instruction restates or overrides. Convergence, not the bound, is what should end it: the early signals (converged, and the same disagreement twice) fire in single digits, as does a rising blocking count of one class — which is a cause to fix and continue, not an exit, and an escalation only where that cause is a design choice. Reaching the bound is a failure to converge, not an exit you may take: STOP, report the per-pass trend and what remains, and hand the decision to the user. Do not advance to the next workflow step on the strength of having hit it, even when only follow-up/out-of-scope entries remain. Do not seek zero suggestions or restart unrelated review channels.
+Fix every **blocking** finding and only those (`references/scope-contract.md` § Blocking), whatever its ledger class. Record the non-blocking remainder without implementing it, and settle its thread with the disposition that actually fits (`references/scope-contract.md` § Resolver dispositions): `deferred` — citing the exclusion — for a finding excluded by scope, and `immaterial` — replying with the materiality reasoning — for an in-scope observation that fails the bar. Both are no-edit, and they are not interchangeable: citing a scope exclusion for an in-scope observation invents an exclusion that does not exist. Each reviewer channel caps at the canonical bound in `references/scope-contract.md` § The iteration bound, which counts the initial pass as iteration 1 and which no local instruction restates or overrides. Convergence, not the bound, is what should end it: the early signals (converged, and the same disagreement twice) fire in single digits, as does a rising blocking count of one class — which is a cause to fix and continue, not an exit, and an escalation only where that cause is a design choice. Reaching the bound is a failure to converge, not an exit you may take: STOP, report the per-pass trend and what remains, and hand the decision to the user. Do not advance to the next workflow step on the strength of having hit it, even when only follow-up/out-of-scope entries remain. Do not seek zero suggestions or restart unrelated review channels.
 
 ##### Skip rules
 
@@ -900,7 +900,7 @@ All sub-agents are launched via the Agent tool. Each loads its skill via the Ski
 | 3 | Planner | `fx-dev:planner` |
 | 3,8 | Issue Updater | `fx-dev:issue-updater` |
 | 4,6.2,8.2 | Coder | `fx-dev:coder` |
-| 4.5 | Pre-PR Self-Review | `simplify`, then `code-review`, then `fx-dev:coderabbit-review` (local `cr`), then `fx-dev:codex-review` (local `codex`) — initial passes complete, blocking-class findings resolved, latest affected delta verified |
+| 4.5 | Pre-PR Self-Review | `simplify`, then `code-review`, then `fx-dev:coderabbit-review` (local `cr`), then `fx-dev:codex-review` (local `codex`) — initial passes complete, blocking findings resolved, latest affected delta verified |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 5.5.2 | Browser Verification | `fx-dev:verify-web-change` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
@@ -925,12 +925,12 @@ Workflow complete when ALL true:
 - ✅ Requirements documented
 - ✅ Plan created
 - ✅ Code implemented with atomic commits
-- ✅ Pre-PR review matrix completed (or permitted degradation documented), findings classified in the shared ledger, blocking-class findings resolved, and the latest affected delta verified within the stopping bounds
+- ✅ Pre-PR review matrix completed (or permitted degradation documented), findings classified in the shared ledger, blocking findings resolved, and the latest affected delta verified within the stopping bounds
 - ✅ PR created with description (including links to related specs/changes and test plan)
 - ✅ ALL test plan items addressed: browser-verified, programmatically verified, or user-confirmed manual verification (NEVER silently skipped)
 - ✅ PR test plan items checked off or annotated with verification results in the PR description
 - ✅ Self-review done, issues fixed
-- ✅ Automated review feedback classified and settled; blocking-class findings resolved and the latest affected delta verified without unrelated review restarts
+- ✅ Automated review feedback classified and settled; blocking findings resolved and the latest affected delta verified without unrelated review restarts
 - ✅ All CI/CD checks pass
 - ✅ Task tracking docs updated (completed tasks marked in relevant change doc or tasks.md)
 - ✅ User notified, awaiting merge approval
