@@ -46,12 +46,10 @@ Then review within it:
 Scope decides whether a finding is the author's problem. **Materiality decides
 whether it is worth their time** — see the materiality bar in the same reference.
 
-- **Report every blocking finding individually.** Wrong behaviour,
-  data loss, security, a build or test that will fail, a contradiction that makes
-  the change unimplementable, a stated fact that is false and that a reader would
-  act on, or a genuine ambiguity
-  a reader could act on two ways.
-- **Collect everything else into one closing note**, unnumbered and explicitly
+- **Report every blocking finding individually**, as defined in `fx-dev/skills/dev/references/scope-contract.md`
+  § Blocking. Do not restate that definition here; the examples there are
+  illustrative and the rule is authoritative.
+- **Collect everything immaterial into one closing note**, unnumbered and explicitly
   non-blocking. Wording, formatting, naming preference, a count nothing keys on.
 - When unsure of the tier, ask: *if this shipped uncorrected, what breaks?* If
   the honest answer is "nothing, it is just not as good as it could be", it

@@ -25,7 +25,7 @@ Scope decides whether a finding is *ours*. Materiality decides whether it is *wo
 
 An in-scope item that would change nothing if it shipped uncorrected — wording, formatting, a count nothing keys on, an entry missing from a list the artifact itself declares non-exhaustive — is an **observation, not a finding**, and is **resolved by replying with that reasoning** rather than by editing. Every thread still ends resolved; the gate is zero *unresolved* threads, not zero observations acted on.
 
-This matters most in the loop below. Each fix push triggers another reviewer pass, so actioning immaterial findings does not converge — it manufactures the next round's input. Push fixes for blocking findings — every contract blocker, Material and Substantive finding; reply-and-resolve only the immaterial rest in the same cycle. A contract blocker is never discharged by a reply explaining it: the artifact has to change.
+This matters most in the loop below. Each fix push triggers another reviewer pass, so actioning immaterial findings does not converge — it manufactures the next round's input. Push fixes for blocking findings (`fx-dev/skills/dev/references/scope-contract.md` § Blocking); reply-and-resolve only the immaterial rest in the same cycle. A contract blocker is never discharged by a reply explaining it: the artifact has to change.
 
 **Verify before fixing.** A finding's premise can be wrong. Check any claim it makes about the code, and when it does not hold, reply with the evidence and resolve rather than changing working code to satisfy a misreading.
 

@@ -218,8 +218,9 @@ Never call the Agent tool from inside a sub-agent context.
 ## Success Criteria
 
 **Mode 1 (local, primary):**
-- ✅ `cr review --agent` reports **no blocking findings** after fixes, **or** the service rate-limited and the pass is recorded as `skipped (rate-limited)`. Remaining immaterial observations do not block — they are carried as one closing note, per the materiality bar
-- ✅ All blocking findings received before any limit are resolved and committed
+- ✅ **No blocking finding is left unresolved** — the ledger test in `fx-dev/skills/dev/references/scope-contract.md` § Convergence, covering every blocking finding received across all passes, not only what the latest `cr` output repeated. A blocker an earlier pass raised and this one did not still blocks
+- ✅ That holds on a normal run **and** on the rate-limited path, where the degradation waives only the *unrun* remainder of the review, never a finding already delivered. Then the pass is recorded as `skipped (rate-limited)`
+- ✅ Remaining immaterial observations do not block — they are carried as one closing note, per the materiality bar
 - ✅ No cooldown waits or retries remain when the rate-limit exception applies
 
 **Mode 2 (PR-level, fallback / optional merge gate):**

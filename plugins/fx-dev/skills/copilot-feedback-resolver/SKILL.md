@@ -186,9 +186,9 @@ carrying it is still blocking. Never auto-resolve on the prefix alone.
 | **Nitpick** | Contains `[nitpick]` prefix **and clears none of the filters below** | Reply and resolve without editing |
 | **Outdated** | Refers to code that no longer exists | Reply with explanation, resolve |
 | **Incorrect** | Misunderstands project conventions | Reply with explanation, resolve, update `REVIEW.md` |
-| **Valid — blocking** | Current concern that clears the bar: a project-rule, security or privacy violation, or a Material or Substantive finding (`fx-dev/skills/dev/references/scope-contract.md`) | Delegate to coder sub-agent to fix |
+| **Valid — blocking** | Clears the bar — see `fx-dev/skills/dev/references/scope-contract.md` § Blocking; do not narrow it here | Delegate to coder sub-agent to fix |
 | **Valid — immaterial** | Correct, but would change nothing if it shipped uncorrected | Reply with that reasoning, resolve. **Do not edit** — a fix push reopens the review loop for an item that changes nothing |
-| **Deferred** | Valid but out of scope for this PR | Track in PROJECT.md, reply, resolve |
+| **Deferred** | Valid but out of scope for this PR | Reply citing the exclusion, resolve. **No edit and no commit** — return the follow-up to the coordinator (`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions) |
 
 ### 3. Resolve Threads
 
@@ -257,9 +257,8 @@ mutation {
 
 #### Valid — blocking
 
-Only for concerns that clear the bar (`fx-dev/skills/dev/references/scope-contract.md`
-§ Blocking): a project-rule, security or privacy violation, or a Material or
-Substantive finding.
+Only for concerns that clear the bar — `fx-dev/skills/dev/references/scope-contract.md`
+§ Blocking is the definition, and this section does not restate it.
 
 1. Delegate to coder sub-agent with:
    - PR number and title
@@ -296,10 +295,10 @@ not doing.
    repo tracks follow-ups in `PROJECT.md`, propose the entry to the user rather
    than committing it here.
 3. **Reply to the thread** explaining the deferral:
-   - "Valid suggestion. Tracked as follow-up task in PROJECT.md for a future PR."
+   - "Valid suggestion, but out of scope for this PR: <the exclusion that covers it>. Returned to the coordinator as a follow-up rather than tracked here, so this PR is not widened."
 4. **Resolve the thread**
 
-**CRITICAL:** Never defer feedback without tracking it. "Acknowledged for follow-up" without a PROJECT.md entry is INCOMPLETE WORK.
+**CRITICAL:** Never defer feedback without recording it somewhere durable — but that record must not be a commit on this PR. Return it to the coordinator for the finding ledger or the PR description; when this skill runs standalone and the repo tracks follow-ups in `PROJECT.md`, propose the entry to the user instead of committing it. A bare "acknowledged for follow-up" with no record anywhere is INCOMPLETE WORK; a `PROJECT.md` commit in this PR is a widened change.
 
 ### 5. Verify Completion
 
@@ -326,7 +325,7 @@ This suggestion conflicts with our [convention name] convention. [Brief explanat
 1. ✅ All code changes pushed to the PR branch
 2. ✅ **EVERY addressed thread resolved via GraphQL mutation** (not just code fixed!)
 3. ✅ **For INCORRECT feedback: `REVIEW.md` updated** to prevent recurrence
-4. ✅ **For DEFERRED feedback: Task added to `docs/PROJECT.md`** via project-management skill
+4. ✅ **For DEFERRED feedback: the follow-up is recorded outside this PR** — returned to the coordinator, or proposed to the user when running standalone. **No `PROJECT.md` commit on this branch**
 5. ✅ Re-query confirms `isResolved: true` for all processed threads
 6. ✅ Output summary table (see format below)
 
@@ -340,7 +339,7 @@ This suggestion conflicts with our [convention name] convention. [Brief explanat
 | PRRT_xxx  | src/foo.ts:42 | Nitpick | Auto-resolved | ✅ Resolved |
 | PRRT_yyy  | src/bar.ts:15 | Valid | Fixed null check | ✅ Resolved |
 | PRRT_zzz  | lib/util.js:8 | Outdated | Code refactored | ✅ Resolved |
-| PRRT_aaa  | src/ui.tsx:20 | Deferred | Tracked in PROJECT.md | ✅ Resolved |
+| PRRT_aaa  | src/ui.tsx:20 | Deferred | Returned to coordinator, no edit | ✅ Resolved |
 ```
 
 **Column definitions:**
