@@ -359,8 +359,8 @@ it before the next iteration rather than filtering by hand again.
 
 A **converged** Codex review — a pass with no blocking findings —
 alongside a converged CodeRabbit review is the gate to PR creation in the SDLC
-(`fx-dev:dev` Step 4.5 → Step 5). Do not open the PR with unresolved material or
-substantive Codex findings. Outstanding **immaterial** observations do not hold
+(`fx-dev:dev` Step 4.5 → Step 5). Do not open the PR with any unresolved
+blocking Codex finding. Outstanding **immaterial** observations do not hold
 the PR; carry them into its description as a closing note.
 
 ## When to Use This Skill
