@@ -313,9 +313,10 @@ rejected ones and why>. Do not re-report them.
 Report every BLOCKING finding. A finding is blocking if it is any of:
 
 1. A violation of a rule this project wrote down — anything in AGENTS.md or
-   REVIEW.md, or a security or privacy invariant. Report these whatever their
-   direct behavioural impact; the project already decided they matter, so do not
-   weigh them against the bar below.
+   REVIEW.md, a security or privacy invariant, or any other mandatory
+   requirement the project recorded, including a change document or a spec it
+   links. Report these whatever their direct behavioural impact; the project
+   already decided they matter, so do not weigh them against the bar below.
 2. Something that would change behaviour, break a build or test, make the
    artifact unimplementable, or expose a security, privacy, or data-loss problem
    — including a leaked credential, internal URL, or private identifier in

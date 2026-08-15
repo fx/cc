@@ -174,9 +174,16 @@ a thread marked `blocking` is fixed even if it carries a `[nitpick]` prefix, and
 a thread marked `deferred` is replied to and resolved without editing anything —
 including without committing a tracker update to this PR.
 
+**With no disposition — this skill invoked directly, or a thread the coordinator
+did not cover — run the filters yourself: scope, then contract, then materiality
+(`fx-dev/skills/dev/references/scope-contract.md` § Three filters).** Copilot's
+`[nitpick]` prefix is an *input* to that judgment, never a verdict: it is the
+reviewer's own label, and a project-rule, security, privacy or correctness defect
+carrying it is still blocking. Never auto-resolve on the prefix alone.
+
 | Category | Indicator | Action |
 |----------|-----------|--------|
-| **Nitpick** | Contains `[nitpick]` prefix | Auto-resolve immediately — **unless the coordinator marked it `blocking`** |
+| **Nitpick** | Contains `[nitpick]` prefix **and clears none of the filters below** | Reply and resolve without editing |
 | **Outdated** | Refers to code that no longer exists | Reply with explanation, resolve |
 | **Incorrect** | Misunderstands project conventions | Reply with explanation, resolve, update `REVIEW.md` |
 | **Valid — blocking** | Current concern that clears the bar: a project-rule, security or privacy violation, or a Material or Substantive finding (`fx-dev/skills/dev/references/scope-contract.md`) | Delegate to coder sub-agent to fix |
