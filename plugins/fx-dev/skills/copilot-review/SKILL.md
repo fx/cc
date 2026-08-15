@@ -231,8 +231,9 @@ Then:
 
 1. `grep -i 'Suppressed comments'` the bodies. If present, **read the entire
    `<details>` block** — every item, not just the summary count.
-2. Triage each item exactly like a thread comment: fix what is valid, apply the
-   Scope Brief to what is out of scope.
+2. Triage each item exactly like a thread comment: fix what is blocking, reply
+   to what is merely correct-but-immaterial, and apply the Scope Brief to what is
+   out of scope.
 3. **Do not apply a suppressed suggestion on sight.** One observed suppressed
    comment, applied as written, would have introduced the very bug it claimed to
    report. Verify the finding against the code before changing anything.
@@ -250,7 +251,7 @@ Skill tool: skill="fx-dev:resolve-pr-feedback", args="<PR_NUMBER>"
 This skill will:
 1. Find all unresolved Copilot threads
 2. Categorize each (nitpick, valid, incorrect, outdated, deferred)
-3. Fix valid concerns, reply to and resolve all threads
+3. Fix **blocking** findings; reply-and-resolve every other thread without editing
 4. Report a summary table of actions taken
 
 ### Step 4: Confirm Resolution
@@ -297,7 +298,7 @@ on its own never passes it (**D4**).
 
 Resolving feedback usually means pushing commits. Those commits are **unreviewed**, and Copilot will not look at them by itself.
 
-If the head SHA changed since the review in Step 2, go back to **Step 1** — nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. Cap at 15 iterations (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) and escalate to the user if it has not settled. The bound is a backstop, not a budget: escalate as soon as the same disagreement repeats or the blocking count rises, and remember that every iteration here costs a full Copilot wait cycle.
+If the head SHA changed since the review in Step 2, go back to **Step 1** — nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. Cap at 15 iterations (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) and escalate to the user if it has not settled. The bound is a backstop, not a budget: escalate as soon as the same disagreement repeats, and when the blocking count rises **with every new finding in one class**, fix that cause before escalating — a count that rises across different categories means the review is still productive. Every iteration here costs a full Copilot wait cycle.
 
 **Convergence is: no new blocking findings, every thread resolved, and the suppressed block empty-or-triaged — all on a reviewed head.** It is NOT "zero new threads". Resolving an immaterial thread by reply creates no commit, so the head does not move and no further pass is owed; nudging for another review to chase a zero-thread pass spends a wait cycle to change nothing. **Only a push restarts this loop**, which is why only blocking findings should produce one.
 
@@ -317,7 +318,7 @@ This skill is complete when ALL of:
 - ✅ Copilot review has been received (script exited 0) **for the current head commit** — `REVIEWED_COMMIT_ID` equals `PR_HEAD_SHA`, checked by you, not for an earlier commit
 - ✅ The script's `SUPPRESSED_COMMENTS=` line was read, and it is a definite `0` or a `1` whose block has been read in full and every item triaged (Step 2b). A `0` must be confirmed from the output rather than assumed, and **`unknown` does not satisfy this criterion at all** — the check failed to run (**D5**), so re-run the waiter or triage the bodies by hand before claiming the gate
 - ✅ All Copilot threads resolved (0 unresolved, **filtered to the Copilot login**)
-- ✅ Any valid code concerns have been fixed and pushed — **and the resulting head was itself reviewed**
+- ✅ Any **blocking** findings have been fixed and pushed — **and the resulting head was itself reviewed**. Correct-but-immaterial observations are resolved by reply and produce no push, so they owe no further pass
 
 **Never report this gate as passed on the grounds that polling found no new feedback.** Absence of a review is not a clean review, and a timeout (exit 1) is not a verdict. Silence here is an unasked question, not an answer.
 

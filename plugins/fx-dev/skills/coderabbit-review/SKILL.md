@@ -1,13 +1,13 @@
 ---
 name: coderabbit-review
-description: "Run CodeRabbit's optional AI review. PRIMARY path: run it LOCALLY via the `cr` CLI before opening a PR and resolve actionable findings. FALLBACK path: wait for + resolve its automated PR review when available. Pass a Scope Brief as args — findings MUST be triaged against the user's original request. Rate limits degrade gracefully: report once, skip CodeRabbit, and continue the SDLC."
+description: "Run CodeRabbit's optional AI review. PRIMARY path: run it LOCALLY via the `cr` CLI before opening a PR and resolve blocking findings. FALLBACK path: wait for + resolve its automated PR review when available. Pass a Scope Brief as args — findings MUST be triaged against the user's original request. Rate limits degrade gracefully: report once, skip CodeRabbit, and continue the SDLC."
 ---
 
 # CodeRabbit Review
 
 CodeRabbit reviews code with AI. The **primary** way to use it is **locally, via the `cr` CLI, BEFORE opening a PR** — as part of pre-PR self-review, alongside `/review` and `/simplify`. Prefer a clean local result when the service is available. A **fallback** path handles CodeRabbit's PR-level review for repos where its GitHub App is configured to auto-review PRs.
 
-**IMPORTANT — CodeRabbit is optional when rate-limited.** If the CLI, API, GitHub check, or wait script reports a CodeRabbit quota/rate limit, report it once and continue without CodeRabbit. Do not sleep, poll, retry after a cooldown, ask the user to wait, or block PR creation/merge solely on CodeRabbit throttling. Resolve actionable findings already received before the limit, then mark the CodeRabbit pass as `skipped (rate-limited)`. This exception applies only to CodeRabbit; it does not relax Copilot, CI, tests, or other merge gates.
+**IMPORTANT — CodeRabbit is optional when rate-limited.** If the CLI, API, GitHub check, or wait script reports a CodeRabbit quota/rate limit, report it once and continue without CodeRabbit. Do not sleep, poll, retry after a cooldown, ask the user to wait, or block PR creation/merge solely on CodeRabbit throttling. Resolve blocking findings already received before the limit, then mark the CodeRabbit pass as `skipped (rate-limited)`. Immaterial observations are not resolved by editing — actioning one manufactures the next round's input. This exception applies only to CodeRabbit; it does not relax Copilot, CI, tests, or other merge gates.
 
 ## ⛔ Local-First: Run CodeRabbit BEFORE Opening the PR
 
@@ -94,9 +94,9 @@ Use `cr review --agent --base main` to scope to the branch's diff against `main`
 
 - If `cr` reports it is **not authenticated**, **STOP and report to the user** — the workspace is expected to be authed. **Do NOT run `cr auth login`** (it is interactive). Do not work around it.
 - If `cr` is **not installed / unavailable**, skip to Mode 2 (resolve at the PR level after opening) and report this to the user once.
-- If `cr` reports a **rate limit, quota limit, or cooldown**, stop the CodeRabbit loop immediately. Report the skip once, resolve any actionable findings already returned, and continue to PR creation without requiring a clean rerun.
+- If `cr` reports a **rate limit, quota limit, or cooldown**, stop the CodeRabbit loop immediately. Report the skip once, resolve any blocking findings already returned, and continue to PR creation without requiring a clean rerun.
 
-### Step 2: Resolve every actionable finding
+### Step 2: Resolve every blocking finding
 
 Treat findings like self-review feedback:
 
@@ -214,5 +214,5 @@ Never call the Agent tool from inside a sub-agent context.
 
 **Mode 2 (PR-level, fallback / optional merge gate):**
 - ✅ CodeRabbit check is terminal with a passing conclusion and all threads are resolved, **or** CodeRabbit rate-limited and the gate is recorded as `skipped (rate-limited)`
-- ✅ Any valid concerns already received are fixed and pushed
+- ✅ Any **blocking** findings already received are fixed and pushed. A correct-but-immaterial observation is resolved by reply, not by an edit — editing it reopens the review loop
 - ✅ CodeRabbit throttling alone does not block merge

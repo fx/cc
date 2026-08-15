@@ -653,7 +653,7 @@ If `Bash` `run_in_background` isn't available in your context, fall back to full
 
 ##### Bounded delta review (both modes)
 
-Fix only blocking-class findings. Record follow-up/out-of-scope feedback without implementing it, and settle its thread with an out-of-scope disposition when repository policy permits. Allow at most two remediation rounds per reviewer. At the bound, continue when only follow-up/out-of-scope findings remain; escalate any unresolved blocking-class finding to the user. Do not seek zero suggestions or restart unrelated review channels.
+Fix only blocking-class findings. Record follow-up/out-of-scope feedback without implementing it, and settle its thread with an out-of-scope disposition when repository policy permits. Each reviewer's remediation loop caps at the canonical bound in `references/scope-contract.md` § The iteration bound — 15 rounds, the single number no local instruction overrides. Convergence, not the bound, is what should end it: the early exits (converged, the same disagreement twice, a rising blocking count of one class) all fire in single digits. At the bound, continue when only follow-up/out-of-scope findings remain; escalate any unresolved blocking-class finding to the user. Do not seek zero suggestions or restart unrelated review channels.
 
 ##### Skip rules
 
