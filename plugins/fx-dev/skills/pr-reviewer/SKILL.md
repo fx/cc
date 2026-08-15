@@ -63,9 +63,12 @@ noise the author learns to skim:
   since the supply of such entries never runs out;
 - a decision the change records with its rationale, **where your disagreement is
   about preference** — say so once as an escalation rather than re-arguing it.
-  This never applies when the decision is itself the defect: a recorded rationale
-  for leaking a credential or private identifier, losing data, or violating a
-  security or privacy invariant is a blocking finding, however well reasoned;
+  This never applies when the decision is itself the defect — see
+  `fx-dev/skills/dev/references/scope-contract.md` § Three things that are not
+  findings for the full carve-out, which this skill does not narrow: a recorded
+  rationale for leaking a credential or private identifier, losing data,
+  violating a security or privacy invariant, **or contradicting a contract the
+  project mandates** is a blocking finding, however well reasoned;
 - a limit the change admits and gates ("verified at implementation time",
   "open question gated on X") — check the gate is real and sequenced, and move on.
 

@@ -203,11 +203,17 @@ own labels are an *input* to that judgment, never a verdict.
 | **Outdated** | Refers to code that no longer exists | Reply with the explanation, resolve. No edit |
 | **Incorrect** | Misreads a deliberate project convention | Reply with the explanation, resolve, and record the convention in `REVIEW.md` |
 
-**A thread the coordinator left undisposed is a false positive it verified and
-rejected** (`fx-dev/skills/dev/references/scope-contract.md` § Resolver
-dispositions) — deliberately undisposed so these last two rows can handle it, not
-an oversight. It is **Outdated** or **Incorrect** whatever section markers it
-carries, and it still ends resolved: an unhandled thread holds the
+**Only a thread the coordinator left undisposed *with a stated reason* takes
+those last two rows** (`fx-dev/skills/dev/references/scope-contract.md`
+§ Resolver dispositions): that is a false positive it verified and rejected, and
+the reason is what marks it as one. Then it is **Outdated** or **Incorrect**
+whatever section markers it carries.
+
+**A thread with no disposition and no reason is untriaged, not rejected.** The
+coordinator is allowed to leave a thread uncovered — run the filters over it
+yourself, as above. Reading a bare omission as a verified rejection resolves a
+real blocker with a reply and no fix, which is the one outcome this table exists
+to prevent. Either way the thread ends resolved: an unhandled one holds the
 zero-unresolved-threads gate open indefinitely.
 
 ### 3. Process Each Category

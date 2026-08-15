@@ -310,7 +310,7 @@ The Codex CLI takes the scope as its review prompt, so this pass is the one wher
 
 **Record each finding's class, not just its location** (`references/scope-contract.md` § Fix the class, not the instance). A reviewer reports the instance it read; the ledger entry names the defect pattern and every site in the change's surface that exhibits it, so a fix closes the class rather than buying the next cycle its input. A ledger entry is not resolved while a sibling of its class is open, and a reviewer MUST NOT be re-run with a class half-closed.
 
-Fix only findings classified `required-by-contract` or `regression-caused-by-change`. After a fix commit:
+Fix every **blocking** ledger entry (`references/scope-contract.md` § Blocking): everything classified `required-by-contract` or `regression-caused-by-change`, plus any entry blocking by tier — a reviewer-originated Material or Substantive finding blocks even where no written rule names it. After a fix commit:
 
 1. Rerun the reviewer or check that originated the blocking finding.
 2. Rerun tests affected by the delta.
@@ -320,7 +320,7 @@ Do not restart the full matrix merely because `HEAD` changed. Deduplicate repeat
 
 **The materiality bar applies to judgment-originated findings only** — things a reviewer raised on its own reading, rather than violations of a rule the project wrote down (`references/scope-contract.md`). One of those must clear the bar before it can be treated as blocking. Materiality is a **separate ledger field**, not a fourth classification — every entry still carries exactly one of the three classifications above, plus a materiality tier. An observation that would change nothing if it shipped uncorrected is recorded as `follow-up/out-of-scope` with materiality `immaterial`, and never triggers a rerun.
 
-**Rule violations are blocking regardless of materiality.** Anything Step 2.5 defines as `required-by-contract` — project, security, privacy, test and merge rules the project wrote down — is blocking by virtue of being a rule, whatever its direct behavioural impact. The contract filter runs before the bar, exactly as `references/scope-contract.md` § Three filters specifies, so the coordinator can never demote a violation the reviewer correctly marked blocking. Two shapes in particular are non-findings and MUST NOT enter the ledger as blocking: a missing entry in a list the artifact does not present as exhaustive, whether it says "for example" or declares the list illustrative, and a decision the artifact records with its rationale **where the disagreement is about preference**. The second, raised twice, is an escalation to the user rather than a third cycle — but a recorded rationale never makes a decision safe: if the decision itself leaks a credential or private identifier, loses data, or violates a security or privacy invariant, it is `required-by-contract` and stays blocking.
+**Rule violations are blocking regardless of materiality.** Anything Step 2.5 defines as `required-by-contract` — project, security, privacy, test and merge rules the project wrote down — is blocking by virtue of being a rule, whatever its direct behavioural impact. The contract filter runs before the bar, exactly as `references/scope-contract.md` § Three filters specifies, so the coordinator can never demote a violation the reviewer correctly marked blocking. Two shapes in particular are non-findings and MUST NOT enter the ledger as blocking: a missing entry in a list the artifact does not present as exhaustive, whether it says "for example" or declares the list illustrative, and a decision the artifact records with its rationale **where the disagreement is about preference**. The second, raised twice, is an escalation to the user rather than a third cycle — but a recorded rationale never makes a decision safe. The full carve-out is in `references/scope-contract.md` § Three things that are not findings and is not narrowed here: if the decision itself leaks a credential or private identifier, loses data, violates a security or privacy invariant, **or contradicts a contract the project mandates**, it is `required-by-contract` and stays blocking.
 
 #### PR-Ready Stopping Condition
 
@@ -328,7 +328,7 @@ Proceed to Step 5 when all of the following are true:
 
 1. Every **blocking** ledger entry is resolved with evidence. Blocking is defined once, in `references/scope-contract.md` § Blocking; this gate does not restate it.
 
-   **`follow-up/out-of-scope` with a Material or Substantive tier is not a legal combination.** The two fields are assigned by different filters and cannot disagree. That class holds entries of two different origins, and only two tiers are legal for it: a finding excluded at filter 1 never reaches the bar, so its tier is `n/a`; an in-scope observation that reached filter 3 and failed it is tier `immaterial`. A finding that reaches the bar and ranks Material or Substantive is in scope by construction and is a defect in work this change actually did. Where a written rule obliges the fix it is `required-by-contract`, and where the branch caused a regression it is `regression-caused-by-change` — but a reviewer-originated Material or Substantive finding that is neither, such as a two-way ambiguity in something this change wrote, is still legal in this class and **still blocks, by tier**. The classification answers what obliges the fix; the tier answers whether it blocks, exactly as the stopping condition below states. What is illegal is that tier pair on a finding excluded at filter 1, which never reached the bar. **Tier decides the resolver disposition, not the class name** (§ Resolver dispositions): `n/a` settles as `deferred`, citing the exclusion; `immaterial` settles as `immaterial`, replying with the materiality reasoning. Citing an exclusion for an in-scope observation invents one that does not exist. If you are about to record that pair, one of the two filters was misapplied — re-run them rather than writing an entry the gate can neither clear nor waive. Materiality never promotes an out-of-scope finding back into scope (`references/scope-contract.md` § Three filters); this rule is that principle applied to the ledger.
+   **A finding excluded at filter 1 can never carry a Material or Substantive tier.** The two fields are assigned by different filters and cannot disagree, so that one pair is illegal. Note the rule is about the *filter*, not the class name: `follow-up/out-of-scope` holds entries of two different origins, and all three tiers can be legal for it — a finding excluded at filter 1 never reaches the bar, so its tier is `n/a`; an in-scope observation that reached filter 3 and failed it is tier `immaterial`. A finding that reaches the bar and ranks Material or Substantive is in scope by construction and is a defect in work this change actually did. Where a written rule obliges the fix it is `required-by-contract`, and where the branch caused a regression it is `regression-caused-by-change` — but a reviewer-originated Material or Substantive finding that is neither, such as a two-way ambiguity in something this change wrote, is still legal in this class and **still blocks, by tier**. The classification answers what obliges the fix; the tier answers whether it blocks, exactly as the stopping condition below states. What is illegal is that tier pair on a finding excluded at filter 1, which never reached the bar. **Tier decides the resolver disposition, not the class name** (§ Resolver dispositions): `n/a` settles as `deferred`, citing the exclusion; `immaterial` settles as `immaterial`, replying with the materiality reasoning. Citing an exclusion for an in-scope observation invents one that does not exist. If you are about to record that pair, one of the two filters was misapplied — re-run them rather than writing an entry the gate can neither clear nor waive. Materiality never promotes an out-of-scope finding back into scope (`references/scope-contract.md` § Three filters); this rule is that principle applied to the ledger.
 2. Contract-required tests and tests affected by the latest delta pass.
 3. Every available review channel completed its initial pass or has a documented permitted degradation.
 4. The review has **converged** as `references/scope-contract.md` § Convergence defines it — no blocking finding left unresolved, ledger-wide, not merely none new in the latest pass. As an additional gate, that state is confirmed by one verification pass over the latest affected delta.
@@ -561,7 +561,7 @@ Agent tool:
   description: "Review PR"
 ```
 
-The coordinator MUST classify and deduplicate these findings in the Step 2.5 ledger before invoking a coder. Do not pass follow-up/out-of-scope findings to implementation.
+The coordinator MUST classify and deduplicate these findings in the Step 2.5 ledger before invoking a coder. Pass every **blocking** entry to implementation and nothing else (`references/scope-contract.md` § Blocking) — which includes a `follow-up/out-of-scope` entry blocking by tier, and excludes one whose tier is `n/a` or `immaterial`.
 
 #### 6.2 Fix Blocking Issues (if any found)
 
@@ -569,10 +569,12 @@ The coordinator MUST classify and deduplicate these findings in the Step 2.5 led
 Agent tool:
   prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
 
-           Fix only these blocking-class issues in PR #[NUMBER]:
-           [REQUIRED-BY-CONTRACT OR REGRESSION-CAUSED-BY-CHANGE FINDINGS]
+           Fix only these blocking issues in PR #[NUMBER]:
+           [EVERY BLOCKING LEDGER ENTRY — REQUIRED-BY-CONTRACT,
+            REGRESSION-CAUSED-BY-CHANGE, AND ANY ENTRY BLOCKING BY TIER]
 
-           Do not implement ledger entries classified follow-up/out-of-scope."
+           Do not implement ledger entries that are not blocking — tier n/a or
+           immaterial."
   description: "Fix review issues"
 ```
 
@@ -655,7 +657,7 @@ If `Bash` `run_in_background` isn't available in your context, fall back to full
 
 ##### Bounded delta review (both modes)
 
-Fix only blocking-class findings. Record follow-up/out-of-scope feedback without implementing it, and settle its thread with the disposition that actually fits (`references/scope-contract.md` § Resolver dispositions): `deferred` — citing the exclusion — for a finding excluded by scope, and `immaterial` — replying with the materiality reasoning — for an in-scope observation that fails the bar. Both are no-edit, and they are not interchangeable: citing a scope exclusion for an in-scope observation invents an exclusion that does not exist. Each reviewer's remediation loop caps at the canonical bound in `references/scope-contract.md` § The iteration bound — 15 rounds, the single number no local instruction overrides. Convergence, not the bound, is what should end it: the early signals (converged, and the same disagreement twice) fire in single digits, as does a rising blocking count of one class — which is a cause to fix and continue, not an exit, and an escalation only where that cause is a design choice. Reaching the bound is a failure to converge, not an exit you may take: STOP, report the per-pass trend and what remains, and hand the decision to the user. Do not advance to the next workflow step on the strength of having hit it, even when only follow-up/out-of-scope entries remain. Do not seek zero suggestions or restart unrelated review channels.
+Fix only blocking-class findings. Record follow-up/out-of-scope feedback without implementing it, and settle its thread with the disposition that actually fits (`references/scope-contract.md` § Resolver dispositions): `deferred` — citing the exclusion — for a finding excluded by scope, and `immaterial` — replying with the materiality reasoning — for an in-scope observation that fails the bar. Both are no-edit, and they are not interchangeable: citing a scope exclusion for an in-scope observation invents an exclusion that does not exist. Each reviewer channel caps at the canonical bound in `references/scope-contract.md` § The iteration bound, which counts the initial pass as iteration 1 and which no local instruction restates or overrides. Convergence, not the bound, is what should end it: the early signals (converged, and the same disagreement twice) fire in single digits, as does a rising blocking count of one class — which is a cause to fix and continue, not an exit, and an escalation only where that cause is a design choice. Reaching the bound is a failure to converge, not an exit you may take: STOP, report the per-pass trend and what remains, and hand the decision to the user. Do not advance to the next workflow step on the strength of having hit it, even when only follow-up/out-of-scope entries remain. Do not seek zero suggestions or restart unrelated review channels.
 
 ##### Skip rules
 
@@ -766,7 +768,7 @@ duvet# A pull request MUST NOT be merged while any review thread on it from a co
 - [ ] ALL CI checks green
 - [ ] Copilot review RECEIVED and ALL threads resolved (via `fx-dev:copilot-review` skill — NEVER raw `gh api`)
 - [ ] CodeRabbit is passing with all received threads resolved, not configured, or explicitly recorded as `skipped (rate-limited)`. CodeRabbit throttling is optional and never blocks merge.
-- [ ] Zero unresolved `required-by-contract` or `regression-caused-by-change` findings; the latest affected delta is verified within the stopping bounds
+- [ ] Zero unresolved **blocking** ledger entries (`references/scope-contract.md` § Blocking) — `required-by-contract`, `regression-caused-by-change`, and any entry blocking by tier; the latest affected delta is verified within the stopping bounds
 - [ ] Codecov coverage passing with 0 missing lines
 - [ ] No unresolved review threads from any reviewer (Copilot, CodeRabbit, human, or future automated reviewer); follow-up/out-of-scope threads are settled without expanding implementation
 

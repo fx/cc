@@ -96,7 +96,7 @@ A finding that fails filter 1 is deferred. One that passes filter 2 is a **contr
 2. **Material** — see the tier table below.
 3. **Substantive** — see the tier table below.
 
-**An immaterial finding is never blocking.** That is the whole vocabulary: *blocking* or *immaterial*.
+**An immaterial finding is never blocking.** Past the scope filter that is the whole vocabulary: *blocking* or *immaterial*. A finding that never got past it is *deferred* (filter 1, and § Resolver dispositions) — do not fold one of those into *immaterial*, which drops the exclusion that covers it and the follow-up record with it.
 
 Every downstream rule is written in terms of **blocking**, deliberately. Fix blocking findings; push for blocking findings; keep going while blocking findings arrive; converge when none is left unresolved.
 
