@@ -100,7 +100,19 @@ A finding that fails filter 1 is deferred. One that passes filter 2 is a **contr
 
 Every downstream rule is written in terms of **blocking**, deliberately. Fix blocking findings; push for blocking findings; keep going while blocking findings arrive; converge when none is left unresolved.
 
-**This generalises, and it is the rule that keeps this document workable: every normative rule here is defined once and referenced, never restated.** That covers the blocking definition, the convergence test, the iteration bound, the two conditions that re-open scope, and the resolver dispositions. A skill that paraphrases one of them creates a copy that goes stale the moment the original changes — and a stale copy is always the *narrower* one, so it under-blocks, under-converges, or re-opens scope it should not. Name the rule and link the section. If a skill genuinely needs different behaviour, change it here, for everyone.
+**This generalises, and it is the rule that keeps this document workable: every normative rule here is defined once and referenced, never restated.** That covers the blocking definition, the convergence test, the iteration bound, the two conditions that re-open scope, and the resolver dispositions below. A skill that paraphrases one of them creates a copy that goes stale the moment the original changes — and a stale copy is always the *narrower* one, so it under-blocks, under-converges, or re-opens scope it should not. Name the rule and link the section. If a skill genuinely needs different behaviour, change it here, for everyone.
+
+**One exception, and only one: text sent verbatim to an external tool.** A prompt handed to `codex review`, `cr`, or any reviewer outside this repo cannot follow a link, so it MUST inline the rule. Such a block is a **mirror**: mark it as one, keep it a faithful restatement of the canonical section rather than an independent edit, and update it in the same commit that changes the canonical text. Nothing an agent reads directly qualifies — only strings crossing a process boundary.
+
+### Resolver dispositions
+
+Every finding handed to a resolver carries exactly one, and they are defined here so no resolver invents a fourth:
+
+- **`blocking`** — fix it and push. See § Blocking.
+- **`immaterial`** — reply with the reasoning and resolve. **No edit**: a fix push reopens the review loop for something that changes nothing.
+- **`deferred`** — reply citing the exclusion that covers it and resolve. **No edit**, and never widen the change to satisfy it.
+
+**A disposition assigned by the coordinator is authoritative and overrides a resolver's own categorisation.** The coordinator holds the Scope Brief and the ledger; a resolver classifying from the comment text alone does not, and its local heuristics — a `[nitpick]` prefix, a tracker-update path — must not override a disposition set with that context.
 
 ### The bar
 
@@ -148,7 +160,7 @@ Report the trend when you stop, so the operator can see the shape rather than ta
 
 A loop should almost always end on one of the three signals above, all of which fire long before 15:
 
-- **Converged** — a pass with no blocking findings. The only successful exit.
+- **Converged** — no blocking finding left unresolved, per § Convergence above. The only successful exit. Note that is the *ledger* test, not a property of the latest pass: a quiet pass with a carried blocker still open is not convergence.
 - **The same disagreement twice** — escalate by name. Do not spend the remaining iterations re-arguing it.
 - **A rising count of one class** — the last fix is generating them. Fix the cause, or escalate the design choice.
 

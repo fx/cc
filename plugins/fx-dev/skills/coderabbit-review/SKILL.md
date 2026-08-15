@@ -13,8 +13,8 @@ CodeRabbit reviews code with AI. The **primary** way to use it is **locally, via
 
 Catch CodeRabbit's feedback **before** a PR exists, using the `cr` CLI on your local changes:
 
-- Run `cr` during pre-PR self-review (alongside `/simplify` and `/review`), fix every **blocking** finding, and re-run until a pass produces none. Immaterial observations get one closing note and do not buy another run — see the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
-- Open the PR once the local review has **converged** — no blocking findings — **or is correctly degraded as `skipped (rate-limited)`**. Resolve the blocking findings already received before proceeding; immaterial ones travel as a closing note.
+- Run `cr` during pre-PR self-review (alongside `/simplify` and `/review`), fix every **blocking** finding, and re-run until none is left unresolved (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — the ledger test, not "the latest pass was quiet"). Immaterial observations get one closing note and do not buy another run — see the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
+- Open the PR once the local review has **converged** — no blocking finding left unresolved — **or is correctly degraded as `skipped (rate-limited)`**. Resolve the blocking findings already received before proceeding; immaterial ones travel as a closing note.
 - A clean local review does NOT remove the merge gates — but it usually means CodeRabbit's PR-level review (when the GitHub App is configured) lands clean on the first pass, and often there is nothing left to resolve on the PR at all.
 
 ## The `cr` CLI
@@ -121,7 +121,7 @@ Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until no block
 
 ### Step 4: Open the PR when clean or correctly degraded
 
-A **converged** local CodeRabbit review — no blocking findings — is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once every blocking finding already received is resolved — the degradation waives the *unrun* remainder of the review, never a finding it already delivered. Do not open the PR with known unresolved blocking findings; immaterial observations travel as a closing note in the PR description.
+A **converged** local CodeRabbit review — no blocking finding left unresolved, per `fx-dev/skills/dev/references/scope-contract.md` § Convergence — is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once every blocking finding already received is resolved — the degradation waives the *unrun* remainder of the review, never a finding it already delivered. Do not open the PR with known unresolved blocking findings; immaterial observations travel as a closing note in the PR description.
 
 ---
 

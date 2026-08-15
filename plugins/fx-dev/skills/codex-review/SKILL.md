@@ -8,7 +8,8 @@ description: Run OpenAI Codex's AI code review LOCALLY via the `codex` CLI BEFOR
 This skill runs OpenAI Codex's AI code review **locally, one-shot**, against the
 current branch. Run it as part of pre-PR self-review — after `coderabbit-review`,
 before opening the PR — fix every **blocking** finding, and open
-the PR once a pass produces none. Immaterial observations get one closing note
+the PR once none is left unresolved (`fx-dev/skills/dev/references/scope-contract.md`
+§ Convergence — the ledger test, not "the latest pass was quiet"). Immaterial observations get one closing note
 and do not hold the PR: see the materiality bar in
 `fx-dev/skills/dev/references/scope-contract.md`.
 
@@ -299,6 +300,12 @@ and list those items once, non-blocking.
 pass where it pays. Every re-run prompt MUST carry, in addition to the Scope
 Brief:
 
+> **This block is a MIRROR** of `fx-dev/skills/dev/references/scope-contract.md`
+> § Blocking and § Three things that are not findings — the one case the
+> define-once rule exempts, because `codex review` receives a string and cannot
+> follow a link. Keep it a faithful restatement, never an independent edit, and
+> update it in the same commit that changes the canonical text.
+
 ```
 CONVERGENCE PASS <N>. Prior passes found <count> issues; all fixed except <the
 rejected ones and why>. Do not re-report them.
@@ -363,7 +370,7 @@ it before the next iteration rather than filtering by hand again.
 
 ### Step 4: Open the PR once it has converged
 
-A **converged** Codex review — a pass with no blocking findings —
+A **converged** Codex review — no blocking finding left unresolved, per `fx-dev/skills/dev/references/scope-contract.md` § Convergence —
 alongside a converged CodeRabbit review is the gate to PR creation in the SDLC
 (`fx-dev:dev` Step 4.5 → Step 5). Do not open the PR with any unresolved
 blocking Codex finding. Outstanding **immaterial** observations do not hold

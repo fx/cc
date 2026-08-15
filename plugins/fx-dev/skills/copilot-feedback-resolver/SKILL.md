@@ -165,9 +165,18 @@ query {
 
 For each unresolved Copilot comment:
 
+**If the coordinator supplied per-thread dispositions, they win.** A disposition
+from `fx-dev:resolve-pr-feedback` is set with the Scope Brief and the finding
+ledger in hand; this table classifies from the comment text alone. Apply the
+disposition (`fx-dev/skills/dev/references/scope-contract.md` § Resolver
+dispositions) and use the table only for threads it did not cover. In particular
+a thread marked `blocking` is fixed even if it carries a `[nitpick]` prefix, and
+a thread marked `deferred` is replied to and resolved without editing anything —
+including without committing a tracker update to this PR.
+
 | Category | Indicator | Action |
 |----------|-----------|--------|
-| **Nitpick** | Contains `[nitpick]` prefix | Auto-resolve immediately |
+| **Nitpick** | Contains `[nitpick]` prefix | Auto-resolve immediately — **unless the coordinator marked it `blocking`** |
 | **Outdated** | Refers to code that no longer exists | Reply with explanation, resolve |
 | **Incorrect** | Misunderstands project conventions | Reply with explanation, resolve, update `REVIEW.md` |
 | **Valid — blocking** | Current concern that clears the bar: a project-rule, security or privacy violation, or a Material or Substantive finding (`fx-dev/skills/dev/references/scope-contract.md`) | Delegate to coder sub-agent to fix |

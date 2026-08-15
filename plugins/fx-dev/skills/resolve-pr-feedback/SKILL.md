@@ -15,7 +15,7 @@ Pass it into every resolver you invoke, and classify each finding before acting:
 
 - **In scope** → resolve it.
 - **Covered by the brief's out-of-scope list** → resolve the thread as deferred, citing the exclusion. Never silently fix it, never silently drop it, and never widen the PR to satisfy it.
-- **Excluded, and the exclusion was invalid** → per `fx-dev/skills/dev/references/scope-contract.md` § Three filters, filter 1, only two things re-open scope: it is a defect in work this change actually did, or the exclusion covered something a brief may not exclude. Being merely correct is not one of them. When one holds, fix the work and say the brief was wrong.
+- **Excluded, and the exclusion was invalid** → only the two conditions in `fx-dev/skills/dev/references/scope-contract.md` § Three filters, filter 1 re-open scope. When one holds, fix the work and say the brief was wrong.
 
 Security, **privacy**, data-loss, and correctness problems **inside** the change are always in scope, whatever the brief says. Resolving out-of-scope suggestions is scope creep with a reviewer's name on it.
 
@@ -182,9 +182,10 @@ which is the push that reopens the loop. Every invocation below MUST carry, as
 its argument:
 
 1. The **Scope Brief**, verbatim (`fx-dev/skills/dev/references/scope-contract.md` § The Scope Brief).
-2. A **disposition per thread**: `blocking` (fix and push), `immaterial`
-   (reply with the reasoning and resolve — no edit), or `deferred` (reply citing
-   the exclusion and resolve — no edit).
+2. A **disposition per thread** — `blocking`, `immaterial`, or `deferred`, as
+   defined in `fx-dev/skills/dev/references/scope-contract.md` § Resolver
+   dispositions. Yours is authoritative: it is set with the Scope Brief and the
+   ledger in hand, which the resolver does not have.
 
 **If Copilot threads exist:**
 ```
