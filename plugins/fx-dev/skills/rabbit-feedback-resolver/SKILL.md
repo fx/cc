@@ -54,10 +54,17 @@ _🧹 Nitpick_ | _🔵 Trivial_    <- Severity indicator (optional)
 </details>
 ```
 
-**Key elements to extract:**
-- **Severity**: `_🧹 Nitpick_` or `_🔵 Trivial_` = auto-resolvable
-- **Prompt for AI Agents**: Explicit instructions - USE THESE DIRECTLY
-- **Committable suggestion**: Ready-to-apply code changes
+**Key elements to extract.** All three are *inputs* to triage, never verdicts —
+the disposition comes from the coordinator, or from the filters you run yourself
+(`fx-dev/skills/dev/references/scope-contract.md` § Three filters):
+- **Severity**: `_🧹 Nitpick_` or `_🔵 Trivial_` is CodeRabbit's own label. It
+  suggests immaterial; it does not establish it. A project-rule, security,
+  privacy or correctness defect carrying it is still blocking.
+- **Prompt for AI Agents**: explicit instructions. Use them for a **blocking**
+  finding, after checking the premise holds.
+- **Committable suggestion**: ready-to-apply code. Verify it against the tree
+  before applying — a suggestion is a claim, and an applied-on-sight one has
+  introduced the bug it claimed to report.
 
 ## Prerequisites
 
@@ -177,9 +184,9 @@ CodeRabbit's own labels are an *input* to that judgment, never a verdict.
 | Category | Indicator | Action |
 |----------|-----------|--------|
 | **Nitpick/Trivial** | Carries `_🧹 Nitpick_` or `_🔵 Trivial_` **and clears none of the filters** | Reply and resolve, no edit |
-| **Actionable with AI Prompt** | Has `🤖 Prompt for AI Agents` section | Extract prompt, delegate to coder |
+| **Actionable with AI Prompt** | Has `🤖 Prompt for AI Agents` section **and is blocking** per `fx-dev/skills/dev/references/scope-contract.md` § Blocking | Verify the premise, then extract the prompt and delegate to coder |
 | **Actionable with Committable** | Has `📝 Committable suggestion` **and is blocking** per `fx-dev/skills/dev/references/scope-contract.md` § Blocking | Verify the suggestion against the code, then apply. Never apply on sight — a committable suggestion is still a claim about the tree |
-| **General Feedback** | No special sections | Analyze and delegate to coder |
+| **General Feedback** | No special sections | Triage first; delegate to coder only if **blocking**, otherwise reply and resolve with no edit |
 | **Deferred** | Valid but out of scope for this PR | Reply citing the exclusion, resolve. **No edit and no commit** — return the follow-up to the coordinator (`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions) |
 
 ### 3. Process Each Category
@@ -196,11 +203,19 @@ and is fixed. Only once it clears none of them is it a nitpick.
 
 #### Actionable with AI Prompt (PREFERRED)
 
-**When a comment contains `🤖 Prompt for AI Agents`, extract and use it directly:**
+**Only for a thread whose disposition is `blocking`.** The presence of an AI
+prompt says nothing about materiality: a formatted comment can still rank
+Immaterial, and then it is replied to and resolved with no edit, exactly like any
+other immaterial thread. Check the disposition first.
+
+For a blocking one:
 
 1. Parse the comment body to extract content between `<summary>🤖 Prompt for AI Agents</summary>` and the closing `</details>`
-2. The extracted text contains explicit instructions - pass these to the coder sub-agent verbatim
-3. After fix is implemented, resolve the thread
+2. **Verify the premise before acting.** The prompt asserts something about the
+   tree; when that does not hold, reply with the evidence and resolve rather than
+   changing working code to satisfy a misreading
+3. Pass the extracted instructions to the coder sub-agent verbatim
+4. After the fix is implemented, resolve the thread
 
 Example extraction:
 ```
@@ -211,10 +226,18 @@ values...
 
 #### Actionable with Committable Suggestion
 
-1. Extract the code block from `📝 Committable suggestion` section
-2. Apply the suggested changes directly using Edit tool
-3. Commit with message referencing the CodeRabbit suggestion
-4. Resolve the thread
+**Only for a thread whose disposition is `blocking`** — a committable suggestion
+attached to an immaterial observation is still immaterial, and applying it
+produces the push that reopens the loop.
+
+1. Extract the code block from the `📝 Committable suggestion` section
+2. **Verify it against the code before applying.** Never apply on sight: a
+   suggestion is a claim about the tree, and one applied as written has been
+   observed to introduce the very bug it claimed to report. If the premise does
+   not hold, reply with the evidence and resolve instead
+3. Apply the verified change using the Edit tool
+4. Commit with a message referencing the CodeRabbit suggestion
+5. Resolve the thread
 
 #### General Feedback
 
