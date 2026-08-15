@@ -161,18 +161,37 @@ query {
 
 For each unresolved CodeRabbit comment:
 
+**If the coordinator supplied per-thread dispositions, they win.** A disposition
+from `fx-dev:coderabbit-review` or `fx-dev:resolve-pr-feedback` is set with the
+Scope Brief and the finding ledger in hand; this table classifies from comment
+text alone. Apply the disposition (`fx-dev/skills/dev/references/scope-contract.md`
+§ Resolver dispositions) and use the table only for threads it did not cover. A
+thread marked `blocking` is fixed even when CodeRabbit labelled it
+`_🧹 Nitpick_`; a thread marked `immaterial` or `deferred` is replied to and
+resolved **without editing anything**.
+
+**With no disposition, run the filters yourself** — scope, then contract, then
+materiality (`fx-dev/skills/dev/references/scope-contract.md` § Three filters).
+CodeRabbit's own labels are an *input* to that judgment, never a verdict.
+
 | Category | Indicator | Action |
 |----------|-----------|--------|
-| **Nitpick/Trivial** | Contains `_🧹 Nitpick_` or `_🔵 Trivial_` | Auto-resolve immediately |
+| **Nitpick/Trivial** | Carries `_🧹 Nitpick_` or `_🔵 Trivial_` **and clears none of the filters** | Reply and resolve, no edit |
 | **Actionable with AI Prompt** | Has `🤖 Prompt for AI Agents` section | Extract prompt, delegate to coder |
-| **Actionable with Committable** | Has `📝 Committable suggestion` | Apply suggestion directly |
+| **Actionable with Committable** | Has `📝 Committable suggestion` **and is blocking** per `fx-dev/skills/dev/references/scope-contract.md` § Blocking | Verify the suggestion against the code, then apply. Never apply on sight — a committable suggestion is still a claim about the tree |
 | **General Feedback** | No special sections | Analyze and delegate to coder |
-| **Deferred** | Valid but out of scope for this PR | Track in PROJECT.md, reply, resolve |
+| **Deferred** | Valid but out of scope for this PR | Reply citing the exclusion, resolve. **No edit and no commit** — return the follow-up to the coordinator (`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions) |
 
 ### 3. Process Each Category
 
 #### Nitpicks/Trivial
-- Resolve immediately without changes
+
+The label is CodeRabbit's, not a verdict. **Run the filters first**: a
+project-rule, security, privacy or correctness defect carrying it is blocking
+and is fixed. Only once it clears none of them is it a nitpick.
+
+- Resolve without changes — an edit reopens the loop for something that changes
+  nothing
 - These are suggestions, not requirements
 
 #### Actionable with AI Prompt (PREFERRED)
@@ -212,15 +231,16 @@ values...
 **When feedback is valid but out of scope for the current PR:**
 
 1. **Load the `fx-dev:project-management` skill** to track the follow-up work
-2. **Add task to PROJECT.md** under the appropriate feature/section:
-   - Read current PROJECT.md structure
-   - Add a concise task describing the improvement
-   - Commit the PROJECT.md update
+2. **Return the follow-up to the coordinator** — the finding ledger or the PR
+   description. **Do not edit or commit anything in this PR**: the canonical
+   `deferred` disposition is reply-and-resolve with no edit, and a tracker commit
+   widens the change and reopens the review loop. Running standalone with no
+   coordinator, propose the entry to the user rather than committing it.
 3. **Reply to the thread** explaining the deferral:
-   - "Valid suggestion. Tracked as follow-up task in PROJECT.md for a future PR."
+   - "Valid suggestion, but out of scope for this PR: <the exclusion that covers it>. Returned as a follow-up rather than tracked here, so this PR is not widened."
 4. **Resolve the thread**
 
-**CRITICAL:** Never defer feedback without tracking it. "Acknowledged for follow-up" without a PROJECT.md entry is INCOMPLETE WORK.
+**CRITICAL:** Never defer feedback without recording it somewhere durable — but that record must not be a commit on this PR. A bare "acknowledged for follow-up" with no record anywhere is INCOMPLETE WORK; a `PROJECT.md` commit on this branch is a widened change.
 
 ### 4. Resolve Threads
 

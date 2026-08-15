@@ -300,8 +300,10 @@ wording. Stop when what remains would change nothing if it shipped uncorrected,
 and list those items once, non-blocking.
 
 **Tell Codex the bar and the settled ground in the prompt**, so it spends the
-pass where it pays. Every re-run prompt MUST carry, in addition to the Scope
-Brief:
+pass where it pays. **Every prompt carries this block — the first pass as well as
+every re-run.** Pass 1 is where a reviewer with no bar produces the largest crop
+of low-value findings, so omitting it there costs the most; on re-runs the
+CONVERGENCE PASS line and the do-not-re-report list are added on top.
 
 > **This block is a MIRROR** of `fx-dev/skills/dev/references/scope-contract.md`
 > § Blocking and § Three things that are not findings — the one case the

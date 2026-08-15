@@ -156,7 +156,7 @@ Report the trend when you stop, so the operator can see the shape rather than ta
 
 **Convergence is the goal. The bound is a runaway backstop, not a target, and reaching it is a failure to converge — never a stopping condition you are entitled to treat as success.**
 
-**Every review-convergence loop caps at 15 iterations.** That is the single number; skills MUST NOT set their own. It is deliberately far above what a healthy loop needs — a review that is working converges in single digits — so that hitting it means something is wrong rather than that the work was merely large.
+**Every review-convergence loop caps at 15 iterations, and the initial pass is iteration 1.** That is the single number; skills MUST NOT set their own, and none may count the bound from *after* the first pass — that quietly buys a sixteenth. It is deliberately far above what a healthy loop needs — a review that is working converges in single digits — so that hitting it means something is wrong rather than that the work was merely large.
 
 A loop should almost always end on one of the three signals above, all of which fire long before 15:
 
