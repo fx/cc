@@ -99,11 +99,15 @@ not handed it.
   Implementing its out-of-scope suggestions is scope creep with a reviewer's name
   on it.
 
-Triage by **materiality** as well as scope — see the materiality bar in the same
-reference. An in-scope item that would change nothing if it shipped uncorrected
-is an **observation, not a finding**, and is **resolved by replying with that
-reasoning** rather than by editing. The gate is zero *unresolved* Copilot
-threads, not zero observations acted on.
+Triage in the contract's order — **scope, then contract, then materiality**
+(`fx-dev/skills/dev/references/scope-contract.md` § Three filters). The middle
+one is not optional here: a violation of a project rule, or of a security or
+privacy invariant, is blocking by virtue of being a rule and never reaches the
+bar, so "it changes no behaviour" cannot demote it. Only what survives both
+earlier filters is ranked — and an in-scope item that would change nothing if it
+shipped uncorrected is then an **observation, not a finding**, and is **resolved
+by replying with that reasoning** rather than by editing. The gate is zero
+*unresolved* Copilot threads, not zero observations acted on.
 
 **Fix the class, not the instance** (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance).
 Copilot reports the site it read; sweep its siblings across this change's surface

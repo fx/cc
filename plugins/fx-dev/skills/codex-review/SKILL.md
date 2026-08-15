@@ -237,7 +237,7 @@ Notes:
 
 ## Workflow (fix → re-run → converge)
 
-Treat Codex's findings like self-review feedback and loop until the review is clean.
+Treat Codex's findings like self-review feedback and loop until the review has **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence) — no blocking finding left unresolved, which is not the same as no output.
 
 ### Step 1: Run the review with the Scope Brief prompt
 
@@ -272,8 +272,9 @@ than waiting it out.
 - **Nitpicks are immaterial by definition, so do not apply them.** They go in
   the closing note. Applying one produces a commit and Step 3 reruns against it,
   manufacturing the next pass to change something that changes nothing. If a
-  nitpick turns out to clear the bar, it was never a nitpick: fix it as the
-  blocking finding it is. There are no PR threads to resolve here (this is
+  nitpick turns out to be blocking — it violates a rule the project wrote down,
+  or it clears the bar — it was never a nitpick: fix it as the blocking finding
+  it is. There are no PR threads to resolve here (this is
   local); resolution = the code is fixed (or the finding is a deliberate
   non-issue).
 - **Verify before fixing.** A reviewer's premise can be wrong. When a finding
@@ -297,8 +298,10 @@ facts verified since the last pass, so Codex does not relitigate settled ground.
 
 **Converged does NOT mean zero output.** Codex will keep producing immaterial
 observations indefinitely; waiting for silence spends full review cycles on
-wording. Stop when what remains would change nothing if it shipped uncorrected,
-and list those items once, non-blocking.
+wording. Stop when what remains would change nothing if it shipped uncorrected
+**and none of it is a contract blocker** — a violation of a project rule or a
+security or privacy invariant blocks even where its behavioural impact is nil, so
+it can never be what "remains" — and list those items once, non-blocking.
 
 **Tell Codex the bar and the settled ground in the prompt**, so it spends the
 pass where it pays. **Every prompt carries this block — the first pass as well as
@@ -367,7 +370,7 @@ If the artifact is internally consistent and matches the tree, say so plainly.
 - **Cap at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound). The
   bound is a runaway backstop, not a target — convergence is the goal, and
   stopping at the bound is a failure to converge that you report as an
-  escalation, never as a clean pass. If Codex flags the same design decision in
+  escalation, never as convergence. If Codex flags the same design decision in
   two successive passes, that is a human call, not more edits — escalate it **by
   name** and stop rather than spending the remaining iterations. Each Codex pass
   on a real branch takes many minutes, so fix causes, not instances.
@@ -406,7 +409,8 @@ the PR; carry them into its description as a closing note.
 ## When to Use This Skill
 
 - **Pre-PR self-review:** run after `coderabbit-review` and before `pr-preparer`.
-  Both reviewers must come back clean before the PR is opened.
+  Both reviewers must have **converged** before the PR is opened — no blocking
+  finding left unresolved, not zero output.
 
 ## Notes
 

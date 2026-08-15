@@ -194,10 +194,16 @@ which is the push that reopens the loop. Every invocation below MUST carry, as
 its argument:
 
 1. The **Scope Brief**, verbatim (`fx-dev/skills/dev/references/scope-contract.md` § The Scope Brief).
-2. A **disposition per thread** — `blocking`, `immaterial`, or `deferred`, as
-   defined in `fx-dev/skills/dev/references/scope-contract.md` § Resolver
-   dispositions. Yours is authoritative: it is set with the Scope Brief and the
-   ledger in hand, which the resolver does not have.
+2. A **disposition for every thread that carries a finding** — `blocking`,
+   `immaterial`, or `deferred`, as defined in
+   `fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions.
+   Yours is authoritative: it is set with the Scope Brief and the ledger in hand,
+   which the resolver does not have. **Verify the premise before disposing of
+   it** — a thread describing code that no longer exists, or misreading a
+   deliberate convention, is a false positive rather than a finding. List it as
+   undisposed with the reason, and let the resolver's outdated/incorrect handler
+   take it; forcing a disposition onto one overrides that handler and loses the
+   `REVIEW.md` entry that stops the finding recurring.
 
 **If Copilot threads exist:**
 ```
@@ -221,6 +227,13 @@ Skill tool: skill="fx-dev:resolve-codecov-feedback",
 here, not a shorthand — the resolver then re-derives triage it cannot see and
 edits for findings you classified immaterial or deferred.
 
+**List false positives separately, not as a disposition.** Append
+`— false premise (resolver's own handler): <thread id> (<what does not hold>)`
+for any thread you verified and rejected. That leaves the resolver's
+outdated/incorrect path — reply, resolve, and update `REVIEW.md` where a
+convention was misread — reachable, which an authoritative disposition would
+close off.
+
 **If multiple exist:** Prefer running Copilot and CodeRabbit resolvers **in parallel** by spawning each as a sub-agent in the same message (see `fx-dev:dev` Step 6.3 for the exact pattern). Codecov is sequential after them since coverage fixes typically require code from the other resolvers to be in place first.
 
 ### 5. Verify All Resolved AND Loop Until Convergence
@@ -231,8 +244,8 @@ After invoking resolver skills, re-query to confirm all threads are resolved AND
 
 1. **Nudge Copilot for the current head SHA** via `fx-dev:copilot-review` (its Step 1). **Copilot does NOT re-review pushed commits on its own.** Skipping this makes the rest of the loop meaningless: you will poll, see nothing, and "converge" on code no reviewer has read. Issue the nudge and discard its response — it is fire-and-forget, never evidence, and having issued it is never a substitute for step 6's received-review check.
 2. Wait for all reviewer checks to reach terminal state (use the dedicated waiters: `fx-dev:copilot-review` for Copilot, `fx-dev:coderabbit-review` for CodeRabbit). **Do not hand-roll a `gh api` / GraphQL polling loop in their place** — a hand-rolled loop only observes, never requests, and will happily accept a review of a superseded commit.
-3. Re-query unresolved threads (per below).
-4. If the breakdown array is non-empty, re-invoke the relevant resolver(s).
+3. Re-run **Step 2's full query** — `id`, `path`, `line` and comment bodies — and re-triage every unresolved thread, including the ones the last cycle's push created. The breakdown query below counts threads by reviewer; it cannot feed step 4, which refuses a resolver invocation without a disposition per thread, and a disposition cannot be assigned to a name and a number. Every iteration repeats the fetch and the triage, not just the first.
+4. If the breakdown array is non-empty, re-invoke the relevant resolver(s) with the dispositions from step 3.
 5. After fixes are pushed, restart at step 1 — the push created unreviewed commits.
 6. Stop when **no blocking finding is unresolved** — not merely when the newest pass produced no *new* one. A blocker carried from an earlier pass still blocks even if this pass did not repeat it, and a suppressed Copilot item creates no thread, so neither a zero-thread count nor a quiet pass discharges it. Track them and clear the list. That state must hold on a head SHA that was actually reviewed (verify: the newest Copilot review's `commit_id` equals `headRefOid`), **every automated thread on that head is resolved**, and **the suppressed-comments block for that head is empty or fully triaged** (see §3 *Identify Unresolved Feedback by Source*, not this loop's step 3 — those findings create no thread, so a zero-thread count says nothing about them). Immaterial findings resolved by reply satisfy this — they are not "new feedback" for the purpose of another cycle, because actioning them would produce a push and therefore manufacture the next round's input. Cap at 15 outer iterations (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) and escalate to the user if not converged — reaching the bound is a failure to converge, reported as such, not a pass. Escalate earlier on a repeated disagreement rather than spending the remaining iterations; and when the blocking count rises **with every new finding in one class**, fix that cause first — a count rising across different categories means the review is still productive, not diverging.
 

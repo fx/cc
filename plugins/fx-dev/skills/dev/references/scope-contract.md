@@ -114,6 +114,8 @@ Every finding handed to a resolver carries exactly one, and they are defined her
 
 **A disposition assigned by the coordinator is authoritative and overrides a resolver's own categorisation.** The coordinator holds the Scope Brief and the ledger; a resolver classifying from the comment text alone does not, and its local heuristics — a `[nitpick]` prefix, a tracker-update path — must not override a disposition set with that context.
 
+**Because it is authoritative, assign one only where there is a finding to dispose of.** A reviewer thread is not automatically a finding: one whose premise does not hold — it describes code that no longer exists, or it misreads a deliberate project convention — is a false positive, and none of the three dispositions is true of it. Verify the premise first. Where it fails, leave the thread **undisposed and say why**, so the resolver runs its own outdated/incorrect handling: those paths reply, resolve, and where the convention was misread record it in `REVIEW.md` so every reviewer stops raising it. Labelling such a thread `immaterial` to fill the field overrides that handling and loses the `REVIEW.md` entry — the one output that stops the finding coming back. An undisposed thread is filled in downstream; a wrongly disposed one is not.
+
 ### The bar
 
 | Tier | Examples | Treatment |

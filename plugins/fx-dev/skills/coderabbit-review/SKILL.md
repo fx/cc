@@ -5,9 +5,9 @@ description: "Run CodeRabbit's optional AI review. PRIMARY path: run it LOCALLY 
 
 # CodeRabbit Review
 
-CodeRabbit reviews code with AI. The **primary** way to use it is **locally, via the `cr` CLI, BEFORE opening a PR** — as part of pre-PR self-review, alongside `/review` and `/simplify`. Prefer a clean local result when the service is available. A **fallback** path handles CodeRabbit's PR-level review for repos where its GitHub App is configured to auto-review PRs.
+CodeRabbit reviews code with AI. The **primary** way to use it is **locally, via the `cr` CLI, BEFORE opening a PR** — as part of pre-PR self-review, alongside `/review` and `/simplify`. Prefer a **converged** local result when the service is available (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, which is not the same as no output). A **fallback** path handles CodeRabbit's PR-level review for repos where its GitHub App is configured to auto-review PRs.
 
-**IMPORTANT — CodeRabbit is optional when rate-limited.** If the CLI, API, GitHub check, or wait script reports a CodeRabbit quota/rate limit, report it once and continue without CodeRabbit. Do not sleep, poll, retry after a cooldown, ask the user to wait, or block PR creation/merge solely on CodeRabbit throttling. Resolve blocking findings already received before the limit, then mark the CodeRabbit pass as `skipped (rate-limited)`. Immaterial observations are not resolved by editing — actioning one manufactures the next round's input. This exception applies only to CodeRabbit; it does not relax Copilot, CI, tests, or other merge gates.
+**IMPORTANT — CodeRabbit is optional when rate-limited.** If the CLI, API, GitHub check, or wait script reports a CodeRabbit quota/rate limit, report it once and continue without CodeRabbit. Do not sleep, poll, retry after a cooldown, ask the user to wait, or block PR creation/merge solely on CodeRabbit throttling. **Throttling waives only the review passes that never ran — never anything already delivered.** Resolve blocking findings already received before the limit, and in Mode 2 settle *every* thread CodeRabbit already posted, immaterial and deferred ones included, by replying and resolving. Only then mark the CodeRabbit pass as `skipped (rate-limited)`. Skipping that leaves an open conversation behind a gate that requires zero unresolved CodeRabbit threads, so the "degraded" PR is still blocked. Immaterial observations are settled by reply and never by editing — actioning one manufactures the next round's input. This exception applies only to CodeRabbit; it does not relax Copilot, CI, tests, or other merge gates.
 
 ## ⛔ Local-First: Run CodeRabbit BEFORE Opening the PR
 
@@ -15,7 +15,7 @@ Catch CodeRabbit's feedback **before** a PR exists, using the `cr` CLI on your l
 
 - Run `cr` during pre-PR self-review (alongside `/simplify` and `/review`), fix every **blocking** finding, and re-run until none is left unresolved (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — the ledger test, not "the latest pass was quiet"). Immaterial observations get one closing note and do not buy another run — see the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
 - Open the PR once the local review has **converged** — no blocking finding left unresolved — **or is correctly degraded as `skipped (rate-limited)`**. Resolve the blocking findings already received before proceeding; immaterial ones travel as a closing note.
-- A clean local review does NOT remove the merge gates — but it usually means CodeRabbit's PR-level review (when the GitHub App is configured) lands clean on the first pass, and often there is nothing left to resolve on the PR at all.
+- A converged local review does NOT remove the merge gates — but it usually means CodeRabbit's PR-level review (when the GitHub App is configured) lands with nothing blocking on the first pass, and often there is nothing left to resolve on the PR at all.
 
 ## The `cr` CLI
 
@@ -96,7 +96,7 @@ Use `cr review --agent --base main` to scope to the branch's diff against `main`
 
 - If `cr` reports it is **not authenticated**, **STOP and report to the user** — the workspace is expected to be authed. **Do NOT run `cr auth login`** (it is interactive). Do not work around it.
 - If `cr` is **not installed / unavailable**, skip to Mode 2 (resolve at the PR level after opening) and report this to the user once.
-- If `cr` reports a **rate limit, quota limit, or cooldown**, stop the CodeRabbit loop immediately. Report the skip once, resolve any blocking findings already returned, and continue to PR creation without requiring a clean rerun.
+- If `cr` reports a **rate limit, quota limit, or cooldown**, stop the CodeRabbit loop immediately. Report the skip once, resolve any blocking findings already returned, and continue to PR creation without requiring a converged rerun.
 
 ### Step 2: Resolve every blocking finding
 
@@ -105,7 +105,7 @@ Treat findings like self-review feedback:
 - **Triage in the contract's order — scope, then contract, then materiality** (`fx-dev/skills/dev/references/scope-contract.md`). An out-of-scope finding is deferred however material it looks, per the triage rules above; project rules and security/privacy invariants block regardless of the bar; only what remains is ranked. Blocking findings are fixed; immaterial ones — wording, formatting, a count nothing keys on, an entry missing from a list the artifact declares non-exhaustive — go in one closing note and MUST NOT drive another iteration. CodeRabbit's own `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an input to that judgment, not a substitute for it.
 - **Fix the class, not the instance** (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance). CodeRabbit reports the site it read; sweep the siblings across this change's surface and fix them together, then prove the sweep with a search that would fail if one remained. **Do not re-run with a class half-closed.**
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
-- **Nitpicks are immaterial by definition, so do not apply them.** They go in the closing note. Applying one produces a commit, and Step 3 then reruns against it — manufacturing the next pass to change something that changes nothing. If a nitpick turns out to clear the bar, it was never a nitpick: fix it as the blocking finding it is.
+- **Nitpicks are immaterial by definition, so do not apply them.** They go in the closing note. Applying one produces a commit, and Step 3 then reruns against it — manufacturing the next pass to change something that changes nothing. If a nitpick turns out to be blocking — it violates a rule the project wrote down, or it clears the bar — it was never a nitpick: fix it as the blocking finding it is.
 - **Verify before fixing.** A finding's premise can be wrong. Check any claim it makes about the tree; when it does not hold, reject the finding with the evidence rather than changing working code to satisfy a misreading.
 - There are no PR threads to resolve here — this is local. Resolution = the code is fixed (or the finding is a deliberate non-issue).
 
@@ -113,14 +113,14 @@ Treat findings like self-review feedback:
 
 Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until no blocking finding is left unresolved** — including any carried from an earlier pass, not merely none new this pass.
 
-**Converged does NOT mean zero output.** Waiting for silence spends full review cycles on wording. Stop when what remains would change nothing if it shipped uncorrected, and list those items once, non-blocking.
+**Converged does NOT mean zero output.** Waiting for silence spends full review cycles on wording. Stop when what remains would change nothing if it shipped uncorrected **and none of it is a contract blocker** — a violation of a project rule or a security or privacy invariant blocks even where its behavioural impact is nil, so it can never be what "remains" — and list those items once, non-blocking.
 
 - **Cap at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) — a runaway backstop, not a target. Convergence is the goal; reaching the bound is a failure to converge, and you report it as an escalation rather than a pass. If CodeRabbit keeps flagging the same design decision across two passes, that is a human call, not more code edits — escalate it **by name** and stop, without spending the remaining iterations.
 - Watch the shape, and count only what blocks: blocking findings still arriving → keep going; **none left unresolved** → converged, however many immaterial observations it produced; the same disagreement twice → escalate. Converged is the ledger test in `fx-dev/skills/dev/references/scope-contract.md` § Convergence — a quiet latest pass does not discharge a blocker carried from an earlier one.
 - **Rate-limit exception:** stop immediately on throttling; do not consume iterations waiting for cooldowns.
 - When you stop, report the per-pass trend and whether the last round's fixes were themselves reviewed.
 
-### Step 4: Open the PR when clean or correctly degraded
+### Step 4: Open the PR when converged or correctly degraded
 
 A **converged** local CodeRabbit review — no blocking finding left unresolved, per `fx-dev/skills/dev/references/scope-contract.md` § Convergence — is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once every blocking finding already received is resolved — the degradation waives the *unrun* remainder of the review, never a finding it already delivered. Do not open the PR with known unresolved blocking findings; immaterial observations travel as a closing note in the PR description.
 
@@ -183,9 +183,13 @@ query {
 }' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and (.comments.nodes[0].author.login | tostring | contains("coderabbitai")))]'
 ```
 
-Assign each thread exactly one of `blocking`, `immaterial`, or `deferred`
-(`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions). Yours
-is authoritative — you hold the Scope Brief; the resolver does not.
+Assign one of `blocking`, `immaterial`, or `deferred`
+(`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions) to
+each thread **that carries a finding**. Yours is authoritative — you hold the
+Scope Brief; the resolver does not. Verify each premise first: a thread about
+code that no longer exists, or one misreading a deliberate convention, is a false
+positive and gets **no** disposition. List it as undisposed with the reason so
+the resolver's outdated/incorrect handler takes it, `REVIEW.md` entry and all.
 
 ### Step 2: Resolve Feedback
 
@@ -259,6 +263,6 @@ Never call the Agent tool from inside a sub-agent context.
 - ✅ No cooldown waits or retries remain when the rate-limit exception applies
 
 **Mode 2 (PR-level, fallback / optional merge gate):**
-- ✅ CodeRabbit check is terminal with a passing conclusion and all threads are resolved, **or** CodeRabbit rate-limited and the gate is recorded as `skipped (rate-limited)`
+- ✅ CodeRabbit check is terminal with a passing conclusion and all threads are resolved, **or** CodeRabbit rate-limited, **every thread it had already delivered is settled**, and the gate is recorded as `skipped (rate-limited)`. The degradation waives the unrun remainder of the review, never a thread already on the PR
 - ✅ Any **blocking** findings already received are fixed and pushed. A correct-but-immaterial observation is resolved by reply, not by an edit — editing it reopens the review loop
 - ✅ CodeRabbit throttling alone does not block merge

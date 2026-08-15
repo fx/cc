@@ -251,7 +251,7 @@ duvet# A pull request MUST NOT be merged while any review thread on it from a co
 
 ### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
 
-> **CodeRabbit and Codex run LOCALLY first.** Implementing sub-agents attempt local CodeRabbit via `cr` and run local Codex via `codex review --base main` during pre-PR self-review. Prefer both clean. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown. Gate 2b is the fallback PR-level CodeRabbit review when the GitHub App is configured, with the same rate-limit exception.
+> **CodeRabbit and Codex run LOCALLY first.** Implementing sub-agents attempt local CodeRabbit via `cr` and run local Codex via `codex review --base main` during pre-PR self-review. Prefer both **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown. Gate 2b is the fallback PR-level CodeRabbit review when the GitHub App is configured, with the same rate-limit exception.
 
 **As coordinator, YOU handle reviewer waits directly. Do NOT spawn sub-agents for reviewer waits — sub-agents in this team context cannot spawn their own sub-agents, and `fx-dev:dev` mode A would fail. You ARE the root agent for the team; invoke each reviewer skill in the foreground sequentially, OR launch the slow waiter (CodeRabbit) as a background `Bash` process while you handle Copilot in the foreground.**
 
