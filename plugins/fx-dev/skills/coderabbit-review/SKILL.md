@@ -112,7 +112,7 @@ Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until a pass p
 
 **Converged does NOT mean zero output.** Waiting for silence spends full review cycles on wording. Stop when what remains would change nothing if it shipped uncorrected, and list those items once, non-blocking.
 
-- **Cap at 4 iterations.** If CodeRabbit keeps flagging the same design decision after 4 passes, that is a human call, not more code edits — escalate it **by name** and stop.
+- **Cap at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) — a runaway backstop, not a target. Convergence is the goal; reaching the bound is a failure to converge, and you report it as an escalation rather than a pass. If CodeRabbit keeps flagging the same design decision across two passes, that is a human call, not more code edits — escalate it **by name** and stop, without spending the remaining iterations.
 - Watch the shape, and count only what blocks: blocking findings still arriving → keep going; a pass with none → converged, however many immaterial observations it produced; the same disagreement twice → escalate.
 - **Rate-limit exception:** stop immediately on throttling; do not consume iterations waiting for cooldowns.
 - When you stop, report the per-pass trend and whether the last round's fixes were themselves reviewed.
@@ -187,7 +187,7 @@ query {
 
 If this count is 0 AND the CodeRabbit check is `success`, the gate is PASSED.
 
-**Cap the loop at 4 iterations** — if CodeRabbit is still posting new feedback after 4 wait+resolve cycles, escalate to the user. Almost always this means CodeRabbit and the codebase disagree on a design decision that needs human input.
+**Cap the loop at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) — if CodeRabbit is still posting new blocking feedback at the bound, escalate to the user and say the loop did not converge. Almost always a loop that runs that long means CodeRabbit and the codebase disagree on a design decision that needs human input — which the same-disagreement-twice rule should have caught far earlier. Escalate when you see it, not at iteration 15.
 
 **Threads must all be resolved, but resolution is not the same as a fix.** An immaterial thread is resolved by replying with the reason it is not being actioned — the gate is zero *unresolved* threads, not zero observations acted on. Re-pushing for another CodeRabbit pass to chase immaterial items is exactly the churn the materiality bar exists to stop.
 

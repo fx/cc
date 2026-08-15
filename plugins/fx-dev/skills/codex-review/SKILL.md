@@ -331,9 +331,13 @@ report it as a blocking finding however carefully it is reasoned.
 If the artifact is internally consistent and matches the tree, say so plainly.
 ```
 
-- **Cap at 4 iterations.** If Codex keeps flagging the same design decision after
-  4 passes, that is a human call, not more edits — escalate it **by name** and
-  stop.
+- **Cap at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound). The
+  bound is a runaway backstop, not a target — convergence is the goal, and
+  stopping at the bound is a failure to converge that you report as an
+  escalation, never as a clean pass. If Codex flags the same design decision in
+  two successive passes, that is a human call, not more edits — escalate it **by
+  name** and stop rather than spending the remaining iterations. Each Codex pass
+  on a real branch takes many minutes, so fix causes, not instances.
 - Watch the shape, and count only what blocks. Blocking findings still arriving
   → keep going. A pass with none → converged, however many immaterial
   observations it produced. The same disagreement twice → escalate.

@@ -331,7 +331,9 @@ Proceed to Step 5 when all of the following are true:
 3. Every available review channel completed its initial pass or has a documented permitted degradation.
 4. One verification pass over the latest affected delta produces no new blocking finding.
 
-`follow-up/out-of-scope` entries and non-contract suggestions do not block PR creation. Limit each review channel to two remediation/delta-verification rounds after its initial pass, with four post-review fix rounds total. At the bound, create the PR if only follow-up/out-of-scope entries remain. If a blocking-class finding remains, STOP and report it to the user. A contract amendment may change product scope, but it cannot waive mandatory correctness, security, privacy, testing, or merge rules. Perfect local convergence is not required.
+`follow-up/out-of-scope` entries and non-contract suggestions do not block PR creation. Each review channel caps at **15 remediation/delta-verification rounds** after its initial pass — the single bound defined in `references/scope-contract.md` § The iteration bound, which no skill overrides. **Convergence is the goal, and the bound is a runaway backstop, not a target.** Reaching it means the loop failed to converge; report it that way. At the bound, create the PR only if every remaining entry is `follow-up/out-of-scope` with tier `n/a`. If a blocking entry remains, STOP and report it to the user — the bound never waives one. A contract amendment may change product scope, but it cannot waive mandatory correctness, security, privacy, testing, or merge rules.
+
+**Do not spend the headroom.** The bound is far above what a healthy channel needs; the exits that should actually end a loop — converged, the same disagreement twice, a rising blocking count of one class — all fire in single digits. A round that resolves only immaterial items is churn at any iteration number, and the convergence rule already forbids it.
 
 ---
 

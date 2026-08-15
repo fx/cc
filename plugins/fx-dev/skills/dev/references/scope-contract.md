@@ -132,9 +132,27 @@ Track findings per pass and watch the shape, not just the count:
 
 Report the trend when you stop, so the operator can see the shape rather than take "clean" on trust: *"Findings per pass: 9, 4, 1, 0 blocking. Stopping — three immaterial wording items remain, listed below."*
 
-**A rising count is a divergence signal, not progress.** If a pass produces more blocking findings than the one before it and they are all the same class, the last round's fix is generating them. Stop and address the cause rather than the instances — and if the cause is a design choice with two defensible answers, that is an escalation to the user, not a fifth pass.
+**A rising count is a divergence signal, not progress.** If a pass produces more blocking findings than the one before it and they are all the same class, the last round's fix is generating them. Stop and address the cause rather than the instances — and if the cause is a design choice with two defensible answers, that is an escalation to the user, not another pass.
 
-**State honestly what the last pass did not cover.** If you stop after applying fixes that were never themselves reviewed, say so.
+**State honestly what the last pass did not cover.** If you stop after applying fixes that were never themselves reviewed, say so. A loop that stops at the bound below has *not* converged, and reporting it as clean is a false result.
+
+### The iteration bound
+
+**Convergence is the goal. The bound is a runaway backstop, not a target, and reaching it is a failure to converge — never a stopping condition you are entitled to treat as success.**
+
+**Every review-convergence loop caps at 15 iterations.** That is the single number; skills MUST NOT set their own. It is deliberately far above what a healthy loop needs — a review that is working converges in single digits — so that hitting it means something is wrong rather than that the work was merely large.
+
+A loop should almost always end on one of the three signals above, all of which fire long before 15:
+
+- **Converged** — a pass with no blocking findings. The only successful exit.
+- **The same disagreement twice** — escalate by name. Do not spend the remaining iterations re-arguing it.
+- **A rising count of one class** — the last fix is generating them. Fix the cause, or escalate the design choice.
+
+Those exits are what keep the loop short; the bound only catches a loop none of them caught. **Do not treat the headroom as licence to keep going** — an iteration that fixes only immaterial items is churn whether it is the 3rd or the 13th, and the convergence rule already forbids it.
+
+When you stop at the bound, say so explicitly, report the per-pass trend, name what is still unresolved, and hand it to the user. "Reached 15 iterations" is an escalation, not a pass.
+
+**Cost is real and worth stating.** A single reviewer pass on a substantial branch can take ten minutes or more, so an unattended loop that actually runs to 15 can consume hours. That is the intended trade — correctness over speed — but it is a reason to fix causes rather than instances, not a budget to spend.
 
 ## The sprawl stop rule
 

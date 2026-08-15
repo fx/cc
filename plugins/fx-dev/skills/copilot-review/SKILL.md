@@ -297,7 +297,7 @@ on its own never passes it (**D4**).
 
 Resolving feedback usually means pushing commits. Those commits are **unreviewed**, and Copilot will not look at them by itself.
 
-If the head SHA changed since the review in Step 2, go back to **Step 1** — nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. Cap at 4 iterations and escalate to the user if it has not settled.
+If the head SHA changed since the review in Step 2, go back to **Step 1** — nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. Cap at 15 iterations (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) and escalate to the user if it has not settled. The bound is a backstop, not a budget: escalate as soon as the same disagreement repeats or the blocking count rises, and remember that every iteration here costs a full Copilot wait cycle.
 
 **Convergence is: no new blocking findings, every thread resolved, and the suppressed block empty-or-triaged — all on a reviewed head.** It is NOT "zero new threads". Resolving an immaterial thread by reply creates no commit, so the head does not move and no further pass is owed; nudging for another review to chase a zero-thread pass spends a wait cycle to change nothing. **Only a push restarts this loop**, which is why only blocking findings should produce one.
 
