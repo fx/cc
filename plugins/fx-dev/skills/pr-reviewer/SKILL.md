@@ -142,11 +142,17 @@ For projects with vendor submodules (e.g., `vendor/` directory):
   narrow that definition here. Label each one with its kind: contract blocker,
   Material, or Substantive.]
 
+### Deferred (out of scope, not blocking)
+- [Each finding the Scope Brief excludes, with the exclusion that covers it.
+  Reported, never silently dropped, and never fixed here.]
+
 ### Closing note (non-blocking)
-- [One unnumbered paragraph for everything that clears neither tier — wording,
+- [One unnumbered paragraph for **immaterial** observations only — wording,
   formatting, naming preference, counts nothing keys on, optional improvements.
-  There is no middle tier: if it is in scope and does not block, it belongs
-  here, collapsed into prose and never itemized as findings.]
+  Nothing blocking belongs here: a contract blocker carries no materiality tier
+  (`fx-dev/skills/dev/references/scope-contract.md` § Three filters) and is still
+  blocking, so "clears neither tier" is not the test. In scope and not
+  immaterial means it goes under Blocking.]
 
 ### Next
 - [Clear actions]

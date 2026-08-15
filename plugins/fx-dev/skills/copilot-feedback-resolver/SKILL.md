@@ -186,7 +186,7 @@ carrying it is still blocking. Never auto-resolve on the prefix alone.
 | **Nitpick** | Contains `[nitpick]` prefix **and clears none of the filters below** | Reply and resolve without editing |
 | **Outdated** | Refers to code that no longer exists | Reply with explanation, resolve |
 | **Incorrect** | Misunderstands project conventions | Reply with explanation, resolve, update `REVIEW.md` |
-| **Valid — blocking** | Clears the bar — see `fx-dev/skills/dev/references/scope-contract.md` § Blocking; do not narrow it here | Delegate to coder sub-agent to fix |
+| **Valid — blocking** | **Is blocking** per `fx-dev/skills/dev/references/scope-contract.md` § Blocking — which includes a contract blocker, and those never pass through the bar at all. Do not narrow it here | Delegate to coder sub-agent to fix |
 | **Valid — immaterial** | Correct, but would change nothing if it shipped uncorrected | Reply with that reasoning, resolve. **Do not edit** — a fix push reopens the review loop for an item that changes nothing |
 | **Deferred** | Valid but out of scope for this PR | Reply citing the exclusion, resolve. **No edit and no commit** — return the follow-up to the coordinator (`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions) |
 
@@ -257,8 +257,10 @@ mutation {
 
 #### Valid — blocking
 
-Only for concerns that clear the bar — `fx-dev/skills/dev/references/scope-contract.md`
-§ Blocking is the definition, and this section does not restate it.
+For any concern that **is blocking** under `fx-dev/skills/dev/references/scope-contract.md`
+§ Blocking, which this section does not restate. Note that a contract blocker —
+a project rule, or a security or privacy invariant — is blocking without ever
+being ranked by the bar, so "did it clear the bar" is the wrong question for one.
 
 1. Delegate to coder sub-agent with:
    - PR number and title
