@@ -285,7 +285,7 @@ than waiting it out.
 Run the review again after fixes, **carrying the same Scope Brief prompt plus
 anything newly established**. Note the iteration number in the prompt and add
 facts verified since the last pass, so Codex does not relitigate settled ground.
-**Repeat Steps 1 → 2 until a pass produces no material or substantive findings**
+**Repeat Steps 1 → 2 until a pass produces no contract blockers and no material or substantive findings**
 — per the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
 
 **Converged does NOT mean zero output.** Codex will keep producing immaterial
@@ -302,10 +302,13 @@ CONVERGENCE PASS <N>. Prior passes found <count> issues; all fixed except <the
 rejected ones and why>. Do not re-report them.
 
 Report findings that would change behaviour, break a build or test, make the
-artifact unimplementable, state something false, or expose a security, privacy,
-or data-loss problem — including a leaked credential, internal URL, or private
-identifier in documentation or examples. Wording, formatting, and counts nothing
-keys on: one closing note, not findings.
+artifact unimplementable, or expose a security, privacy, or data-loss problem —
+including a leaked credential, internal URL, or private identifier in
+documentation or examples. A false statement counts when a reader would act on
+it; a wrong number nothing keys on does not. Also report a genuine ambiguity a
+reader could act on two ways, and a missing step that would be discovered late
+and cost a cycle — those block too. Wording, formatting, and counts nothing keys
+on: one closing note, not findings.
 
 Where this artifact declares a list illustrative and a rule authoritative,
 assess the RULE. A further missing list entry is not a finding.
@@ -343,7 +346,7 @@ it before the next iteration rather than filtering by hand again.
 
 ### Step 4: Open the PR once it has converged
 
-A **converged** Codex review — a pass with no material or substantive findings —
+A **converged** Codex review — a pass with no contract blockers and no material or substantive findings —
 alongside a converged CodeRabbit review is the gate to PR creation in the SDLC
 (`fx-dev:dev` Step 4.5 → Step 5). Do not open the PR with unresolved material or
 substantive Codex findings. Outstanding **immaterial** observations do not hold

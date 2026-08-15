@@ -108,7 +108,7 @@ Treat findings like self-review feedback:
 
 ### Step 3: Re-run until it converges (REQUIRED)
 
-Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until a pass produces no material or substantive findings.**
+Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until a pass produces no contract blockers and no material or substantive findings.**
 
 **Converged does NOT mean zero output.** Waiting for silence spends full review cycles on wording. Stop when what remains would change nothing if it shipped uncorrected, and list those items once, non-blocking.
 
@@ -119,7 +119,7 @@ Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until a pass p
 
 ### Step 4: Open the PR when clean or correctly degraded
 
-A **converged** local CodeRabbit review — no material or substantive findings — is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once the material and substantive findings already received are addressed. Do not open the PR with known unresolved material or substantive findings; immaterial observations travel as a closing note in the PR description.
+A **converged** local CodeRabbit review — no contract blockers and no material or substantive findings — is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once the material and substantive findings already received are addressed. Do not open the PR with known unresolved material or substantive findings; immaterial observations travel as a closing note in the PR description.
 
 ---
 
@@ -208,7 +208,7 @@ Never call the Agent tool from inside a sub-agent context.
 ## Success Criteria
 
 **Mode 1 (local, primary):**
-- ✅ `cr review --agent` reports **no material or substantive findings** after fixes, **or** the service rate-limited and the pass is recorded as `skipped (rate-limited)`. Remaining immaterial observations do not block — they are carried as one closing note, per the materiality bar
+- ✅ `cr review --agent` reports **no contract blockers and no material or substantive findings** after fixes, **or** the service rate-limited and the pass is recorded as `skipped (rate-limited)`. Remaining immaterial observations do not block — they are carried as one closing note, per the materiality bar
 - ✅ All material and substantive findings received before any limit are resolved and committed
 - ✅ No cooldown waits or retries remain when the rate-limit exception applies
 

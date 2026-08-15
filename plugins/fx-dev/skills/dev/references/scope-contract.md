@@ -84,7 +84,7 @@ Materiality is the **last** of three, and applying it out of order produces the 
 2. **Contract** — is it a violation of a project rule, security or privacy invariant, or another mandatory requirement the project wrote down? Those are **blocking by virtue of being rules**, and the bar does not filter them. The project already decided they matter; that decision is not a reviewer's to re-make per finding.
 3. **Materiality** — for everything left, which is findings a reviewer originates from its own judgment: does acting on it change anything?
 
-A finding that fails filter 1 is deferred. One that passes filter 2 is blocking. Only what reaches filter 3 is ranked by the bar below.
+A finding that fails filter 1 is deferred. One that passes filter 2 is a **contract blocker** — blocking on its own terms, and never ranked by the bar. Only what reaches filter 3 is ranked below. Contract blockers are unranked but not unblocking: convergence requires zero of them as well as zero material and substantive findings.
 
 ### The bar
 
@@ -110,12 +110,13 @@ When unsure which tier something is, ask: *if this shipped uncorrected, what bre
 
 ### Convergence
 
-**A review has converged when a pass produces no material or substantive findings — not when it produces zero output.** Zero is usually unreachable and waiting for it burns cycles on immaterial churn.
+**A review has converged when a pass produces no unresolved contract blockers and no material or substantive findings — not when it produces zero output.** Zero is usually unreachable and waiting for it burns cycles on immaterial churn. An outstanding contract blocker prevents convergence by itself: it is unranked precisely because the project already decided it blocks, so "no material or substantive findings" never clears it.
 
 Track findings per pass and watch the shape, not just the count:
 
+- **Contract blockers outstanding** — not converged, whatever the tiers did.
 - **Material or substantive findings still arriving, in new categories** — keep going. The review is still working.
-- **No material or substantive findings this pass** — converged, whatever the immaterial count did. Stop, and say so: report the trend and what remains below the bar. A pass that falls from five immaterial observations to three *different* immaterial observations has converged; the drop is churn, not progress.
+- **No contract blockers and no material or substantive findings this pass** — converged, whatever the immaterial count did. Stop, and say so: report the trend and what remains below the bar. A pass that falls from five immaterial observations to three *different* immaterial observations has converged; the drop is churn, not progress.
 - **The same disagreement in successive passes** — stop. That is a human decision, not a review outcome. Escalate it by name.
 
 Report the trend when you stop, so the operator can see the shape rather than take "clean" on trust: *"Findings per pass: 9, 4, 1, 0 material. Stopping — three immaterial wording items remain, listed below."*

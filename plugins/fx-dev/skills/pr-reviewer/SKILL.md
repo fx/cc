@@ -137,17 +137,18 @@ For projects with vendor submodules (e.g., `vendor/` directory):
 **Ready**: YES/NO
 
 ### Blocking
-- [Material findings: wrong behaviour, data loss, security, privacy, a build or
-  test that will fail, a false stated fact, a project-rule violation]
+- [Contract blockers: a project, security, or privacy rule violation — blocking
+  by virtue of being a rule, never ranked by the bar]
+- [Material findings: wrong behaviour, data loss, security, a build or test that
+  will fail, a stated fact that is false AND that a reader would act on]
 - [Substantive findings: a genuine ambiguity a reader could act on two ways, a
   missing step that would be discovered late]
 
-### Suggestions
-- [Optional improvements that are in scope but not blocking]
-
 ### Closing note (non-blocking)
-- [One unnumbered paragraph for everything immaterial — wording, formatting,
-  naming preference, counts nothing keys on. Never itemized as findings.]
+- [One unnumbered paragraph for everything that clears neither tier — wording,
+  formatting, naming preference, counts nothing keys on, optional improvements.
+  There is no middle tier: if it is in scope and does not block, it belongs
+  here, collapsed into prose and never itemized as findings.]
 
 ### Next
 - [Clear actions]
