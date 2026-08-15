@@ -308,6 +308,8 @@ The Codex CLI takes the scope as its review prompt, so this pass is the one wher
 
 #### Remediation and Delta Verification
 
+**Record each finding's class, not just its location** (`references/scope-contract.md` § Fix the class, not the instance). A reviewer reports the instance it read; the ledger entry names the defect pattern and every site in the change's surface that exhibits it, so a fix closes the class rather than buying the next cycle its input. A ledger entry is not resolved while a sibling of its class is open, and a reviewer MUST NOT be re-run with a class half-closed.
+
 Fix only findings classified `required-by-contract` or `regression-caused-by-change`. After a fix commit:
 
 1. Rerun the reviewer or check that originated the blocking finding.

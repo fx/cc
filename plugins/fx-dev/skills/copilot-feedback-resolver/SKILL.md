@@ -165,6 +165,12 @@ query {
 
 For each unresolved Copilot comment:
 
+**Fix the class, not the instance** (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance).
+Copilot comments on the site it read. Before pushing a fix, find every sibling of
+that defect within this change's surface and fix them together — otherwise the
+next Copilot pass reports them as new findings and the loop spends a full wait
+cycle per sibling. Never push with a class half-closed.
+
 **If the coordinator supplied per-thread dispositions, they win.** A disposition
 from `fx-dev:resolve-pr-feedback` is set with the Scope Brief and the finding
 ledger in hand; this table classifies from the comment text alone. Apply the

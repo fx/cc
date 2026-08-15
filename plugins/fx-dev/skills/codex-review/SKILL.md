@@ -267,6 +267,7 @@ than waiting it out.
   immaterial ones — wording, formatting, a count nothing keys on, an entry
   missing from a list the artifact declares non-exhaustive — go into one closing
   note and MUST NOT drive another iteration.
+- **Fix the class, not the instance** (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance). Codex reports the site it read; treat it as one instance until you have proved it unique, sweep the lexical, altitude, symmetry and enumeration axes across this change's surface, and fix them in one commit. Prove the sweep with a search whose empty result is the evidence — normalising whitespace, and never filtering out the file under review. **Do not re-run with a class half-closed**: the next pass will spend itself reporting siblings you already knew about.
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
 - **Nitpicks are immaterial by definition, so do not apply them.** They go in
   the closing note. Applying one produces a commit and Step 3 reruns against it,
@@ -315,6 +316,11 @@ CONVERGENCE PASS line and the do-not-re-report list are added on top.
 CONVERGENCE PASS <N>. Prior passes found <count> issues; all fixed except <the
 rejected ones and why>. Do not re-report them.
 
+Classes closed since the last pass — every site of each was swept, not just the
+one reported: <class, and the search that proved it closed>. Report a further
+instance of one of these only if the sweep actually missed it, and say which
+site.
+
 Report every BLOCKING finding. A finding is blocking if it is any of:
 
 1. A violation of a rule this project wrote down — anything in AGENTS.md or
@@ -332,6 +338,12 @@ Report every BLOCKING finding. A finding is blocking if it is any of:
 
 Wording, formatting, and counts nothing keys on are NOT blocking: one closing
 note, not findings.
+
+When a finding is one instance of a pattern that appears elsewhere, say so and
+list every other site you can see. Report it as ONE finding naming the class,
+not as one finding per site and not as a single site. A class reported whole is
+fixed in one pass; a class reported one instance at a time takes as many passes
+as it has members.
 
 Where this artifact declares a list illustrative and a rule authoritative,
 assess the RULE. A further missing list entry is not a finding.

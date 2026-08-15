@@ -27,6 +27,8 @@ An in-scope item that would change nothing if it shipped uncorrected — wording
 
 This matters most in the loop below. Each fix push triggers another reviewer pass, so actioning immaterial findings does not converge — it manufactures the next round's input. Push fixes for blocking findings (`fx-dev/skills/dev/references/scope-contract.md` § Blocking); reply-and-resolve only the immaterial rest in the same cycle. A contract blocker is never discharged by a reply explaining it: the artifact has to change.
 
+**Fix the class, not the instance.** A reviewer reports the site it read. Fixing exactly that site means the next pass finds its siblings and reports them as new findings — every pass productive, the loop never ending. Sweep the class across this change's surface before pushing (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance), and do not trigger another reviewer pass with a class half-closed: each push buys a full cycle, and spending one to be told about siblings you already knew about is the most expensive way to make no progress.
+
 **Verify before fixing.** A finding's premise can be wrong. Check any claim it makes about the code, and when it does not hold, reply with the evidence and resolve rather than changing working code to satisfy a misreading.
 
 ## WHEN TO USE THIS SKILL

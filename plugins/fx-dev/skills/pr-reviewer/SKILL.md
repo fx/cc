@@ -68,6 +68,12 @@ noise the author learns to skim:
 - a limit the change admits and gates ("verified at implementation time",
   "open question gated on X") — check the gate is real and sequenced, and move on.
 
+**When a finding is one instance of a pattern, say so and list the other sites**
+(`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance).
+A reviewer that reports one occurrence of a defect it can see in eleven places
+has handed the author ten future review cycles. Name the class, enumerate what
+you found, and count it as one finding — not eleven, and not one.
+
 **A review that reports twenty things equally has reported nothing.** State the
 count at each tier so the author knows what to act on first.
 

@@ -105,6 +105,12 @@ is an **observation, not a finding**, and is **resolved by replying with that
 reasoning** rather than by editing. The gate is zero *unresolved* Copilot
 threads, not zero observations acted on.
 
+**Fix the class, not the instance** (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance).
+Copilot reports the site it read; sweep its siblings across this change's surface
+and push them as one commit. Here that discipline is worth the most in the loop,
+because a push costs a full Copilot wait cycle — closing a class half-way spends
+one of those to be told about the other half.
+
 This matters more here than anywhere else in the loop: **every push re-opens the
 gate.** Copilot must then re-review the new head (Step 5), so editing for an
 immaterial finding costs a full wait cycle and produces a fresh commit for it to

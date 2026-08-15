@@ -152,6 +152,46 @@ Report the trend when you stop, so the operator can see the shape rather than ta
 
 **State honestly what the last pass did not cover.** If you stop after applying fixes that were never themselves reviewed, say so. A loop that stops at the bound below has *not* converged, and reporting it as clean is a false result.
 
+### Fix the class, not the instance
+
+**This is the single biggest cause of a review loop that will not end, and the bar alone does not prevent it.** A reviewer reports the instance it happened to read. If you fix exactly that instance, the next pass finds a sibling — same defect, different location — and reports it as a new finding. Every pass is then genuinely productive and the loop still never terminates, because the supply of siblings is the size of the class, not the size of the review.
+
+The failure is invisible from inside a single pass. Each finding is real, each fix is correct, each pass costs a full cycle, and the count drifts sideways forever. Watch for the signature: **findings that are individually valid and collectively repetitive.** That is not the reviewer being pedantic; it is the previous fix having been too small.
+
+**A finding is an instance of a class until you have proved it unique.** Before fixing, name the class — the defect *pattern*, stated without reference to any location — then find every site in this change's surface that exhibits it, and fix them together in one commit.
+
+#### The sibling axes
+
+A class rarely lives at one altitude or in one file. Check each axis before declaring a sweep complete:
+
+| Axis | The question | Typical miss |
+|---|---|---|
+| **Lexical** | Where else does this exact wording appear? | A phrase fixed at one site, unchanged at eleven others |
+| **Altitude** | Does this rule also appear as a summary, a table row, a step-by-step handler, a checklist, a success criterion, an example, a template, or a command block? | The definition is corrected; the procedure that implements it still describes the old behaviour, and a reader who follows the steps gets the old rule |
+| **Symmetry** | Is there a counterpart file or branch — reviewer A and reviewer B, mode 1 and mode 2, the parallel resolver? | One of a near-identical pair is fixed and the twin is untouched |
+| **Enumeration** | If one member of a list was wrong, are the others? | A list gains a missing case at the site reported and keeps the same gap everywhere else it is restated |
+
+#### Prove the sweep with a search that would fail
+
+**A sweep is not complete because it felt complete.** End it with a search whose *empty result* is the evidence, and read that result. Two ways this has genuinely gone wrong, both of which reported success:
+
+- **A line-oriented search against prose that wraps.** The phrase existed, split across a newline, and `grep` could not see it. Normalise whitespace before searching for anything longer than a few words.
+- **A search that excluded the file under review.** A filter meant to trim noise removed the one remaining site, and the empty output was read as proof.
+
+If the verifying search cannot fail, it is not verifying anything. State the search you ran alongside the claim that the class is closed, so a wrong one is visible rather than trusted.
+
+#### When the class is large, the duplication is the defect
+
+Past a handful of sites, stop syncing copies and remove the need for them: define the rule once and have every other site reference it (§ Blocking is the worked example). Fixing eleven copies leaves eleven copies to drift again on the next change. This is a design decision, so if it is not obviously right, raise it rather than performing a large mechanical rewrite unasked.
+
+#### Scope still binds
+
+Sweeping a class is **not** a licence to widen the change. The class is bounded by this change's blast radius: the files it touches, plus files it made inconsistent (`regression-caused-by-change`). A sibling outside that radius is a deferred follow-up, reported and not fixed — the sprawl stop rule governs here exactly as elsewhere.
+
+#### Close the class before re-running
+
+**Do not start the next review pass with a class half-closed.** A re-run against a partial fix spends a full cycle to be told about the siblings you already knew about, and its findings are indistinguishable from new ones. Finish the sweep, verify it, and record the class as closed — then carry that into the next pass's prompt so the reviewer spends the pass on ground nobody has covered.
+
 ### The iteration bound
 
 **Convergence is the goal. The bound is a runaway backstop, not a target, and reaching it is a failure to converge — never a stopping condition you are entitled to treat as success.**
