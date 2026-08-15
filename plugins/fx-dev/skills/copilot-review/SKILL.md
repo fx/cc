@@ -108,7 +108,7 @@ threads, not zero observations acted on.
 This matters more here than anywhere else in the loop: **every push re-opens the
 gate.** Copilot must then re-review the new head (Step 5), so editing for an
 immaterial finding costs a full wait cycle and produces a fresh commit for it to
-comment on. Push fixes for material and substantive findings; reply-and-resolve
+comment on. Push fixes for blocking findings; reply-and-resolve
 the rest without a commit.
 
 ## When to Use
@@ -299,7 +299,7 @@ Resolving feedback usually means pushing commits. Those commits are **unreviewed
 
 If the head SHA changed since the review in Step 2, go back to **Step 1** — nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. Cap at 4 iterations and escalate to the user if it has not settled.
 
-**Convergence is: no contract blockers, no new material or substantive findings, every thread resolved, and the suppressed block empty-or-triaged — all on a reviewed head.** It is NOT "zero new threads". Resolving an immaterial thread by reply creates no commit, so the head does not move and no further pass is owed; nudging for another review to chase a zero-thread pass spends a wait cycle to change nothing. **Only a push restarts this loop**, which is why only material and substantive findings should produce one.
+**Convergence is: no new blocking findings, every thread resolved, and the suppressed block empty-or-triaged — all on a reviewed head.** It is NOT "zero new threads". Resolving an immaterial thread by reply creates no commit, so the head does not move and no further pass is owed; nudging for another review to chase a zero-thread pass spends a wait cycle to change nothing. **Only a push restarts this loop**, which is why only blocking findings should produce one.
 
 ```bash
 # The gate is only passed when the newest Copilot review covers the current head.

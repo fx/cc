@@ -84,14 +84,26 @@ Materiality is the **last** of three, and applying it out of order produces the 
 2. **Contract** — is it a violation of a project rule, security or privacy invariant, or another mandatory requirement the project wrote down? Those are **blocking by virtue of being rules**, and the bar does not filter them. The project already decided they matter; that decision is not a reviewer's to re-make per finding.
 3. **Materiality** — for everything left, which is findings a reviewer originates from its own judgment: does acting on it change anything?
 
-A finding that fails filter 1 is deferred. One that passes filter 2 is a **contract blocker** — blocking on its own terms, and never ranked by the bar. Only what reaches filter 3 is ranked below. Contract blockers are unranked but not unblocking: convergence requires zero of them as well as zero material and substantive findings.
+A finding that fails filter 1 is deferred. One that passes filter 2 is a **contract blocker** — blocking on its own terms, and never ranked by the bar. Only what reaches filter 3 is ranked below.
+
+### Blocking — the one term everything else uses
+
+**A finding is BLOCKING if it is any of these three:**
+
+1. **A contract blocker** — it passed filter 2. Unranked by the bar, blocking by virtue of being a rule.
+2. **Material** — see the tier table below.
+3. **Substantive** — see the tier table below.
+
+**An immaterial finding is never blocking.** That is the whole vocabulary: *blocking* or *immaterial*.
+
+Every downstream rule is written in terms of **blocking**, deliberately. Fix blocking findings; push for blocking findings; keep going while blocking findings arrive; converge when a pass produces none. Skills MUST NOT re-enumerate the three constituents in their own stopping rules — an enumeration copied to a dozen sites silently goes stale the moment this list changes, and every copy then under-blocks. Say "blocking" and point here.
 
 ### The bar
 
 | Tier | Examples | Treatment |
 |---|---|---|
-| **Material** | Wrong behaviour, data loss, security, a build/CI/test that will fail, a contradiction that makes the artifact unimplementable, a stated fact that is false **and that a reader would act on** | Report individually. Blocks convergence. |
-| **Substantive** | A genuine ambiguity a reader could act on two ways; a missing step that would be discovered late and cost a cycle | Report individually. Blocks convergence. |
+| **Material** | Wrong behaviour, data loss, security, a build/CI/test that will fail, a contradiction that makes the artifact unimplementable, a stated fact that is false **and that a reader would act on** | Report individually. **Blocking.** |
+| **Substantive** | A genuine ambiguity a reader could act on two ways; a missing step that would be discovered late and cost a cycle | Report individually. **Blocking.** |
 | **Immaterial** | Wording that is merely improvable; a count off by one where nothing keys on the count; a list entry missing from a list nothing enumerates exhaustively; formatting; a synonym that reads better | **One closing note, unnumbered, non-blocking.** Never a separate finding, never a reason for another pass. |
 
 When unsure which tier something is, ask: *if this shipped uncorrected, what breaks?* If the honest answer is "nothing, it is just not as good as it could be", it is immaterial.
@@ -104,22 +116,23 @@ When unsure which tier something is, ask: *if this shipped uncorrected, what bre
 
 **A decision already made, recorded, and reasoned — where the disagreement is about preference.** Once an artifact states a decision with its rationale, including a rationale that says "we do not know, and here is how we will find out", re-arguing it is not a review finding. Say so once as a single escalation; do not re-raise it on the next pass in different words. A preference re-litigated across passes needs a person, not another round.
 
-**But a recorded rationale does not make a decision safe.** If the decision *itself* is the defect — it leaks a credential, loses data, violates a security or privacy invariant, or contradicts a contract the project mandates — it is a **Material finding and stays blocking until resolved**, however carefully it is reasoned. Writing down why you did an unsafe thing does not make it safe. The distinction is whether you disagree with the choice or the choice is wrong: the first is an escalation, the second is a finding.
+**But a recorded rationale does not make a decision safe.** If the decision *itself* is the defect — it leaks a credential, loses data, violates a security or privacy invariant, or contradicts a contract the project mandates — it is **blocking and stays blocking until resolved**, however carefully it is reasoned. Which kind of blocking follows the filters, and you do not need to decide it to act: where it violates a rule the project wrote down it is a contract blocker at filter 2; where it is your own reading of a defect it is Material at filter 3. Both block, so the disposition is identical. Writing down why you did an unsafe thing does not make it safe. The distinction is whether you disagree with the choice or the choice is wrong: the first is an escalation, the second is a finding.
 
 **An artifact that admits a limit.** "This is verified by X at implementation time", "this is an open question gated on Y" — those are dispositions, not gaps. Check the gate is real and sequenced before the thing that depends on it; do not report the limit itself.
 
 ### Convergence
 
-**A review has converged when a pass produces no unresolved contract blockers and no material or substantive findings — not when it produces zero output.** Zero is usually unreachable and waiting for it burns cycles on immaterial churn. An outstanding contract blocker prevents convergence by itself: it is unranked precisely because the project already decided it blocks, so "no material or substantive findings" never clears it.
+**A review has converged when a pass produces no unresolved blocking findings — not when it produces zero output.** Zero is usually unreachable and waiting for it burns cycles on immaterial churn.
 
 Track findings per pass and watch the shape, not just the count:
 
-- **Contract blockers outstanding** — not converged, whatever the tiers did.
-- **Material or substantive findings still arriving, in new categories** — keep going. The review is still working.
-- **No contract blockers and no material or substantive findings this pass** — converged, whatever the immaterial count did. Stop, and say so: report the trend and what remains below the bar. A pass that falls from five immaterial observations to three *different* immaterial observations has converged; the drop is churn, not progress.
+- **Blocking findings still arriving, in new categories** — keep going. The review is still working.
+- **No blocking findings this pass** — converged, whatever the immaterial count did. Stop, and say so: report the trend and what remains below the bar. A pass that falls from five immaterial observations to three *different* immaterial observations has converged; the drop is churn, not progress.
 - **The same disagreement in successive passes** — stop. That is a human decision, not a review outcome. Escalate it by name.
 
-Report the trend when you stop, so the operator can see the shape rather than take "clean" on trust: *"Findings per pass: 9, 4, 1, 0 material. Stopping — three immaterial wording items remain, listed below."*
+Report the trend when you stop, so the operator can see the shape rather than take "clean" on trust: *"Findings per pass: 9, 4, 1, 0 blocking. Stopping — three immaterial wording items remain, listed below."*
+
+**A rising count is a divergence signal, not progress.** If a pass produces more blocking findings than the one before it and they are all the same class, the last round's fix is generating them. Stop and address the cause rather than the instances — and if the cause is a design choice with two defensible answers, that is an escalation to the user, not a fifth pass.
 
 **State honestly what the last pass did not cover.** If you stop after applying fixes that were never themselves reviewed, say so.
 

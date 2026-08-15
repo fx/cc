@@ -13,8 +13,8 @@ CodeRabbit reviews code with AI. The **primary** way to use it is **locally, via
 
 Catch CodeRabbit's feedback **before** a PR exists, using the `cr` CLI on your local changes:
 
-- Run `cr` during pre-PR self-review (alongside `/simplify` and `/review`), fix every **material or substantive** finding, and re-run until a pass produces none. Immaterial observations get one closing note and do not buy another run — see the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
-- Open the PR once the local review has **converged** — no material or substantive findings — **or is correctly degraded as `skipped (rate-limited)`**. Resolve the material and substantive findings already received before proceeding; immaterial ones travel as a closing note.
+- Run `cr` during pre-PR self-review (alongside `/simplify` and `/review`), fix every **blocking** finding, and re-run until a pass produces none. Immaterial observations get one closing note and do not buy another run — see the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
+- Open the PR once the local review has **converged** — no blocking findings — **or is correctly degraded as `skipped (rate-limited)`**. Resolve the blocking findings already received before proceeding; immaterial ones travel as a closing note.
 - A clean local review does NOT remove the merge gates — but it usually means CodeRabbit's PR-level review (when the GitHub App is configured) lands clean on the first pass, and often there is nothing left to resolve on the PR at all.
 
 ## The `cr` CLI
@@ -100,7 +100,7 @@ Use `cr review --agent --base main` to scope to the branch's diff against `main`
 
 Treat findings like self-review feedback:
 
-- **Triage in the contract's order — scope, then contract, then materiality** (`fx-dev/skills/dev/references/scope-contract.md`). An out-of-scope finding is deferred however material it looks, per the triage rules above; project rules and security/privacy invariants block regardless of the bar; only what remains is ranked. Material and substantive findings are fixed; immaterial ones — wording, formatting, a count nothing keys on, an entry missing from a list the artifact declares non-exhaustive — go in one closing note and MUST NOT drive another iteration. CodeRabbit's own `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an input to that judgment, not a substitute for it.
+- **Triage in the contract's order — scope, then contract, then materiality** (`fx-dev/skills/dev/references/scope-contract.md`). An out-of-scope finding is deferred however material it looks, per the triage rules above; project rules and security/privacy invariants block regardless of the bar; only what remains is ranked. Blocking findings are fixed; immaterial ones — wording, formatting, a count nothing keys on, an entry missing from a list the artifact declares non-exhaustive — go in one closing note and MUST NOT drive another iteration. CodeRabbit's own `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an input to that judgment, not a substitute for it.
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
 - **Nitpicks** may be applied or consciously skipped — don't churn on style the project doesn't care about.
 - **Verify before fixing.** A finding's premise can be wrong. Check any claim it makes about the tree; when it does not hold, reject the finding with the evidence rather than changing working code to satisfy a misreading.
@@ -108,18 +108,18 @@ Treat findings like self-review feedback:
 
 ### Step 3: Re-run until it converges (REQUIRED)
 
-Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until a pass produces no contract blockers and no material or substantive findings.**
+Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until a pass produces no blocking findings.**
 
 **Converged does NOT mean zero output.** Waiting for silence spends full review cycles on wording. Stop when what remains would change nothing if it shipped uncorrected, and list those items once, non-blocking.
 
 - **Cap at 4 iterations.** If CodeRabbit keeps flagging the same design decision after 4 passes, that is a human call, not more code edits — escalate it **by name** and stop.
-- Watch the shape, and count only the tiers that block: material or substantive findings still arriving → keep going; a pass with none → converged, however many immaterial observations it produced; the same disagreement twice → escalate.
+- Watch the shape, and count only what blocks: blocking findings still arriving → keep going; a pass with none → converged, however many immaterial observations it produced; the same disagreement twice → escalate.
 - **Rate-limit exception:** stop immediately on throttling; do not consume iterations waiting for cooldowns.
 - When you stop, report the per-pass trend and whether the last round's fixes were themselves reviewed.
 
 ### Step 4: Open the PR when clean or correctly degraded
 
-A **converged** local CodeRabbit review — no contract blockers and no material or substantive findings — is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once the material and substantive findings already received are addressed. Do not open the PR with known unresolved material or substantive findings; immaterial observations travel as a closing note in the PR description.
+A **converged** local CodeRabbit review — no blocking findings — is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once every blocking finding already received is resolved — the degradation waives the *unrun* remainder of the review, never a finding it already delivered. Do not open the PR with known unresolved blocking findings; immaterial observations travel as a closing note in the PR description.
 
 ---
 
@@ -208,8 +208,8 @@ Never call the Agent tool from inside a sub-agent context.
 ## Success Criteria
 
 **Mode 1 (local, primary):**
-- ✅ `cr review --agent` reports **no contract blockers and no material or substantive findings** after fixes, **or** the service rate-limited and the pass is recorded as `skipped (rate-limited)`. Remaining immaterial observations do not block — they are carried as one closing note, per the materiality bar
-- ✅ All material and substantive findings received before any limit are resolved and committed
+- ✅ `cr review --agent` reports **no blocking findings** after fixes, **or** the service rate-limited and the pass is recorded as `skipped (rate-limited)`. Remaining immaterial observations do not block — they are carried as one closing note, per the materiality bar
+- ✅ All blocking findings received before any limit are resolved and committed
 - ✅ No cooldown waits or retries remain when the rate-limit exception applies
 
 **Mode 2 (PR-level, fallback / optional merge gate):**

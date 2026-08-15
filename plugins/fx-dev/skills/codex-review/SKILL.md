@@ -7,7 +7,7 @@ description: Run OpenAI Codex's AI code review LOCALLY via the `codex` CLI BEFOR
 
 This skill runs OpenAI Codex's AI code review **locally, one-shot**, against the
 current branch. Run it as part of pre-PR self-review — after `coderabbit-review`,
-before opening the PR — fix every **material or substantive** finding, and open
+before opening the PR — fix every **blocking** finding, and open
 the PR once a pass produces none. Immaterial observations get one closing note
 and do not hold the PR: see the materiality bar in
 `fx-dev/skills/dev/references/scope-contract.md`.
@@ -260,7 +260,7 @@ than waiting it out.
   (see `fx-dev/skills/dev/references/scope-contract.md`). Scope first: an
   out-of-scope finding is deferred however material it looks (Step 3.5). Then
   project rules and security/privacy invariants, which block regardless of the
-  bar. Only what remains is ranked: material and substantive findings are fixed;
+  bar. Only what remains is ranked. Blocking findings are fixed;
   immaterial ones — wording, formatting, a count nothing keys on, an entry
   missing from a list the artifact declares non-exhaustive — go into one closing
   note and MUST NOT drive another iteration.
@@ -285,7 +285,7 @@ than waiting it out.
 Run the review again after fixes, **carrying the same Scope Brief prompt plus
 anything newly established**. Note the iteration number in the prompt and add
 facts verified since the last pass, so Codex does not relitigate settled ground.
-**Repeat Steps 1 → 2 until a pass produces no contract blockers and no material or substantive findings**
+**Repeat Steps 1 → 2 until a pass produces no blocking findings**
 — per the materiality bar in `fx-dev/skills/dev/references/scope-contract.md`.
 
 **Converged does NOT mean zero output.** Codex will keep producing immaterial
@@ -301,14 +301,22 @@ Brief:
 CONVERGENCE PASS <N>. Prior passes found <count> issues; all fixed except <the
 rejected ones and why>. Do not re-report them.
 
-Report findings that would change behaviour, break a build or test, make the
-artifact unimplementable, or expose a security, privacy, or data-loss problem —
-including a leaked credential, internal URL, or private identifier in
-documentation or examples. A false statement counts when a reader would act on
-it; a wrong number nothing keys on does not. Also report a genuine ambiguity a
-reader could act on two ways, and a missing step that would be discovered late
-and cost a cycle — those block too. Wording, formatting, and counts nothing keys
-on: one closing note, not findings.
+Report every BLOCKING finding. A finding is blocking if it is any of:
+
+1. A violation of a rule this project wrote down — anything in AGENTS.md or
+   REVIEW.md, or a security or privacy invariant. Report these whatever their
+   direct behavioural impact; the project already decided they matter, so do not
+   weigh them against the bar below.
+2. Something that would change behaviour, break a build or test, make the
+   artifact unimplementable, or expose a security, privacy, or data-loss problem
+   — including a leaked credential, internal URL, or private identifier in
+   documentation or examples. A false statement counts when a reader would act
+   on it; a wrong number nothing keys on does not.
+3. A genuine ambiguity a reader could act on two ways, or a missing step that
+   would be discovered late and cost a cycle.
+
+Wording, formatting, and counts nothing keys on are NOT blocking: one closing
+note, not findings.
 
 Where this artifact declares a list illustrative and a rule authoritative,
 assess the RULE. A further missing list entry is not a finding.
@@ -326,11 +334,14 @@ If the artifact is internally consistent and matches the tree, say so plainly.
 - **Cap at 4 iterations.** If Codex keeps flagging the same design decision after
   4 passes, that is a human call, not more edits — escalate it **by name** and
   stop.
-- Watch the shape, and count only the tiers that block. Material or substantive
-  findings still arriving → keep going. A pass with none → converged, however
-  many immaterial observations it produced. The same disagreement twice →
-  escalate.
-- When you stop, **report the per-pass trend** (`9, 4, 1, 0 material`) and say
+- Watch the shape, and count only what blocks. Blocking findings still arriving
+  → keep going. A pass with none → converged, however many immaterial
+  observations it produced. The same disagreement twice → escalate.
+- **A rising count means the last fix caused it.** If a pass returns more
+  blocking findings than the one before and they are all the same class, stop
+  fixing instances and fix the cause. When the cause is a design choice with two
+  defensible answers, escalate to the user rather than spending the next pass.
+- When you stop, **report the per-pass trend** (`9, 4, 1, 0 blocking`) and say
   whether the last round's fixes were themselves reviewed.
 
 ### Step 3.5: Report out-of-scope findings, never silently apply them
@@ -346,7 +357,7 @@ it before the next iteration rather than filtering by hand again.
 
 ### Step 4: Open the PR once it has converged
 
-A **converged** Codex review — a pass with no contract blockers and no material or substantive findings —
+A **converged** Codex review — a pass with no blocking findings —
 alongside a converged CodeRabbit review is the gate to PR creation in the SDLC
 (`fx-dev:dev` Step 4.5 → Step 5). Do not open the PR with unresolved material or
 substantive Codex findings. Outstanding **immaterial** observations do not hold

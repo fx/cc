@@ -184,7 +184,7 @@ full review cycle to filter by hand.
 
 **Then freeze the implementation contract.** If the task is sourced from, names, or discovers a relevant `docs/changes/*.md` file, read it and the spec sections it links. Confirm implementation approval from the conversation or the change's recorded workflow state; if approval is unclear, STOP and ask the user. Record the contract path and approval evidence in the working brief. The change document, its linked specs, and all mandatory project rules form the implementation contract: the plan and coder prompt MUST map work to that contract and MUST NOT infer adjacent product or architecture work.
 
-The coordinator owns one in-memory finding ledger for the run; reviewer sub-agents return findings to the coordinator and MUST NOT mutate the ledger concurrently. Give every finding a stable fingerprint (`category + file + line/range + normalized claim`) and record its source, first-seen revision, classification, materiality tier, disposition, and verification evidence. Classification and materiality are independent fields — see Step 4.5 for how the tier is assigned. Classify each finding exactly once as:
+The coordinator owns one in-memory finding ledger for the run; reviewer sub-agents return findings to the coordinator and MUST NOT mutate the ledger concurrently. Give every finding a stable fingerprint (`category + file + line/range + normalized claim`) and record its source, first-seen revision, classification, materiality tier, disposition, and verification evidence. Classification and materiality are independent fields — see Step 4.5 for how the tier is assigned. The tier is `n/a` for a contract blocker: filter 2 stops before the bar, so a rule violation is never ranked, and inventing a tier for one is the mistake that lets it be argued down. Classify each finding exactly once as:
 
 - **required-by-contract** — Necessary to satisfy the change document, its linked specs, or any mandatory project, security, privacy, test, or merge rule.
 - **regression-caused-by-change** — A demonstrable correctness, security, privacy, or data-loss regression caused by this branch anywhere within its behavioral impact, including downstream consumers or integrations.
@@ -324,10 +324,10 @@ Do not restart the full matrix merely because `HEAD` changed. Deduplicate repeat
 
 Proceed to Step 5 when all of the following are true:
 
-1. Every `required-by-contract` and `regression-caused-by-change` ledger entry is resolved with evidence.
+1. Every **blocking** ledger entry is resolved with evidence — every `required-by-contract` and `regression-caused-by-change` entry, plus every entry of any classification whose materiality tier is Material or Substantive. A judgment-originated Substantive finding can sit under `follow-up/out-of-scope` and still block; classification decides who owns it, the tier decides whether it holds the gate.
 2. Contract-required tests and tests affected by the latest delta pass.
 3. Every available review channel completed its initial pass or has a documented permitted degradation.
-4. One verification pass over the latest affected delta produces no new finding in either blocking class.
+4. One verification pass over the latest affected delta produces no new blocking finding.
 
 `follow-up/out-of-scope` entries and non-contract suggestions do not block PR creation. Limit each review channel to two remediation/delta-verification rounds after its initial pass, with four post-review fix rounds total. At the bound, create the PR if only follow-up/out-of-scope entries remain. If a blocking-class finding remains, STOP and report it to the user. A contract amendment may change product scope, but it cannot waive mandatory correctness, security, privacy, testing, or merge rules. Perfect local convergence is not required.
 

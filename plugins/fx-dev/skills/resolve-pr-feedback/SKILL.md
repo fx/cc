@@ -25,7 +25,7 @@ Scope decides whether a finding is *ours*. Materiality decides whether it is *wo
 
 An in-scope item that would change nothing if it shipped uncorrected — wording, formatting, a count nothing keys on, an entry missing from a list the artifact itself declares non-exhaustive — is an **observation, not a finding**, and is **resolved by replying with that reasoning** rather than by editing. Every thread still ends resolved; the gate is zero *unresolved* threads, not zero observations acted on.
 
-This matters most in the loop below. Each fix push triggers another reviewer pass, so actioning immaterial findings does not converge — it manufactures the next round's input. Push fixes for material and substantive findings; reply-and-resolve the rest in the same cycle.
+This matters most in the loop below. Each fix push triggers another reviewer pass, so actioning immaterial findings does not converge — it manufactures the next round's input. Push fixes for blocking findings — every contract blocker, Material and Substantive finding; reply-and-resolve only the immaterial rest in the same cycle. A contract blocker is never discharged by a reply explaining it: the artifact has to change.
 
 **Verify before fixing.** A finding's premise can be wrong. Check any claim it makes about the code, and when it does not hold, reply with the evidence and resolve rather than changing working code to satisfy a misreading.
 
@@ -203,7 +203,7 @@ After invoking resolver skills, re-query to confirm all threads are resolved AND
 3. Re-query unresolved threads (per below).
 4. If the breakdown array is non-empty, re-invoke the relevant resolver(s).
 5. After fixes are pushed, restart at step 1 — the push created unreviewed commits.
-6. Stop when a pass produces **no contract blockers and no new material or substantive findings** on a head SHA that was actually reviewed (verify: the newest Copilot review's `commit_id` equals `headRefOid`), **every automated thread on that head is resolved**, and **the suppressed-comments block for that head is empty or fully triaged** (see §3 *Identify Unresolved Feedback by Source*, not this loop's step 3 — those findings create no thread, so a zero-thread count says nothing about them). Immaterial findings resolved by reply satisfy this — they are not "new feedback" for the purpose of another cycle, because actioning them would produce a push and therefore manufacture the next round's input. Cap at 4 outer iterations and escalate to the user if not converged.
+6. Stop when a pass produces **no new blocking findings** on a head SHA that was actually reviewed (verify: the newest Copilot review's `commit_id` equals `headRefOid`), **every automated thread on that head is resolved**, and **the suppressed-comments block for that head is empty or fully triaged** (see §3 *Identify Unresolved Feedback by Source*, not this loop's step 3 — those findings create no thread, so a zero-thread count says nothing about them). Immaterial findings resolved by reply satisfy this — they are not "new feedback" for the purpose of another cycle, because actioning them would produce a push and therefore manufacture the next round's input. Cap at 4 outer iterations and escalate to the user if not converged.
 
 **⛔ Zero new threads is not convergence unless a Copilot review has been RECEIVED for the current head SHA.** "Received for the current head" is the *only* condition — do **not** phrase it as "was requested", and do not try to verify that a request happened: `requested_reviewers` is empirically always empty, so whether a review was requested is not a determinable fact (see `fx-dev:copilot-review` **D1**/**D3**). Issue the nudge because it sometimes helps, then judge convergence solely on the delivered review. Absence of feedback is not evidence of quality.
 
@@ -287,7 +287,7 @@ If unresolved threads remain, report which reviewers still have open feedback.
 
 1. All unresolved automated review threads identified — matched on the `copilot-pull-request-reviewer` login, **not** the bare `Copilot` — **plus** any findings in the "Suppressed comments" block of every Copilot review **of the current head commit**, which produce no threads
 2. Appropriate resolver skill(s) invoked (Copilot + CodeRabbit in parallel where applicable)
-3. The wait-and-resolve loop has CONVERGED — a Copilot review has been **RECEIVED for the current head SHA**, produced no contract blockers and no new material or substantive findings, and every automated thread on that head is resolved. Immaterial findings resolved by reply do not block this. Do not add "and was requested", which is not a determinable fact (**D1**). A quiet poll on an unreviewed head is not convergence
+3. The wait-and-resolve loop has CONVERGED — a Copilot review has been **RECEIVED for the current head SHA**, produced no new blocking findings, and every automated thread on that head is resolved. Immaterial findings resolved by reply do not block this. Do not add "and was requested", which is not a determinable fact (**D1**). A quiet poll on an unreviewed head is not convergence
 4. CodeRabbit's check is in a terminal passing state (or absent if not configured)
 5. Final verification confirms all threads resolved
 6. Summary output provided

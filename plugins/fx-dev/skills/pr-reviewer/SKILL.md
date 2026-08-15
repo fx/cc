@@ -44,7 +44,7 @@ Then review within it:
 Scope decides whether a finding is the author's problem. **Materiality decides
 whether it is worth their time** — see the materiality bar in the same reference.
 
-- **Report material and substantive findings individually.** Wrong behaviour,
+- **Report every blocking finding individually.** Wrong behaviour,
   data loss, security, a build or test that will fail, a contradiction that makes
   the change unimplementable, a stated fact that is false and that a reader would
   act on, or a genuine ambiguity
