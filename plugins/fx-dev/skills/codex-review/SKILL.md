@@ -254,7 +254,7 @@ If the run produces **no output for several minutes at near-0% CPU**, it is
 stalled, not slow — diagnose it with the rollout check in "How to Run" rather
 than waiting it out.
 
-### Step 2: Resolve every actionable finding
+### Step 2: Resolve every blocking finding
 
 - **Triage in the contract's order — scope, then contract, then materiality**
   (see `fx-dev/skills/dev/references/scope-contract.md`). Scope first: an

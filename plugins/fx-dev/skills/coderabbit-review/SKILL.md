@@ -69,7 +69,7 @@ coordinator's ledger.
 
 **The brief never suppresses a real finding.** It excludes work deliberately not
 done; it does not excuse defects in the work that *was* done. Security,
-data-loss, and correctness problems inside the change are always actionable. If a
+**privacy**, data-loss, and correctness problems inside the change are always in scope. If a
 finding the brief excluded turns out to be correct, the exclusion was wrong — fix
 the work and correct the brief.
 

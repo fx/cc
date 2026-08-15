@@ -68,7 +68,7 @@ State the **reason** each exclusion is deliberate. "Do not flag missing tests" i
 
 **A reviewer invoked without a brief MUST reconstruct one** from the conversation before reviewing, and say that it did. Reviewing a diff with no idea what was asked for is the failure mode this contract exists to prevent — never proceed as if the diff speaks for itself.
 
-**Never use the brief to suppress real findings.** It excludes work that was deliberately not done. It does not excuse defects in the work that *was* done. Security, data-loss, and correctness problems inside the change are always in scope, whatever the brief says. If a reviewer flags something excluded and is *right* — the exclusion was wrong — fix the work and correct the brief.
+**Never use the brief to suppress real findings.** It excludes work that was deliberately not done. It does not excuse defects in the work that *was* done. Security, **privacy**, data-loss, and correctness problems inside the change are always in scope, whatever the brief says — a brief cannot exclude them, because filter 2 would make them blocking anyway and filter 1 must not get the chance to defer them first. If a reviewer flags something excluded and is *right* — the exclusion was wrong — fix the work and correct the brief.
 
 ## The materiality bar
 
@@ -81,6 +81,8 @@ This is not a licence to ignore problems. It is a ranking rule: report what clea
 Materiality is the **last** of three, and applying it out of order produces the wrong verdict:
 
 1. **Scope** — is this finding ours at all? An out-of-scope finding is deferred with the exclusion that covers it, **however material it looks in isolation**. A valid improvement to work this change deliberately did not do is still out of scope. Materiality never promotes something back into scope.
+
+   **"The reviewer was right" does not by itself re-open scope.** An excluded observation can be perfectly true — for a docs-only change, "the implementation is absent" is *correct* and still out of scope, because its absence is the exclusion. Only two things pull an item back in: it is a defect in work this change **actually did**, or the exclusion itself was invalid (it excluded something a brief may not exclude, such as a security, privacy, data-loss or correctness problem inside the change). Anything else is deferred with the exclusion cited, no matter how accurate.
 2. **Contract** — is it a violation of a project rule, security or privacy invariant, or another mandatory requirement the project wrote down? Those are **blocking by virtue of being rules**, and the bar does not filter them. The project already decided they matter; that decision is not a reviewer's to re-make per finding.
 3. **Materiality** — for everything left, which is findings a reviewer originates from its own judgment: does acting on it change anything?
 

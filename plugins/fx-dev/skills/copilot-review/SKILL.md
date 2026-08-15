@@ -93,8 +93,8 @@ not handed it.
   silently dropped.
 - **The brief never suppresses a real finding.** It excludes work deliberately
   not done; it does not excuse defects in the work that *was* done. Security,
-  data-loss, and correctness problems inside the change are always actionable and
-  always block the merge gate.
+  **privacy**, data-loss, and correctness problems inside the change are always in
+  scope and always block the merge gate.
 - Copilot being unable to see the scope is not a reason to widen the change.
   Implementing its out-of-scope suggestions is scope creep with a reviewer's name
   on it.
@@ -231,9 +231,9 @@ Then:
 
 1. `grep -i 'Suppressed comments'` the bodies. If present, **read the entire
    `<details>` block** — every item, not just the summary count.
-2. Triage each item exactly like a thread comment: fix what is blocking, reply
-   to what is merely correct-but-immaterial, and apply the Scope Brief to what is
-   out of scope.
+2. Triage each item exactly like a thread comment: fix what is blocking, and
+   record — do not reply, there is no thread to reply to (item 4) — the
+   disposition for what is merely correct-but-immaterial or out of scope.
 3. **Do not apply a suppressed suggestion on sight.** One observed suppressed
    comment, applied as written, would have introduced the very bug it claimed to
    report. Verify the finding against the code before changing anything.

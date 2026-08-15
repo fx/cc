@@ -170,7 +170,8 @@ For each unresolved Copilot comment:
 | **Nitpick** | Contains `[nitpick]` prefix | Auto-resolve immediately |
 | **Outdated** | Refers to code that no longer exists | Reply with explanation, resolve |
 | **Incorrect** | Misunderstands project conventions | Reply with explanation, resolve, update `REVIEW.md` |
-| **Valid** | Current, actionable concern | Delegate to coder sub-agent to fix |
+| **Valid — blocking** | Current concern that clears the bar: a project-rule, security or privacy violation, or a Material or Substantive finding (`fx-dev/skills/dev/references/scope-contract.md`) | Delegate to coder sub-agent to fix |
+| **Valid — immaterial** | Correct, but would change nothing if it shipped uncorrected | Reply with that reasoning, resolve. **Do not edit** — a fix push reopens the review loop for an item that changes nothing |
 | **Deferred** | Valid but out of scope for this PR | Track in PROJECT.md, reply, resolve |
 
 ### 3. Resolve Threads

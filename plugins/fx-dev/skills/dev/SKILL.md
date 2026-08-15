@@ -324,7 +324,7 @@ Do not restart the full matrix merely because `HEAD` changed. Deduplicate repeat
 
 Proceed to Step 5 when all of the following are true:
 
-1. Every **blocking** ledger entry is resolved with evidence — every `required-by-contract` and `regression-caused-by-change` entry, and every entry whose materiality tier is Material or Substantive.
+1. Every **blocking** ledger entry is resolved with evidence. Blocking is defined once, in `references/scope-contract.md` § Blocking; this gate does not restate it.
 
    **`follow-up/out-of-scope` with a Material or Substantive tier is not a legal combination.** The two fields are assigned by different filters and cannot disagree: an out-of-scope finding is deferred at filter 1 and never reaches the bar, so its tier is `n/a`; a finding that *does* reach the bar is in scope by construction, so if it ranks Material or Substantive it is a defect in work this change actually did, and belongs under `required-by-contract` or `regression-caused-by-change`. If you are about to record that pair, one of the two filters was misapplied — re-run them rather than writing an entry the gate can neither clear nor waive. Materiality never promotes an out-of-scope finding back into scope (`references/scope-contract.md` § Three filters); this rule is that principle applied to the ledger.
 2. Contract-required tests and tests affected by the latest delta pass.
