@@ -357,8 +357,11 @@ If the artifact is internally consistent and matches the tree, say so plainly.
   name** and stop rather than spending the remaining iterations. Each Codex pass
   on a real branch takes many minutes, so fix causes, not instances.
 - Watch the shape, and count only what blocks. Blocking findings still arriving
-  → keep going. A pass with none → converged, however many immaterial
-  observations it produced. The same disagreement twice → escalate.
+  → keep going. **None left unresolved** → converged, however many immaterial
+  observations it produced. The same disagreement twice → escalate. Converged is
+  the ledger test in `fx-dev/skills/dev/references/scope-contract.md`
+  § Convergence — a quiet latest pass does not discharge a blocker carried from
+  an earlier one.
 - **A rising count means the last fix caused it.** If a pass returns more
   blocking findings than the one before and they are all the same class, stop
   fixing instances and fix the cause. When the cause is a design choice with two

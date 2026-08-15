@@ -139,12 +139,10 @@ For projects with vendor submodules (e.g., `vendor/` directory):
 **Ready**: YES/NO
 
 ### Blocking
-- [Contract blockers: a project, security, or privacy rule violation — blocking
-  by virtue of being a rule, never ranked by the bar]
-- [Material findings: wrong behaviour, data loss, security, a build or test that
-  will fail, a stated fact that is false AND that a reader would act on]
-- [Substantive findings: a genuine ambiguity a reader could act on two ways, a
-  missing step that would be discovered late]
+- [Every blocking finding, as defined in
+  `fx-dev/skills/dev/references/scope-contract.md` § Blocking — do not restate or
+  narrow that definition here. Label each one with its kind: contract blocker,
+  Material, or Substantive.]
 
 ### Closing note (non-blocking)
 - [One unnumbered paragraph for everything that clears neither tier — wording,

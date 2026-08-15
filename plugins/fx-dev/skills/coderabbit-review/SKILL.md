@@ -115,7 +115,7 @@ Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until no block
 **Converged does NOT mean zero output.** Waiting for silence spends full review cycles on wording. Stop when what remains would change nothing if it shipped uncorrected, and list those items once, non-blocking.
 
 - **Cap at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) — a runaway backstop, not a target. Convergence is the goal; reaching the bound is a failure to converge, and you report it as an escalation rather than a pass. If CodeRabbit keeps flagging the same design decision across two passes, that is a human call, not more code edits — escalate it **by name** and stop, without spending the remaining iterations.
-- Watch the shape, and count only what blocks: blocking findings still arriving → keep going; a pass with none → converged, however many immaterial observations it produced; the same disagreement twice → escalate.
+- Watch the shape, and count only what blocks: blocking findings still arriving → keep going; **none left unresolved** → converged, however many immaterial observations it produced; the same disagreement twice → escalate. Converged is the ledger test in `fx-dev/skills/dev/references/scope-contract.md` § Convergence — a quiet latest pass does not discharge a blocker carried from an earlier one.
 - **Rate-limit exception:** stop immediately on throttling; do not consume iterations waiting for cooldowns.
 - When you stop, report the per-pass trend and whether the last round's fixes were themselves reviewed.
 
@@ -157,7 +157,8 @@ Script exit codes:
 If the script reports unresolved CodeRabbit threads (count > 0), invoke the rabbit-feedback-resolver:
 
 ```
-Skill tool: skill="fx-dev:rabbit-feedback-resolver", args="<PR_NUMBER>"
+Skill tool: skill="fx-dev:rabbit-feedback-resolver",
+            args="<PR_NUMBER> — <Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>)"
 ```
 
 That skill handles per-thread categorisation, pushes any code fixes, replies, and resolves each thread.
