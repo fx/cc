@@ -181,8 +181,13 @@ a thread marked `deferred` is replied to and resolved without editing anything �
 including without committing a tracker update to this PR.
 
 **With no disposition — this skill invoked directly, or a thread the coordinator
-did not cover — run the filters yourself: scope, then contract, then materiality
-(`fx-dev/skills/dev/references/scope-contract.md` § Three filters).** Copilot's
+did not cover — you need a Scope Brief before you can run the scope filter at
+all.** Reconstruct one from the conversation and the PR description, and say that
+you did (`fx-dev/skills/dev/references/scope-contract.md` § Injecting the brief
+into reviews). Filtering without it is guesswork that reads valid out-of-scope
+feedback as an in-scope edit — the exact widening the contract exists to stop.
+Then **run the filters yourself: scope, then contract, then materiality**
+(`fx-dev/skills/dev/references/scope-contract.md` § Three filters). Copilot's
 `[nitpick]` prefix is an *input* to that judgment, never a verdict: it is the
 reviewer's own label, and a project-rule, security, privacy or correctness defect
 carrying it is still blocking. Never auto-resolve on the prefix alone.

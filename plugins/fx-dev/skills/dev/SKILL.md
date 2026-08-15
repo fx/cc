@@ -296,7 +296,7 @@ Skill tool: skill="code-review", args="<Scope Brief>"
 Skill tool: skill="fx-dev:coderabbit-review", args="<Scope Brief>"
 ```
 
-If `cr` is **unavailable**, fall back to the PR-level CodeRabbit review in Step 6.3. If `cr` is installed but **not authenticated**, STOP and report to the user — NEVER run `cr auth login`. If CodeRabbit reports a rate/quota limit or cooldown, report it once, classify findings already received, mark the pass `skipped (rate-limited)`, and continue immediately. Never wait or retry solely for a CodeRabbit cooldown.
+If `cr` is **unavailable**, fall back to the PR-level CodeRabbit review in Step 6.3. If `cr` is installed but **not authenticated**, STOP and report to the user — NEVER run `cr auth login`. If CodeRabbit reports a rate/quota limit or cooldown, report it once, classify findings already received and resolve the blocking ones, mark the pass `skipped (rate-limited)`, and continue immediately. Throttling waives the unrun remainder of the review, never a finding already delivered. Never wait or retry solely for a CodeRabbit cooldown.
 
 **4. Codex (local, via `codex`)** — independent one-shot branch review:
 
@@ -328,7 +328,7 @@ Proceed to Step 5 when all of the following are true:
 
 1. Every **blocking** ledger entry is resolved with evidence. Blocking is defined once, in `references/scope-contract.md` § Blocking; this gate does not restate it.
 
-   **`follow-up/out-of-scope` with a Material or Substantive tier is not a legal combination.** The two fields are assigned by different filters and cannot disagree: an out-of-scope finding is deferred at filter 1 and never reaches the bar, so its tier is `n/a`; a finding that *does* reach the bar is in scope by construction, so if it ranks Material or Substantive it is a defect in work this change actually did, and belongs under `required-by-contract` or `regression-caused-by-change`. If you are about to record that pair, one of the two filters was misapplied — re-run them rather than writing an entry the gate can neither clear nor waive. Materiality never promotes an out-of-scope finding back into scope (`references/scope-contract.md` § Three filters); this rule is that principle applied to the ledger.
+   **`follow-up/out-of-scope` with a Material or Substantive tier is not a legal combination.** The two fields are assigned by different filters and cannot disagree. That class holds entries of two different origins, and only two tiers are legal for it: a finding excluded at filter 1 never reaches the bar, so its tier is `n/a`; an in-scope observation that reached filter 3 and failed it is tier `immaterial`. A finding that reaches the bar and ranks Material or Substantive is in scope by construction and is a defect in work this change actually did, so it belongs under `required-by-contract` or `regression-caused-by-change`. **Tier decides the resolver disposition, not the class name** (§ Resolver dispositions): `n/a` settles as `deferred`, citing the exclusion; `immaterial` settles as `immaterial`, replying with the materiality reasoning. Citing an exclusion for an in-scope observation invents one that does not exist. If you are about to record that pair, one of the two filters was misapplied — re-run them rather than writing an entry the gate can neither clear nor waive. Materiality never promotes an out-of-scope finding back into scope (`references/scope-contract.md` § Three filters); this rule is that principle applied to the ledger.
 2. Contract-required tests and tests affected by the latest delta pass.
 3. Every available review channel completed its initial pass or has a documented permitted degradation.
 4. The review has **converged** as `references/scope-contract.md` § Convergence defines it — no blocking finding left unresolved, ledger-wide, not merely none new in the latest pass. As an additional gate, that state is confirmed by one verification pass over the latest affected delta.
@@ -580,7 +580,7 @@ Agent tool:
 
 **MANDATORY: Wait for and resolve EVERY automated reviewer configured on the repo.** Copilot and CodeRabbit are the two we know about today; future integrations slot in here. Reviewers are **independent feedback channels** with different latencies (Copilot 85 s to 12 m 42 s observed — do not budget for it being quick; CodeRabbit 2–10+ min and re-runs after every push).
 
-> **CodeRabbit was attempted LOCALLY in Step 4.5** (`cr review --agent`). The PR-level handling here is a fallback for repos whose GitHub App auto-reviews PRs. Prefer a passing check and resolve received feedback; if either local or PR-level CodeRabbit rate-limits, record `skipped (rate-limited)` and continue without blocking.
+> **CodeRabbit was attempted LOCALLY in Step 4.5** (`cr review --agent`). The PR-level handling here is a fallback for repos whose GitHub App auto-reviews PRs. Prefer a passing check and resolve received feedback; if either local or PR-level CodeRabbit rate-limits, resolve what it already delivered — blocking findings fixed, every posted thread settled — then record `skipped (rate-limited)` and continue without blocking.
 
 ##### Reviewer-by-reviewer skills
 
@@ -660,10 +660,10 @@ Fix only blocking-class findings. Record follow-up/out-of-scope feedback without
 ##### Skip rules
 
 - If a reviewer is **not configured** for the repo (e.g. `wait-for-coderabbit-review.sh` exits 2 because no `CodeRabbit` check ever appears), report this once and proceed without that reviewer.
-- If **CodeRabbit reports a rate/quota limit or cooldown**, report it once, mark CodeRabbit `skipped (rate-limited)`, and proceed immediately. Do not raise timeouts, sleep, poll, or retry for CodeRabbit throttling.
+- If **CodeRabbit reports a rate/quota limit or cooldown**, report it once, mark CodeRabbit `skipped (rate-limited)`, and proceed immediately. Do not raise timeouts, sleep, poll, or retry for CodeRabbit throttling. **The degradation waives only the review passes that never ran** (`fx-dev:coderabbit-review`, rate-limit rule): anything CodeRabbit already delivered still counts — fix its blocking findings and settle every thread it already posted before recording the skip, or the PR carries an open thread past a gate that requires none.
 - Do not apply this exception to Copilot or other reviewers. A merely slow CodeRabbit check with no rate-limit signal still follows the normal timeout behavior.
 
-**⛔ DO NOT PROCEED until every required reviewer has settled. CodeRabbit is satisfied by a passing result or an explicit `skipped (rate-limited)` degradation.**
+**⛔ DO NOT PROCEED until every required reviewer has settled. CodeRabbit is satisfied by a passing result, or by an explicit `skipped (rate-limited)` degradation once everything it already delivered is resolved.**
 
 ---
 

@@ -242,7 +242,7 @@ duvet# A pull request MUST NOT be merged while any review thread on it from a co
 |---|------|--------------|-----------|
 | 1 | **Required CI checks green** | `gh pr checks <NUMBER>` — every required non-CodeRabbit check must pass | YES |
 | 2 | **Copilot review RECEIVED and feedback RESOLVED** | Invoke `fx-dev:copilot-review` skill — confirm 0 unresolved Copilot threads | YES |
-| 2b | **CodeRabbit reviewed or correctly degraded** | Invoke `fx-dev:coderabbit-review`: prefer a passing check with received feedback resolved; if CodeRabbit rate-limits, report once and record `skipped (rate-limited)` without blocking | NO when rate-limited |
+| 2b | **CodeRabbit reviewed or correctly degraded** | Invoke `fx-dev:coderabbit-review`: prefer a passing check with received feedback resolved; if CodeRabbit rate-limits, report once, resolve what it already delivered (blocking findings fixed, every posted thread settled), and record `skipped (rate-limited)` without blocking | NO when rate-limited |
 | 3 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
 | 4 | **Spec task marked complete** | Check via project-management skill | YES |
 | 5 | **PR description is clear** | Read PR body | YES |
@@ -267,7 +267,7 @@ Skill tool: skill="fx-dev:coderabbit-review",  args="<PR_NUMBER>"
 # 3. When Bash task completes: Skill fx-dev:rabbit-feedback-resolver
 ```
 
-Apply `fx-dev:dev` Steps 2.5 and 6.3 as the canonical reviewer policy: maintain the coordinator-owned finding ledger, fix only blocking-class findings, and rerun only reviewer state invalidated by the latest delta. Do not restart every reviewer after each push or seek zero suggestions. Settle all required threads within the bounded remediation rounds. **If CodeRabbit reports a rate/quota limit or cooldown at any point, stop its loop immediately, report once, record `skipped (rate-limited)`, and continue without waiting or escalating.** Copilot must still satisfy its mandatory review gate.
+Apply `fx-dev:dev` Steps 2.5 and 6.3 as the canonical reviewer policy: maintain the coordinator-owned finding ledger, fix only blocking-class findings, and rerun only reviewer state invalidated by the latest delta. Do not restart every reviewer after each push or seek zero suggestions. Settle all required threads within the bounded remediation rounds. **If CodeRabbit reports a rate/quota limit or cooldown at any point, stop its loop immediately, report once, record `skipped (rate-limited)`, and continue without waiting or escalating — after fixing the blocking findings it already delivered and settling every thread it already posted.** The degradation waives only the passes that never ran (`fx-dev:coderabbit-review`, rate-limit rule), never work already on the PR. Copilot must still satisfy its mandatory review gate.
 
 If CodeRabbit is not configured (wait script exits 2), report once and proceed. Do not silently skip ordinary failures; the optional exception is specifically for CodeRabbit throttling.
 

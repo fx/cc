@@ -183,9 +183,15 @@ thread marked `blocking` is fixed even when CodeRabbit labelled it
 `_🧹 Nitpick_`; a thread marked `immaterial` or `deferred` is replied to and
 resolved **without editing anything**.
 
-**With no disposition, run the filters yourself** — scope, then contract, then
-materiality (`fx-dev/skills/dev/references/scope-contract.md` § Three filters).
-CodeRabbit's own labels are an *input* to that judgment, never a verdict.
+**With no disposition — this skill invoked directly, or a thread the coordinator
+did not cover — reconstruct the Scope Brief first**, from the conversation and the
+PR description, and say that you did
+(`fx-dev/skills/dev/references/scope-contract.md` § Injecting the brief into
+reviews). There is no scope filter without one, and filtering by guess reads valid
+out-of-scope feedback as an in-scope edit. **Then run the filters yourself** —
+scope, then contract, then materiality
+(`fx-dev/skills/dev/references/scope-contract.md` § Three filters). CodeRabbit's
+own labels are an *input* to that judgment, never a verdict.
 
 | Category | Indicator | Action |
 |----------|-----------|--------|
@@ -194,6 +200,15 @@ CodeRabbit's own labels are an *input* to that judgment, never a verdict.
 | **Actionable with Committable** | Has `📝 Committable suggestion` **and is blocking** per `fx-dev/skills/dev/references/scope-contract.md` § Blocking | Verify the suggestion against the code, then apply. Never apply on sight — a committable suggestion is still a claim about the tree |
 | **General Feedback** | No special sections | Triage first; delegate to coder only if **blocking**, otherwise reply and resolve with no edit |
 | **Deferred** | Valid but out of scope for this PR | Reply citing the exclusion, resolve. **No edit and no commit** — return the follow-up to the coordinator (`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions) |
+| **Outdated** | Refers to code that no longer exists | Reply with the explanation, resolve. No edit |
+| **Incorrect** | Misreads a deliberate project convention | Reply with the explanation, resolve, and record the convention in `REVIEW.md` |
+
+**A thread the coordinator left undisposed is a false positive it verified and
+rejected** (`fx-dev/skills/dev/references/scope-contract.md` § Resolver
+dispositions) — deliberately undisposed so these last two rows can handle it, not
+an oversight. It is **Outdated** or **Incorrect** whatever section markers it
+carries, and it still ends resolved: an unhandled thread holds the
+zero-unresolved-threads gate open indefinitely.
 
 ### 3. Process Each Category
 
@@ -255,7 +270,10 @@ produces the push that reopens the loop.
    shipped uncorrected: reply with that reasoning and resolve. **Do not delegate
    and do not edit**; a fix push reopens the review loop for an item that changes
    nothing. Validity is not the gate here, materiality is
-5. If conflicts with project conventions (INCORRECT):
+5. If it refers to code that no longer exists (OUTDATED):
+   - Reply naming the commit that removed or refactored it, and resolve
+   - No edit — there is nothing left to fix
+6. If conflicts with project conventions (INCORRECT):
    - Reply with explanation and resolve
    - **Update `REVIEW.md`** to document the correct pattern
    - This prevents Copilot, CodeRabbit, Codex, AND Claude Code Review from flagging it again — they all resolve to the same file
@@ -342,6 +360,7 @@ echo "$COMMENT_BODY" | sed -n '/🤖 Prompt for AI Agents/,/<\/details>/p' | sed
 | PRRT_zzz  | lib/util.js:8 | Committable | Applied suggestion | ✅ Resolved |
 | PRRT_aaa  | src/ui.tsx:20 | Deferred | Returned to coordinator, no edit | ✅ Resolved |
 | PRRT_bbb  | src/api.ts:88 | Immaterial | Replied, no edit | ✅ Resolved |
+| PRRT_ccc  | src/old.ts:31 | Outdated | Code refactored, replied | ✅ Resolved |
 ```
 
 ## Error Handling

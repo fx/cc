@@ -317,7 +317,11 @@ CONVERGENCE PASS line and the do-not-re-report list are added on top.
 
 ```
 CONVERGENCE PASS <N>. Prior passes found <count> issues; all fixed except <the
-rejected ones and why>. Do not re-report them.
+rejected ones and why>. Do not re-report them **while the reason still holds** —
+each was rejected against a specific state of the tree, and later fixes have
+changed that tree. If one of those reasons no longer holds, report the finding as
+new and say which fix invalidated the rejection. Do not treat a rejection as
+permanent.
 
 Classes closed since the last pass — every site of each was swept, not just the
 one reported: <class, and the search that proved it closed>. Report a further
