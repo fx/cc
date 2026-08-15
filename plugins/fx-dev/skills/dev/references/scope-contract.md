@@ -90,11 +90,13 @@ A finding that fails filter 1 is deferred. One that passes filter 2 is blocking.
 
 | Tier | Examples | Treatment |
 |---|---|---|
-| **Material** | Wrong behaviour, data loss, security, a build/CI/test that will fail, a contradiction that makes the artifact unimplementable, a stated fact that is false | Report individually. Blocks convergence. |
+| **Material** | Wrong behaviour, data loss, security, a build/CI/test that will fail, a contradiction that makes the artifact unimplementable, a stated fact that is false **and that a reader would act on** | Report individually. Blocks convergence. |
 | **Substantive** | A genuine ambiguity a reader could act on two ways; a missing step that would be discovered late and cost a cycle | Report individually. Blocks convergence. |
 | **Immaterial** | Wording that is merely improvable; a count off by one where nothing keys on the count; a list entry missing from a list nothing enumerates exhaustively; formatting; a synonym that reads better | **One closing note, unnumbered, non-blocking.** Never a separate finding, never a reason for another pass. |
 
 When unsure which tier something is, ask: *if this shipped uncorrected, what breaks?* If the honest answer is "nothing, it is just not as good as it could be", it is immaterial.
+
+**When two rows both seem to fit, that question decides it — reader impact, not the category label.** A document that says "four steps" above five steps is both a false stated fact and a count nothing keys on; it is **immaterial**, because no reader acts on the number. The same document saying a command takes `--base` when it rejects `--base` is **material**, because a reader will run it and it will fail. The falsehood is not what makes a finding material; acting on the falsehood is.
 
 ### Three things that are not findings
 

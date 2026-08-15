@@ -311,8 +311,11 @@ Where this artifact declares a list illustrative and a rule authoritative,
 assess the RULE. A further missing list entry is not a finding.
 
 Where it records a decision with its rationale — including "unknown, gated on
-X" — that is settled. If you believe it is wrong, say so once as an escalation;
-do not re-argue it.
+X" — and your disagreement is about preference, that is settled: say so once as
+an escalation, and do not re-argue it. This does NOT cover a decision that is
+itself the defect. If the decision leaks a credential, an internal URL, or a
+private identifier, loses data, or violates a security or privacy invariant,
+report it as a blocking finding however carefully it is reasoned.
 
 If the artifact is internally consistent and matches the tree, say so plainly.
 ```

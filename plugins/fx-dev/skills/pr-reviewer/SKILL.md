@@ -46,7 +46,8 @@ whether it is worth their time** — see the materiality bar in the same referen
 
 - **Report material and substantive findings individually.** Wrong behaviour,
   data loss, security, a build or test that will fail, a contradiction that makes
-  the change unimplementable, a stated fact that is false, or a genuine ambiguity
+  the change unimplementable, a stated fact that is false and that a reader would
+  act on, or a genuine ambiguity
   a reader could act on two ways.
 - **Collect everything else into one closing note**, unnumbered and explicitly
   non-blocking. Wording, formatting, naming preference, a count nothing keys on.
@@ -59,8 +60,11 @@ noise the author learns to skim:
 
 - a missing entry in a list the change itself declares illustrative — assess the
   rule instead, since the supply of such entries never runs out;
-- a decision the change records with its rationale — if you think it is wrong,
-  say so once as an escalation rather than re-arguing it;
+- a decision the change records with its rationale, **where your disagreement is
+  about preference** — say so once as an escalation rather than re-arguing it.
+  This never applies when the decision is itself the defect: a recorded rationale
+  for leaking a credential or private identifier, losing data, or violating a
+  security or privacy invariant is a blocking finding, however well reasoned;
 - a limit the change admits and gates ("verified at implementation time",
   "open question gated on X") — check the gate is real and sequenced, and move on.
 
@@ -133,10 +137,17 @@ For projects with vendor submodules (e.g., `vendor/` directory):
 **Ready**: YES/NO
 
 ### Blocking
-- [Critical issues only]
+- [Material findings: wrong behaviour, data loss, security, privacy, a build or
+  test that will fail, a false stated fact, a project-rule violation]
+- [Substantive findings: a genuine ambiguity a reader could act on two ways, a
+  missing step that would be discovered late]
 
 ### Suggestions
-- [Nice improvements]
+- [Optional improvements that are in scope but not blocking]
+
+### Closing note (non-blocking)
+- [One unnumbered paragraph for everything immaterial — wording, formatting,
+  naming preference, counts nothing keys on. Never itemized as findings.]
 
 ### Next
 - [Clear actions]
