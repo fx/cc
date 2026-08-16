@@ -119,7 +119,10 @@ This matters more here than anywhere else in the loop: **every push re-opens the
 gate.** Copilot must then re-review the new head (Step 5), so editing for an
 immaterial finding costs a full wait cycle and produces a fresh commit for it to
 comment on. Push fixes for blocking findings; reply-and-resolve
-the rest without a commit.
+the rest without a commit — with one exception: a thread whose premise is wrong
+because Copilot misread a deliberate convention needs the `REVIEW.md` entry that
+stops it recurring, and that entry is a commit. It is required work, not an edit
+made for an immaterial finding.
 
 ## When to Use
 
@@ -323,7 +326,7 @@ on its own never passes it (**D4**).
 
 Resolving feedback usually means pushing commits. Those commits are **unreviewed**, and Copilot will not look at them by itself.
 
-If the head SHA changed since the review in Step 2, go back to **Step 1** — nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. Cap at 15 iterations (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) and escalate to the user if it has not settled. The bound is a backstop, not a budget: escalate as soon as the same disagreement repeats, and when the blocking count rises **with every new finding in one class**, fix that cause before escalating — a count that rises across different categories means the review is still productive. Every iteration here costs a full Copilot wait cycle.
+If the head SHA changed since the review in Step 2, go back to **Step 1** — nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. Cap at 15 iterations (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) and escalate to the user if it has not settled. The bound is a backstop, not a budget: escalate on the same disagreement in successive passes (`fx-dev/skills/dev/references/scope-contract.md` § Convergence defines that trigger and this skill does not restate it), and when the blocking count rises **with every new finding in one class**, fix that cause before escalating — a count that rises across different categories means the review is still productive. Every iteration here costs a full Copilot wait cycle.
 
 **Convergence is: no blocking finding left unresolved, every thread resolved, and the suppressed block empty-or-triaged — all on a reviewed head.** *Unresolved*, not *new*: a blocker carried from an earlier pass still blocks even if this pass did not repeat it, and a suppressed item creates no thread, so no thread count discharges it. It is NOT "zero new threads". Resolving an immaterial thread by reply creates no commit, so the head does not move and no further pass is owed; nudging for another review to chase a zero-thread pass spends a wait cycle to change nothing. **Only a push restarts this loop**, which is why only blocking findings should produce one.
 

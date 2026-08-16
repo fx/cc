@@ -347,7 +347,9 @@ Report every BLOCKING finding. A finding is blocking if it is any of:
    would be discovered late and cost a cycle.
 
 Wording, formatting, and counts nothing keys on are NOT blocking: one closing
-note, not findings.
+note, not findings. The exception is item 1 above — where the project wrote down
+a rule about wording or formatting, violating it is blocking on those grounds,
+and this sentence does not override that.
 
 When a finding is one instance of a pattern that appears elsewhere, say so and
 list every other site you can see. Report it as ONE finding naming the class,

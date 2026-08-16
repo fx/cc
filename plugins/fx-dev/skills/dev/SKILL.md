@@ -333,7 +333,7 @@ Proceed to Step 5 when all of the following are true:
 3. Every available review channel completed its initial pass or has a documented permitted degradation.
 4. The review has **converged** as `references/scope-contract.md` § Convergence defines it — no blocking finding left unresolved, ledger-wide, not merely none new in the latest pass. As an additional gate, that state is confirmed by one verification pass over the latest affected delta.
 
-`follow-up/out-of-scope` entries with tier `n/a`, and immaterial observations, do not block PR creation. Nothing else is waivable here: a reviewer-originated Material or Substantive finding blocks even though no written requirement names it, exactly as item 1 above and `references/scope-contract.md` § Blocking say. Each review channel caps at **15 reviewer invocations in total, counting its initial pass** — the single bound defined in `references/scope-contract.md` § The iteration bound, which no skill overrides. The initial pass is iteration 1, leaving 14 remediation/delta-verification rounds; counting the bound from *after* the initial pass would make it 16. **Convergence is the goal, and the bound is a runaway backstop, not a target.** Reaching it means the loop failed to converge; report it that way. Reaching the bound is a failure to converge and does not authorize Step 5. STOP, report the per-pass trend and everything still open, and let the user decide whether to create the PR — including when every remaining entry is `follow-up/out-of-scope` with tier `n/a`. A blocking entry at the bound is always an escalation; the bound never waives one. A contract amendment may change product scope, but it cannot waive mandatory correctness, security, privacy, testing, or merge rules.
+`follow-up/out-of-scope` entries with tier `n/a` — the class and the tier together, which is what identifies a filter-1 exclusion — and immaterial observations, do not block PR creation. Tier `n/a` alone does not qualify: a `required-by-contract` entry carries it too, and blocks. Nothing else is waivable here: a reviewer-originated Material or Substantive finding blocks even though no written requirement names it, exactly as item 1 above and `references/scope-contract.md` § Blocking say. Each review channel caps at **15 reviewer invocations in total, counting its initial pass** — the single bound defined in `references/scope-contract.md` § The iteration bound, which no skill overrides. The initial pass is iteration 1, leaving 14 remediation/delta-verification rounds; counting the bound from *after* the initial pass would make it 16. **Convergence is the goal, and the bound is a runaway backstop, not a target.** Reaching it means the loop failed to converge; report it that way. Reaching the bound is a failure to converge and does not authorize Step 5. STOP, report the per-pass trend and everything still open, and let the user decide whether to create the PR — including when every remaining entry is `follow-up/out-of-scope` with tier `n/a`. A blocking entry at the bound is always an escalation; the bound never waives one. A contract amendment may change product scope, but it cannot waive mandatory correctness, security, privacy, testing, or merge rules.
 
 **Do not spend the headroom.** The bound is far above what a healthy channel needs; the signals that should actually end a loop — converged, and the same disagreement in successive passes (`references/scope-contract.md` § Convergence) — fire in single digits, as does a rising blocking count of one class, which is a cause to fix rather than an exit: address the cause and continue, and escalate only where the cause is a design choice with two defensible answers (`references/scope-contract.md` § The iteration bound). A round that resolves only immaterial items is churn at any iteration number, and the convergence rule already forbids it.
 
@@ -561,7 +561,7 @@ Agent tool:
   description: "Review PR"
 ```
 
-The coordinator MUST classify and deduplicate these findings in the Step 2.5 ledger before invoking a coder. Pass every **blocking** entry to implementation and nothing else (`references/scope-contract.md` § Blocking) — which includes a `follow-up/out-of-scope` entry blocking by tier, and excludes one whose tier is `n/a` or `immaterial`.
+The coordinator MUST classify and deduplicate these findings in the Step 2.5 ledger before invoking a coder. Pass every **blocking** entry to implementation and nothing else (`references/scope-contract.md` § Blocking) — which includes a `follow-up/out-of-scope` entry blocking by tier, and excludes an entry that is not blocking. Select on blocking, never on the tier: `n/a` marks a contract blocker (filter 2 stopped before the bar) just as it marks a filter-1 exclusion, so dropping every `n/a` entry drops every mandatory rule violation.
 
 #### 6.2 Fix Blocking Issues (if any found)
 
@@ -573,8 +573,9 @@ Agent tool:
            [EVERY BLOCKING LEDGER ENTRY — REQUIRED-BY-CONTRACT,
             REGRESSION-CAUSED-BY-CHANGE, AND ANY ENTRY BLOCKING BY TIER]
 
-           Do not implement ledger entries that are not blocking — tier n/a or
-           immaterial."
+           Do not implement ledger entries that are not blocking. Judge that by
+           the blocking flag, not the tier: a required-by-contract entry also
+           carries tier n/a, and it MUST be fixed."
   description: "Fix review issues"
 ```
 
