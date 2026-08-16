@@ -210,8 +210,14 @@ the reason is what marks it as one. Then it is **Outdated** or **Incorrect**
 whatever section markers it carries.
 
 **A thread with no disposition and no reason is untriaged, not rejected.** The
-coordinator is allowed to leave a thread uncovered — run the filters over it
-yourself, as above. Reading a bare omission as a verified rejection resolves a
+coordinator is allowed to leave a thread uncovered, and this skill also runs
+standalone with no coordinator at all — so triage it yourself, as above. **That
+includes checking the premise**: if you find the thread describes code that no
+longer exists, or misreads a deliberate convention, it is **Outdated** or
+**Incorrect** and takes those rows on your own finding, exactly as it would on
+the coordinator's. The filters rank a real finding; they do not detect a false
+one, so an unchecked premise is how an incorrect thread loses its `REVIEW.md`
+entry. Reading a bare omission as a verified rejection resolves a
 real blocker with a reply and no fix, which is the one outcome this table exists
 to prevent. Either way the thread ends resolved: an unhandled one holds the
 zero-unresolved-threads gate open indefinitely.

@@ -271,10 +271,12 @@ than waiting it out.
   out-of-scope finding is deferred however material it looks (Step 3.5). Then
   project rules and security/privacy invariants, which block regardless of the
   bar. Only what remains is ranked. Blocking findings are fixed;
-  immaterial ones — wording, formatting, a count nothing keys on, an entry
-  missing from a list the artifact does not present as exhaustive, whether it says
-  "for example" or declares the list illustrative — go into one closing
-  note and MUST NOT drive another iteration.
+  immaterial ones — wording, formatting, a count nothing keys on — go into one
+  closing note and MUST NOT drive another iteration. An entry missing from a list
+  the artifact does not present as exhaustive is not reported **at all**, not even
+  in that note (`fx-dev/skills/dev/references/scope-contract.md` § Three things
+  that are not findings): the supply never runs out, so a note listing them grows
+  without bound.
 - **Fix the class, not the instance** (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance). Codex reports the site it read; treat it as one instance until you have proved it unique, sweep the lexical, altitude, symmetry and enumeration axes across this change's surface, and fix them in one commit. Prove the sweep with a search whose empty result is the evidence — normalising whitespace, and never filtering out the file under review. **Do not re-run with a class half-closed**: the next pass will spend itself reporting siblings you already knew about.
 - **Fix real issues** in code and tests; make atomic commits for the fixes.
 - **Nitpicks are immaterial by definition, so do not apply them.** They go in
@@ -308,10 +310,12 @@ facts verified since the last pass, so Codex does not relitigate settled ground.
 
 **Converged does NOT mean zero output.** Codex will keep producing immaterial
 observations indefinitely; waiting for silence spends full review cycles on
-wording. Stop when what remains would change nothing if it shipped uncorrected
-**and none of it is a contract blocker** — a violation of a project rule or a
-security or privacy invariant blocks even where its behavioural impact is nil, so
-it can never be what "remains" — and list those items once, non-blocking.
+wording. **Stop when no blocking finding is left unresolved** — the ledger test in
+`fx-dev/skills/dev/references/scope-contract.md` § Convergence, and the only test.
+It already settles both edge cases, so do not re-derive either from materiality: a
+deferred finding is non-blocking however material it looks in isolation, and a
+contract blocker is blocking however small its behavioural impact. List what
+remains once, non-blocking.
 
 **Tell Codex the bar and the settled ground in the prompt**, so it spends the
 pass where it pays. **Every prompt carries this block — the first pass as well as

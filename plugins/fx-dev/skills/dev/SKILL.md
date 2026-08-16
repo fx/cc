@@ -739,8 +739,8 @@ gh pr checks [NUMBER]
 # Use the dedicated skills — NEVER raw gh api commands.
 ```
 ```
-Skill tool: skill="fx-dev:copilot-review",     args="[NUMBER]"
-Skill tool: skill="fx-dev:coderabbit-review",  args="[NUMBER]"
+Skill tool: skill="fx-dev:copilot-review",     args="[NUMBER] — [STEP 2.5 SCOPE BRIEF VERBATIM]"
+Skill tool: skill="fx-dev:coderabbit-review",  args="[NUMBER] — [STEP 2.5 SCOPE BRIEF VERBATIM]"
 ```
 ```bash
 # 3. Unresolved review threads — MUST be 0 (across ALL reviewers)
