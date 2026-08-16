@@ -116,7 +116,7 @@ Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until no block
 **Converged does NOT mean zero output.** Waiting for silence spends full review cycles on wording. Stop when what remains would change nothing if it shipped uncorrected **and none of it is a contract blocker** — a violation of a project rule or a security or privacy invariant blocks even where its behavioural impact is nil, so it can never be what "remains" — and list those items once, non-blocking.
 
 - **Cap at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) — a runaway backstop, not a target. Convergence is the goal; reaching the bound is a failure to converge, and you report it as an escalation rather than a pass. If CodeRabbit keeps flagging the same design decision across two passes, that is a human call, not more code edits — escalate it **by name** and stop, without spending the remaining iterations.
-- Watch the shape, and count only what blocks: blocking findings still arriving → keep going; **none left unresolved** → converged, however many immaterial observations it produced; the same disagreement twice → escalate. Converged is the ledger test in `fx-dev/skills/dev/references/scope-contract.md` § Convergence — a quiet latest pass does not discharge a blocker carried from an earlier one.
+- Watch the shape, and count only what blocks: blocking findings still arriving → keep going; **none left unresolved** → converged, however many immaterial observations it produced; the same disagreement in successive passes → escalate (`fx-dev/skills/dev/references/scope-contract.md` § Convergence, which defines the trigger this skill does not restate). Converged is the ledger test in `fx-dev/skills/dev/references/scope-contract.md` § Convergence — a quiet latest pass does not discharge a blocker carried from an earlier one.
 - **Rate-limit exception:** stop immediately on throttling; do not consume iterations waiting for cooldowns.
 - When you stop, report the per-pass trend and whether the last round's fixes were themselves reviewed.
 
@@ -230,7 +230,7 @@ query {
 
 If this count is 0, the CodeRabbit check is `success`, **and no blocking finding from any pass is still unresolved**, the gate is PASSED. Two of the three are observable from the API; the third is yours to track, and it is the one that a zero count cannot stand in for.
 
-**Cap the loop at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) — if CodeRabbit is still posting new blocking feedback at the bound, escalate to the user and say the loop did not converge. Almost always a loop that runs that long means CodeRabbit and the codebase disagree on a design decision that needs human input — which the same-disagreement-twice rule should have caught far earlier. Escalate when you see it, not at iteration 15.
+**Cap the loop at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound) — if CodeRabbit is still posting new blocking feedback at the bound, escalate to the user and say the loop did not converge. Almost always a loop that runs that long means CodeRabbit and the codebase disagree on a design decision that needs human input — which the successive-passes rule above should have caught far earlier. Escalate when you see it, not at iteration 15.
 
 **Hand the resolver the brief and a disposition per thread.** Invoking
 `fx-dev:rabbit-feedback-resolver` with only a PR number makes it re-derive triage

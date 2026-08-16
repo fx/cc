@@ -383,7 +383,9 @@ If the artifact is internally consistent and matches the tree, say so plainly.
   on a real branch takes many minutes, so fix causes, not instances.
 - Watch the shape, and count only what blocks. Blocking findings still arriving
   → keep going. **None left unresolved** → converged, however many immaterial
-  observations it produced. The same disagreement twice → escalate. Converged is
+  observations it produced. The same disagreement in successive passes → escalate, per
+  `fx-dev/skills/dev/references/scope-contract.md` § Convergence, which defines
+  that trigger and which this skill does not restate. Converged is
   the ledger test in `fx-dev/skills/dev/references/scope-contract.md`
   § Convergence — a quiet latest pass does not discharge a blocker carried from
   an earlier one.
