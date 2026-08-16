@@ -84,8 +84,12 @@ out of order produces the wrong verdict:
 
 A reviewer's own severity labels — CodeRabbit's `🧹 Nitpick` / `🔵 Trivial`,
 Copilot's `[nitpick]` prefix, a `P2` — are an **input** to that judgment, never a
-verdict. A project-rule, security, privacy or correctness defect carrying one is
-still blocking.
+verdict. A label demotes nothing: an item carrying one still goes through all
+three filters, so a project-rule, security or privacy violation wearing a
+`[nitpick]` prefix is a contract blocker at filter 2 regardless. Nor does the
+converse hold — calling something a correctness defect does not carry it past the
+bar. A false count nobody acts on reaches filter 3 and ranks immaterial, exactly
+as § The bar says.
 
 The outcome is exactly one of: **blocking**, **immaterial**, **deferred**, or —
 where you checked the premise and it does not hold — **no disposition at all**
@@ -154,7 +158,15 @@ as ONE finding naming the class and list every other site — § Reporting a cla
 | **blocking** | Fix it, swept as a class, and push (or commit, for a local review). A contract blocker is never discharged by a reply explaining it — the artifact has to change. |
 | **immaterial** | **Reply with the reasoning** — what the observation is, why it is below the bar — and resolve. **No edit.** For a local review with no threads, it goes in the closing note instead. |
 | **deferred** | Reply citing the exclusion that covers it, and resolve. **No edit, and no commit** — including no tracker commit, which widens the change. Return the follow-up to the coordinator, or propose it to the user when running standalone. |
-| **false premise** | The outdated/incorrect handler: reply with the evidence, resolve, and where a deliberate convention was misread, record it (Step 6). |
+
+**A false premise is not a fourth disposition.** There are exactly three
+(§ Resolver dispositions), and a thread whose premise does not hold carries
+**none** of them — that absence is what routes it to the adapter's
+outdated/incorrect handler: reply with the evidence, resolve, and where a
+deliberate convention was misread, record it (Step 6). A coordinator hands it over
+as an explicitly undisposed item *with the reason*, never as a disposition value,
+because an authoritative one would close that route off and lose the `REVIEW.md`
+entry with it.
 
 **Never edit for an immaterial finding.** Every push requires another reviewer
 pass before the loop can converge, so actioning one manufactures the next round's

@@ -1,6 +1,6 @@
 ---
 name: pr-reviewer
-description: "MUST BE USED when user asks to: review code, review PR, check my code, look at my changes, review changes. Reviews pull requests and code changes, evaluating quality and providing actionable feedback."
+description: "MUST BE USED when user asks to: review code, review PR, check my code, look at my changes, review changes. Reviews pull requests and code changes, reporting findings by tier — blocking ones individually, deferred ones with the exclusion covering each, and immaterial ones in a single closing note."
 ---
 
 # Pragmatic PR Review Skill

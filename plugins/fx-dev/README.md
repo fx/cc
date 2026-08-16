@@ -20,7 +20,7 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 - **issue-updater** - Updates GitHub issues with planning information and status changes
 
 #### PR Management Skills
-- **pr-reviewer** - Reviews pull requests, identifies issues, provides actionable feedback (adapter over **review**)
+- **pr-reviewer** - Reviews pull requests and reports findings by tier: blocking individually, deferred with the exclusion that covers each, immaterial in one closing note (adapter over **review**)
 - **pr-preparer** - Prepares PRs for submission, ensures compliance with project standards
 - **pr-check-monitor** - Monitors GitHub PR checks and coordinates fixes for failures
 - **pr-changeset-minimalist** - Reviews changesets to ensure only minimal necessary changes

@@ -127,7 +127,7 @@ Don't serialize reviewers when you don't have to — but do not budget for Copil
 
 ## Arguments
 
-This skill expects a PR number. Pass it as args: `skill='fx-dev:copilot-review', args='<PR_NUMBER>'`
+This skill expects a PR number **and the Scope Brief**: `skill='fx-dev:copilot-review', args='<PR_NUMBER> — <Scope Brief verbatim>'`. Copilot cannot be handed the brief itself, but this skill triages its output and dispatches a resolver, and both need it (`fx-dev:review` Step 1). A bare PR number makes the whole chain re-derive the exclusions from the PR description.
 
 ## Workflow
 

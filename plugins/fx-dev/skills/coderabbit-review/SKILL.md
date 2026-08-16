@@ -227,8 +227,9 @@ is the one a zero count cannot stand in for.
 ## Concurrency with other reviewers (Mode 2)
 
 Mode 2 can run **in parallel** with `fx-dev:copilot-review`. The SDLC step gating
-merge on automated review should wait for every configured reviewer to settle
-(terminal + zero unresolved threads each), and loop the whole group: any reviewer
+merge on automated review should wait for every configured reviewer to settle —
+terminal, zero unresolved threads, **and no blocking finding left unresolved**,
+for each — and loop the whole group: any reviewer
 that re-runs after a push re-triggers its waiter → resolver → possibly more
 commits → the other reviewers' waiters.
 
@@ -250,7 +251,10 @@ rate-limited path, where everything already delivered is resolved and the pass i
 recorded `skipped (rate-limited)`. Remaining immaterial observations travel as one
 closing note.
 
-**Mode 2:** the check is terminal with a passing conclusion and all threads are
-resolved — or CodeRabbit rate-limited, **every thread it had already delivered is
-settled**, and the gate is recorded `skipped (rate-limited)`. Throttling alone
-never blocks merge.
+**Mode 2:** all three of Step 3's conditions — the check terminal with a passing
+conclusion, zero unresolved CodeRabbit threads, **and no blocking finding left
+unresolved across every pass**. The third is not implied by the first two: a
+thread is closed by a reply, a blocker only by a fix, so a passing check over a
+resolved-but-unfixed blocker is not settlement. Or CodeRabbit rate-limited,
+**every thread it had already delivered is settled**, and the gate recorded
+`skipped (rate-limited)`. Throttling alone never blocks merge.

@@ -61,7 +61,12 @@ effect on this same PR's next review.
 - As part of the PR workflow after `pr-reviewer` skill completes
 - When PR checks show Copilot has left review comments
 
-**Invocation:** Use the Skill tool with `skill="fx-dev:copilot-feedback-resolver"`
+**Invocation:** always with the brief and your dispositions, never bare —
+
+```
+Skill tool: skill="fx-dev:copilot-feedback-resolver",
+            args="<Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>) — false premise (this skill's own handler): <thread id> (<what does not hold>)"
+```
 
 ## Processing Rules
 
