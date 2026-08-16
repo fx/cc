@@ -52,8 +52,9 @@ prompt, in this order:
 4. **IN SCOPE** — the dimensions worth reviewing for this deliverable.
 5. **Established facts** — anything verified this session, so Codex does not
    relitigate it.
-6. **`fx-dev:review` § The external-reviewer block, verbatim** — on pass 1 as
-   well as every re-run.
+6. **`fx-dev:review` § The external-reviewer block, verbatim** — Part 2 (the bar)
+   on pass 1 as well as every re-run; Part 1 (the convergence prefix) on top of
+   it from pass 2 only.
 
 ```bash
 codex review "${MCP_OFF[@]}" "SCOPE — READ CAREFULLY BEFORE REVIEWING.
@@ -72,7 +73,8 @@ IN SCOPE — review for:
 Established this session and not to be relitigated:
 - <verified fact>
 
-<fx-dev:review § The external-reviewer block — verbatim, on pass 1 too>"
+<fx-dev:review § The external-reviewer block, Part 2 — verbatim, on pass 1 too.
+ On a re-run, Part 1 goes above this.>"
 ```
 
 **A Codex run without the scope prompt is an incomplete pass.** Rerun it with one
@@ -229,7 +231,12 @@ moment the models change.
 Send **`fx-dev:review` § The external-reviewer block, verbatim**, as the last part
 of every prompt — the first pass as well as every re-run. That block is the single
 mirror both external reviewers use; this skill does not keep its own copy, and
-must not paraphrase it. Its CONVERGENCE PASS preamble goes on top from pass 2.
+must not paraphrase it.
+
+That section is in two parts, sent on different schedules: **Part 2 (the bar) goes
+in every prompt, pass 1 included; Part 1 (the convergence prefix) goes on top of it
+from pass 2 only.** On pass 1 send Part 2 alone — Part 1 has nothing to carry and
+asks the reviewer to honour a list of prior findings that does not exist.
 
 
 ## Codex-specific triage notes

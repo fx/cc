@@ -309,9 +309,20 @@ writing their own.
 > it a faithful restatement, never an independent edit, and update it in the same
 > commit that changes the canonical text.
 
-Send it on **every** pass, the first as well as every re-run. Pass 1 is where a
-reviewer with no bar produces the largest crop of low-value findings, so omitting
-it there costs the most. On a re-run the CONVERGENCE PASS preamble goes on top.
+**The block has two parts, and they are sent on different schedules.** Do not read
+"send it verbatim on every pass" as covering both: Part 1 is addressed to a
+reviewer that has prior passes to be told about, and on pass 1 it degenerates into
+`Prior passes found <count> issues` with nothing to fill in.
+
+- **Part 1 — the convergence prefix. From pass 2 only.** Omit it entirely on
+  pass 1; there is nothing to carry yet.
+- **Part 2 — the bar. Every pass, pass 1 included, verbatim.** Pass 1 is where a
+  reviewer with no bar produces the largest crop of low-value findings, so
+  omitting it there costs the most.
+
+On a re-run, send Part 1 followed by Part 2. On pass 1, send Part 2 alone.
+
+**Part 1 — the convergence prefix (pass 2 onwards):**
 
 ```
 CONVERGENCE PASS <N>. Prior passes found <count> issues, disposed of as follows
@@ -332,7 +343,11 @@ Classes closed since the last pass — every site of each was swept, not just th
 one reported: <class, and the search that proved it closed>. Report a further
 instance of one of these only if the sweep actually missed it, and say which
 site.
+```
 
+**Part 2 — the bar (every pass, including pass 1):**
+
+```
 Report every BLOCKING finding. A finding is blocking if it is any of:
 
 1. A violation of a rule this project wrote down — anything in AGENTS.md or

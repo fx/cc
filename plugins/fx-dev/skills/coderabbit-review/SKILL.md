@@ -39,6 +39,10 @@ Write two things into that file: the Scope Brief, and **`fx-dev:review` § The
 external-reviewer block, verbatim**. That block is the single mirror both external
 reviewers use — do not paraphrase it or write a CodeRabbit-specific variant.
 
+That section is in two parts: write **Part 2 (the bar) on every pass, pass 1
+included**, and add **Part 1 (the convergence prefix) on top only from pass 2**,
+where there are prior dispositions to carry.
+
 ```bash
 # The brief + fx-dev:review § The external-reviewer block, as instructions
 # cr reads before reviewing.
@@ -161,8 +165,14 @@ in the **FOREGROUND** with `timeout: 1320000` (22 minutes) on the Bash call:
 bash [SKILL_BASE_DIR]/skills/coderabbit-review/scripts/wait-for-coderabbit-review.sh <PR_NUMBER>
 ```
 
-**⚠️ Do NOT use `run_in_background`** — that loses the script output and breaks
-the cycle.
+**⚠️ Never background this without capturing its output** — the cycle is driven by
+what the script prints, and a backgrounded run whose stdout goes nowhere breaks it.
+
+Foreground is the default and always correct. Backgrounding is permitted in exactly
+one case: **redirect stdout and stderr to a file and read that file when the run
+finishes** — which is what `fx-dev:dev` Step 6.3 mode B does, to overlap this slow
+waiter with the Copilot one when you cannot spawn sub-agents. The rule is about
+losing the output, not about which process it runs in.
 
 Exit codes:
 
