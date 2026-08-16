@@ -208,13 +208,13 @@ its argument:
 **If Copilot threads exist:**
 ```
 Skill tool: skill="fx-dev:copilot-feedback-resolver",
-            args="<Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>)"
+            args="<Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>) — false premise (resolver's own handler): <thread id> (<what does not hold>)"
 ```
 
 **If CodeRabbit threads exist:**
 ```
 Skill tool: skill="fx-dev:rabbit-feedback-resolver",
-            args="<Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>)"
+            args="<Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>) — false premise (resolver's own handler): <thread id> (<what does not hold>)"
 ```
 
 **If Codecov coverage gaps detected:**

@@ -197,8 +197,10 @@ If the script reports unresolved CodeRabbit threads (count > 0), invoke the rabb
 
 ```
 Skill tool: skill="fx-dev:rabbit-feedback-resolver",
-            args="<PR_NUMBER> — <Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>)"
+            args="<PR_NUMBER> — <Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>) — false premise (resolver's own handler): <thread id> (<what does not hold>)"
 ```
+
+**The false-premise suffix is not optional when Step 1b rejected a thread.** That thread carries no disposition by design, and the ID and the reason are the only things that tell the resolver to run its outdated/incorrect path rather than re-triaging an omission — a re-triage that can lose the `REVIEW.md` entry which is the whole point of the incorrect path.
 
 That skill handles per-thread categorisation, pushes any code fixes, replies, and resolves each thread.
 
@@ -236,8 +238,11 @@ If this count is 0, the CodeRabbit check is `success`, **and no blocking finding
 `fx-dev:rabbit-feedback-resolver` with only a PR number makes it re-derive triage
 it cannot see, and it will edit for threads you classified immaterial or
 deferred. Pass `args="<PR_NUMBER> — <Scope Brief verbatim> — dispositions: <thread
-id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>)"`, per
-`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions.
+id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>) — false
+premise (resolver's own handler): <thread id> (<what does not hold>)"`, per
+`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions — the
+false-premise suffix included, since a thread Step 1b rejected carries no
+disposition and the reason is what routes it to the outdated/incorrect path.
 
 **Threads must all be resolved, but resolution is not the same as a fix.** An immaterial thread is resolved by replying with the reason it is not being actioned — the gate is zero *unresolved* threads, not zero observations acted on. Re-pushing for another CodeRabbit pass to chase immaterial items is exactly the churn the materiality bar exists to stop.
 

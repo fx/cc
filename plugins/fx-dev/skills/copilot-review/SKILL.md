@@ -259,7 +259,7 @@ After the review is received, invoke the resolve-pr-feedback skill to process al
 
 ```
 Skill tool: skill="fx-dev:resolve-pr-feedback",
-            args="<PR_NUMBER> — <Scope Brief verbatim> — dispositions already assigned: <suppressed item or thread id> blocking | immaterial | deferred (<exclusion>)"
+            args="<PR_NUMBER> — <Scope Brief verbatim> — dispositions already assigned: <suppressed item or thread id> blocking | immaterial | deferred (<exclusion>) — false premise (resolver's own handler): <item or thread id> (<what does not hold>)"
 ```
 
 **Never invoke it with only the PR number.** The Scope Brief must travel into
