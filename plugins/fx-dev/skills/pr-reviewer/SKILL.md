@@ -1,43 +1,27 @@
 ---
 name: pr-reviewer
-description: "MUST BE USED when user asks to: review code, review PR, check my code, look at my changes, review changes. Reviews pull requests and code changes, evaluating quality and providing actionable feedback."
+description: "MUST BE USED when user asks to: review code, review PR, check my code, look at my changes, review changes. Reviews pull requests and code changes, reporting findings by tier — blocking ones individually, deferred ones with the exclusion covering each, and immaterial ones in a single closing note."
 ---
 
 # Pragmatic PR Review Skill
 
-## MANDATORY: Establish the Scope Brief (Step 0)
+**⛔ Load `fx-dev:review` first** (Skill tool: `skill="fx-dev:review"`). It is the
+canonical review procedure — carrying the Scope Brief, triaging in filter order,
+reporting a class, converging, reporting the trend. This skill is the **agent
+adapter**: you *are* the reviewer, so there is no CLI or bot to drive. What it
+adds is the project-rule pass every fx-dev review starts from, and the output
+format. Where the two appear to disagree, `fx-dev:review` wins.
 
-**Never review a bare diff.** A reviewer that does not know what was asked for
-reports the work that was deliberately not done — missing implementation for a
-docs-only change, missing tests for a spec, absent dependencies a later phase
-adds. Those findings are noise, and each round costs a full review cycle.
+Follow `fx-dev:review` Steps 1–4 in full: establish the brief (reconstruct it from
+the conversation and PR description if you were not handed one, and say so),
+triage scope → contract → materiality, verify each premise before reporting it,
+and report a class as one finding rather than one per site.
 
-Before reading a single line of the diff, establish the **Scope Brief**
-(canonical definition and field rules:
-`fx-dev/skills/dev/references/scope-contract.md`):
+Two things this skill is responsible for, on top of that procedure:
 
-- **Verbatim request** — the user's own words, quoted, never paraphrased.
-  "just fix the typo real quick" and "fix the typo" are different instructions.
-- **Interpreted scope** — files, subsystems, deliverable type.
-- **Explicitly out of scope** — what was deliberately not done, and why.
-- **Known-and-accepted** — deliberate states that look like defects out of context.
-
-If a coordinator handed you a brief, use it verbatim. **If you were invoked
-without one, reconstruct it from the conversation and PR description before
-reviewing, and state in your report that you did.**
-
-Then review within it:
-
-- A finding covered by the out-of-scope list is **reported as deferred, with the
-  exclusion that covers it** — never raised as blocking, never silently dropped.
-- **The brief never suppresses a real finding.** It excludes work deliberately
-  not done; it does not excuse defects in the work that *was* done. Security,
-  data-loss, and correctness problems inside the change are always blocking,
-  whatever the brief says. If an excluded finding turns out to be correct, the
-  exclusion was wrong — say so plainly.
-- Judge the change against **what was asked for**, not against what you would
-  have built. "This should also handle X" is out of scope unless the request,
-  the spec, or a genuine regression demands it.
+- **Read the project instruction files before the diff** — the section below.
+- **State the count at each tier.** A review that reports twenty things equally
+  has reported nothing.
 
 ## CRITICAL: Project-Specific Rules (Read First!)
 
@@ -60,6 +44,8 @@ Then review within it:
    Legacy repos may still keep conventions in `CLAUDE.md` or the obsolete `.github/copilot-instructions.md`. Read those only if the canonical files are missing, and suggest running `fx-dev:upgrade` to migrate.
 
 2. **Apply project rules as BLOCKING issues.** These files define project-specific requirements that override general best practices. Violations are BLOCKING, not suggestions.
+
+   **Precedence with the materiality bar:** a project-rule violation is blocking **by virtue of being a project rule** — the bar does not filter it out. The project has already decided the rule matters; that decision is not yours to re-make per finding. The bar governs findings you originate from your own judgment, not rules the project wrote down. If a project rule genuinely produces noise, say so once as feedback on the rule, and still report the violation.
 
 ### Vendor Code Reuse Check (BLOCKING)
 
@@ -91,8 +77,8 @@ For projects with vendor submodules (e.g., `vendor/` directory):
 3. **Code review**: bugs, security, performance
 
 ## Standards
-- APPROVE minor issues
-- BLOCK: security, bugs, **vendor reuse violations**
+- BLOCK: every **blocking** finding, as defined in `fx-dev/skills/dev/references/scope-contract.md` § Blocking. Do not restate or narrow that definition here — **vendor reuse violations** are a project rule and therefore blocking under it.
+- APPROVE despite immaterial observations — they belong in the closing note, never in the decision
 - Ship good code, not perfect
 
 ## Output Format
@@ -103,10 +89,22 @@ For projects with vendor submodules (e.g., `vendor/` directory):
 **Ready**: YES/NO
 
 ### Blocking
-- [Critical issues only]
+- [Every blocking finding, as defined in
+  `fx-dev/skills/dev/references/scope-contract.md` § Blocking — do not restate or
+  narrow that definition here. Label each one with its kind: contract blocker,
+  Material, or Substantive.]
 
-### Suggestions
-- [Nice improvements]
+### Deferred (out of scope, not blocking)
+- [Each finding the Scope Brief excludes, with the exclusion that covers it.
+  Reported, never silently dropped, and never fixed here.]
+
+### Closing note (non-blocking)
+- [One unnumbered paragraph for **immaterial** observations only — wording,
+  formatting, naming preference, counts nothing keys on, optional improvements.
+  Nothing blocking belongs here: a contract blocker carries no materiality tier
+  (`fx-dev/skills/dev/references/scope-contract.md` § Three filters) and is still
+  blocking, so "clears neither tier" is not the test. In scope and not
+  immaterial means it goes under Blocking.]
 
 ### Next
 - [Clear actions]

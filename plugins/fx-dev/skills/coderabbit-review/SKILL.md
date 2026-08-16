@@ -1,167 +1,250 @@
 ---
 name: coderabbit-review
-description: "Run CodeRabbit's optional AI review. PRIMARY path: run it LOCALLY via the `cr` CLI before opening a PR and resolve actionable findings. FALLBACK path: wait for + resolve its automated PR review when available. Pass a Scope Brief as args — findings MUST be triaged against the user's original request. Rate limits degrade gracefully: report once, skip CodeRabbit, and continue the SDLC."
+description: "Run CodeRabbit's optional AI review. PRIMARY path: run it LOCALLY via the `cr` CLI before opening a PR and resolve blocking findings. FALLBACK path: wait for + resolve its automated PR review when available. Pass a Scope Brief as args — findings MUST be triaged against the user's original request. Rate limits degrade gracefully: report once, skip CodeRabbit, and continue the SDLC."
 ---
 
 # CodeRabbit Review
 
-CodeRabbit reviews code with AI. The **primary** way to use it is **locally, via the `cr` CLI, BEFORE opening a PR** — as part of pre-PR self-review, alongside `/review` and `/simplify`. Prefer a clean local result when the service is available. A **fallback** path handles CodeRabbit's PR-level review for repos where its GitHub App is configured to auto-review PRs.
+**⛔ Load `fx-dev:review` first** (Skill tool: `skill="fx-dev:review"`). It is the
+canonical review procedure — carrying the Scope Brief, triaging in filter order,
+sweeping a class, converging, reporting. This skill is the **CodeRabbit adapter**:
+the `cr` CLI, the GitHub App's check and threads, and the rate-limit exception.
+Where the two appear to disagree, `fx-dev:review` wins.
 
-**IMPORTANT — CodeRabbit is optional when rate-limited.** If the CLI, API, GitHub check, or wait script reports a CodeRabbit quota/rate limit, report it once and continue without CodeRabbit. Do not sleep, poll, retry after a cooldown, ask the user to wait, or block PR creation/merge solely on CodeRabbit throttling. Resolve actionable findings already received before the limit, then mark the CodeRabbit pass as `skipped (rate-limited)`. This exception applies only to CodeRabbit; it does not relax Copilot, CI, tests, or other merge gates.
+CodeRabbit runs two ways, and **local is primary**:
 
-## ⛔ Local-First: Run CodeRabbit BEFORE Opening the PR
-
-Catch CodeRabbit's feedback **before** a PR exists, using the `cr` CLI on your local changes:
-
-- Run `cr` during pre-PR self-review (alongside `/simplify` and `/review`), fix everything it flags, and re-run until clean.
-- Open the PR after the local review is clean **or correctly degraded as `skipped (rate-limited)`**. Resolve all actionable findings already received before proceeding.
-- A clean local review does NOT remove the merge gates — but it usually means CodeRabbit's PR-level review (when the GitHub App is configured) lands clean on the first pass, and often there is nothing left to resolve on the PR at all.
-
-## The `cr` CLI
-
-`cr` is the CodeRabbit CLI (run `cr --help` / `cr review --help`). Key usage:
-
-- `cr review --agent` — review all local changes and emit **structured findings for agent workflows**. **Use this** — it is the easiest to parse and act on. Bare `cr` or `cr review` prints a plain-text review (default mode).
-- `cr review --base main` — compare the current branch against `main` (scope the review to the branch's diff).
-- `cr review --type committed|uncommitted|all` — scope by change state (default `all` = committed + uncommitted).
-- `cr review findings` — reprint findings from the previous local review (no new review).
-- `cr doctor` — check installation / local-review readiness (read-only, safe to run).
-
-**⛔ NEVER run `cr auth login` (or any interactive `cr auth …`).** It is interactive and the workspace is expected to be authenticated already. If `cr` reports it is not authenticated, **STOP and report it to the user** — do not attempt to log in.
-
-## When to Use
-
-- **Pre-PR self-review (PRIMARY)** — after implementation + `/simplify`, before `fx-dev:pr-preparer` opens the PR (`fx-dev:dev` Step 4.5).
-- **PR-level merge gate (FALLBACK)** — when the repo's CodeRabbit GitHub App auto-reviews PRs and you must clear its `CodeRabbit` check before merging, or when `cr` wasn't available locally.
-- When the user says "run coderabbit", "cr review", "check rabbit", "did rabbit re-review yet".
+| | How | When |
+|---|---|---|
+| **Mode 1** | `cr` CLI, on local changes | Pre-PR self-review (`fx-dev:dev` Step 4.5) |
+| **Mode 2** | GitHub App's `CodeRabbit` check + review threads | Fallback merge gate, or when `cr` was unavailable |
 
 ## Arguments
 
-- Mode 1 (local): pass the **Scope Brief** (see below). No PR number needed — reviews the current working tree / branch.
-- Mode 2 (PR-level): pass the PR number plus the Scope Brief — `skill='fx-dev:coderabbit-review', args='<PR_NUMBER> — <scope brief>'`.
+- **Mode 1** — the Scope Brief. No PR number; it reviews the working tree/branch.
+- **Mode 2** — `args='<PR_NUMBER> — <Scope Brief verbatim>'`.
 
-## MANDATORY: Carry the Scope Brief
+## How the brief reaches CodeRabbit
 
-**Never review a bare diff.** A reviewer that does not know what was asked for
-reports the work you deliberately did not do — missing implementation for a
-docs-only change, missing tests for a spec, dependencies a later phase adds.
-Each such finding costs a full cycle to filter by hand.
+**Mode 1 can be handed it. Mode 2 cannot.**
 
-Every invocation of this skill MUST carry a **Scope Brief** (canonical definition
-and field rules: `fx-dev/skills/dev/references/scope-contract.md`) holding the
-user's **verbatim** request, the interpreted scope, the deliverable type, an
-explicit out-of-scope list with reasons, and anything known-and-accepted.
+`cr review` takes `-c, --config <files...>` — "Additional instructions for
+CodeRabbit AI". Write the brief to a file and pass it, so Mode 1 is a
+prompt-capable reviewer and the brief reaches it *before* the review rather than
+only at triage. This is the external-mirror case in
+`fx-dev/skills/dev/references/scope-contract.md` § Blocking, which names `cr`
+explicitly: the file crosses a process boundary and cannot follow a link, so it
+inlines what it needs and is kept a faithful mirror.
 
-**If you were invoked without one, reconstruct it from the conversation before
-reviewing, and say that you did.**
+Write two things into that file: the Scope Brief, and **`fx-dev:review` § The
+external-reviewer block, verbatim**. That block is the single mirror both external
+reviewers use — do not paraphrase it or write a CodeRabbit-specific variant.
 
-How the brief is applied differs by mode:
-
-- **Mode 1 (local `cr`)** — CodeRabbit's CLI reviews the diff and does not take a
-  scope prompt. Apply the brief when **triaging** its output.
-- **Mode 2 (PR-level GitHub App)** — the brief cannot reach the reviewer at all.
-  Apply it entirely at triage.
-
-In both modes, triage means: a finding covered by the out-of-scope list is
-**recorded as deferred with the exclusion that covers it**, never silently fixed
-and never silently dropped. Deferred findings belong in the PR description or the
-coordinator's ledger.
-
-**The brief never suppresses a real finding.** It excludes work deliberately not
-done; it does not excuse defects in the work that *was* done. Security,
-data-loss, and correctness problems inside the change are always actionable. If a
-finding the brief excluded turns out to be correct, the exclusion was wrong — fix
-the work and correct the brief.
-
-Persistent out-of-scope noise across passes means the brief is too thin. Tighten
-it rather than filtering the same findings by hand every round.
-
----
-
-## Mode 1 (PRIMARY): Local Pre-PR Review via `cr`
-
-Run BEFORE creating the PR, after implementation and `/simplify`.
-
-### Step 1: Run the review
-
-Run in the **FOREGROUND**:
+That section is in two parts: write **Part 2 (the bar) on every pass, pass 1
+included**, and add **Part 1 (the convergence prefix) on top only from pass 2**,
+where there are prior dispositions to carry.
 
 ```bash
-cr review --agent
+# The brief + fx-dev:review § The external-reviewer block, as instructions
+# cr reads before reviewing.
+cr review --agent -c /tmp/scope-brief.md
 ```
 
-Use `cr review --agent --base main` to scope to the branch's diff against `main`.
+**Mode 2's GitHub App cannot be addressed at all**, so there the brief is applied
+**entirely at triage** (`fx-dev:review` Steps 1–2). Judge a Mode 2 run on triage
+coverage, not on how few out-of-scope findings it produced — that signal does not
+exist for a reviewer that never saw the brief (`fx-dev:review` Step 8).
 
-- If `cr` reports it is **not authenticated**, **STOP and report to the user** — the workspace is expected to be authed. **Do NOT run `cr auth login`** (it is interactive). Do not work around it.
-- If `cr` is **not installed / unavailable**, skip to Mode 2 (resolve at the PR level after opening) and report this to the user once.
-- If `cr` reports a **rate limit, quota limit, or cooldown**, stop the CodeRabbit loop immediately. Report the skip once, resolve any actionable findings already returned, and continue to PR creation without requiring a clean rerun.
+CodeRabbit's `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an **input** to
+triage, never a verdict.
 
-### Step 2: Resolve every actionable finding
+## ⛔ CodeRabbit is optional when rate-limited
 
-Treat findings like self-review feedback:
+If the CLI, API, GitHub check, or wait script reports a CodeRabbit quota/rate
+limit: report it once and continue without CodeRabbit. Do not sleep, poll, retry
+after a cooldown, ask the user to wait, or block PR creation/merge on CodeRabbit
+throttling alone. Do not consume convergence iterations waiting for a cooldown.
 
-- **Fix real issues** in code and tests; make atomic commits for the fixes.
-- **Nitpicks** may be applied or consciously skipped — don't churn on style the project doesn't care about.
-- There are no PR threads to resolve here — this is local. Resolution = the code is fixed (or the finding is a deliberate non-issue).
+**Throttling waives only the review passes that never ran — never anything
+already delivered.** Before recording the skip:
 
-### Step 3: Re-run until clean (REQUIRED)
+- fix every blocking finding CodeRabbit already returned, and
+- in Mode 2, settle *every* thread it already posted — immaterial and deferred
+  ones included — by replying and resolving.
 
-Run `cr review --agent` again after fixes. **Repeat Steps 1 → 2 until the review reports no actionable findings.**
+Skipping that leaves an open conversation behind a gate that requires zero
+unresolved CodeRabbit threads, so the "degraded" PR is still blocked.
 
-- **Cap at 4 iterations.** If CodeRabbit keeps flagging the same design decision after 4 passes, that is a human call, not more code edits — escalate to the user.
-- **Rate-limit exception:** stop immediately on throttling; do not consume iterations waiting for cooldowns.
-
-### Step 4: Open the PR when clean or correctly degraded
-
-A clean local CodeRabbit review is preferred before PR creation. A rate-limited review is correctly degraded and does not block PR creation once all findings already received are addressed. Do not open the PR with known unresolved actionable findings.
+Only then mark the pass `skipped (rate-limited)`. This exception applies to
+CodeRabbit alone; it does not relax Copilot, CI, tests, or other merge gates.
 
 ---
 
-## Mode 2 (FALLBACK): PR-Level Review Wait + Resolve
+## Mode 1 (PRIMARY): local pre-PR review via `cr`
 
-Use this only when the repo's CodeRabbit GitHub App auto-reviews PRs (it exposes a `CodeRabbit` GitHub check) and you must clear it as a merge gate, or when `cr` was unavailable locally. Cycle until CodeRabbit's check is terminal **and** there are zero unresolved CodeRabbit threads.
+### The `cr` CLI
+
+Run `cr --help` / `cr review --help` for the full surface. Key usage:
+
+- **`cr review --agent`** — reviews tracked changes and emits **structured
+  findings for agent workflows**. Use this; bare `cr` or `cr review` prints a
+  plain-text review.
+- **`cr review -c, --config <files...>`** — additional instructions for the AI.
+  This is how the Scope Brief reaches Mode 1; see above.
+- `cr review --base <branch>` / `--base-commit <commit>` — what to compare against.
+- `cr review --committed` / `--uncommitted` / `--include-untracked` — scope by
+  change state. There is **no** `--type` flag; verified against `cr review --help`.
+- `cr review --dir <path>` — restrict to changes inside one directory.
+- `cr review --light` — a lighter review with reduced context work.
+- `cr review findings` — reprint the previous run's findings, without reviewing.
+- `cr doctor` — check installation / readiness (read-only, safe).
+
+Run `cr review --help` before using a flag this list does not name.
+
+**⛔ NEVER run `cr auth login`** or any interactive `cr auth …`. If `cr` reports
+it is not authenticated, STOP and report to the user.
+
+### Running it
+
+Run in the **FOREGROUND**, passing the brief as instructions:
+
+```bash
+cr review --agent -c /tmp/scope-brief.md
+```
+
+Add `--base main` to scope to the branch's diff. Without `-c` the review is
+unscoped and will report the work you deliberately did not do.
+
+- **Not authenticated** → STOP and report; do not work around it.
+- **Not installed / unavailable** → skip to Mode 2 (resolve at the PR level after
+  opening) and report this to the user once.
+- **Rate limit / quota / cooldown** → the exception above.
+
+### Resolving and re-running
+
+`fx-dev:review` Steps 2–7, with one local peculiarity: **there are no threads
+here.** Resolution means the code is fixed, or the finding is a recorded
+non-issue, and an immaterial observation goes straight into the closing note. A
+fix is an atomic commit; re-run `cr review --agent -c /tmp/scope-brief.md` against
+it. **Every rerun keeps `-c`** — an unscoped convergence pass reintroduces exactly
+the out-of-scope churn the brief exists to prevent.
+
+### The gate
+
+Open the PR once the local review has **converged** — no blocking finding left
+unresolved (`fx-dev/skills/dev/references/scope-contract.md` § Convergence) — **or
+is correctly degraded as `skipped (rate-limited)`** with everything already
+delivered resolved. Immaterial observations travel as a closing note in the PR
+description.
+
+A converged local review does not remove the merge gates, but it usually means
+the PR-level review lands with nothing blocking on the first pass.
+
+---
+
+## Mode 2 (FALLBACK): PR-level wait + resolve
+
+Use only when the repo's CodeRabbit GitHub App auto-reviews PRs (it exposes a
+`CodeRabbit` check) and you must clear it as a merge gate, or when `cr` was
+unavailable locally.
 
 ### Facts
 
-- CodeRabbit's PR review is **completely independent of CI**. CI passing has NOTHING to do with CodeRabbit.
-- CodeRabbit **re-reviews on every push** that changes the PR's head SHA. After you push fixes, the `CodeRabbit` check goes pending again until the new review completes.
-- When CodeRabbit is available, wait until its check is terminal and resolve every CodeRabbit thread. If CodeRabbit itself reports rate limiting, report once and skip this optional gate; do not block merge solely on the throttled reviewer.
-- **NEVER use raw `gh api repos/.../reviews` or `gh pr view --json reviews` to make merge decisions about CodeRabbit.** Use this skill's bundled script.
+- CodeRabbit's PR review is **completely independent of CI**. CI passing has
+  nothing to do with CodeRabbit.
+- CodeRabbit **re-reviews on every push** that changes the head SHA — unlike
+  Copilot, it needs no nudge. After you push, the check goes pending again.
+- **NEVER use raw `gh api repos/.../reviews` or `gh pr view --json reviews` to
+  make merge decisions about CodeRabbit.** Use this skill's bundled script.
 
-### Step 1: Wait for the CodeRabbit Check
+### Step 1: Wait for the check
 
-CodeRabbit auto-runs — there is **no review-request step**. Run the bundled script **in the FOREGROUND** with `timeout: 1320000` (22 minutes) on the Bash tool call:
+CodeRabbit auto-runs — there is **no review-request step**. Run the bundled script
+in the **FOREGROUND** with `timeout: 1320000` (22 minutes) on the Bash call:
 
 ```bash
 bash [SKILL_BASE_DIR]/skills/coderabbit-review/scripts/wait-for-coderabbit-review.sh <PR_NUMBER>
 ```
 
-**⚠️ CRITICAL: Run in FOREGROUND — do NOT use `run_in_background`.** Running in the background loses the script output and breaks the cycle.
+**⚠️ Never background this without capturing its output** — the cycle is driven by
+what the script prints, and a backgrounded run whose stdout goes nowhere breaks it.
 
-Script exit codes:
-- **Exit 0**: CodeRabbit check reached a terminal state. Output also reports the unresolved-thread count → proceed to Step 2.
-- **Exit 1**: Timeout (default 20 min) waiting for the check to settle → STOP. Report: "CodeRabbit check did not settle within 20 min on PR #N." Do not merge unless the output identifies CodeRabbit rate limiting; throttling uses the optional-review exception and may be skipped immediately.
-- **Exit 2**: No CodeRabbit check present after a one-cycle grace period → the CodeRabbit GitHub App is not configured for this repo. Report once and proceed without the PR-level gate.
-- **Exit 3**: Invalid arguments or gh error → report error to user. If the error specifically identifies a CodeRabbit rate/quota limit, report once and proceed without CodeRabbit.
+Foreground is the default and always correct. Backgrounding is permitted in exactly
+one case: **redirect stdout and stderr to a file and read that file when the run
+finishes** — which is what `fx-dev:dev` Step 6.3 mode B does, to overlap this slow
+waiter with the Copilot one when you cannot spawn sub-agents. The rule is about
+losing the output, not about which process it runs in.
 
-### Step 2: Resolve Feedback
+Exit codes:
 
-If the script reports unresolved CodeRabbit threads (count > 0), invoke the rabbit-feedback-resolver:
+- **0** — check reached a terminal state; output reports the unresolved-thread
+  count → Step 1b.
+- **1** — timeout (default 20 min) → STOP. Report "CodeRabbit check did not settle
+  within 20 min on PR #N." Do not merge unless the output identifies rate
+  limiting, which takes the exception above.
+- **2** — no CodeRabbit check after a grace period → the App is not configured.
+  Report once and proceed without the PR-level gate.
+- **3** — invalid arguments or `gh` error → report. If it identifies a rate/quota
+  limit, take the exception.
+
+### Step 1b: Fetch the threads and triage them
+
+**The waiter emits a count, not the threads**, and Step 2 hands the resolver a
+disposition per thread — a count cannot be triaged. Fetch the bodies, then run
+`fx-dev:review` Steps 2–3 over them.
+
+```bash
+# Replace OWNER, REPO, PR_NUMBER with actual values (GraphQL body — no shell expansion here)
+gh api graphql -f query='
+query {
+  repository(owner: "OWNER", name: "REPO") {
+    pullRequest(number: PR_NUMBER) {
+      reviewThreads(first: 100) {
+        nodes {
+          id
+          isResolved
+          path
+          line
+          comments(first: 10) { nodes { author { login } body } }
+        }
+      }
+    }
+  }
+}' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and (.comments.nodes[0].author.login | tostring | contains("coderabbitai")))]'
+```
+
+Assign one of `blocking`, `immaterial`, or `deferred` to each thread **that
+carries a finding**. Yours is authoritative — you hold the Scope Brief; the
+resolver does not. A thread whose premise fails gets **no** disposition; list it
+with the reason so the resolver's outdated/incorrect handler takes it
+(`fx-dev:review` Step 3).
+
+### Step 2: Hand it to the resolver
 
 ```
-Skill tool: skill="fx-dev:rabbit-feedback-resolver", args="<PR_NUMBER>"
+Skill tool: skill="fx-dev:rabbit-feedback-resolver",
+            args="<PR_NUMBER> — <Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>) — false premise (resolver's own handler): <thread id> (<what does not hold>)"
 ```
 
-That skill handles per-thread categorisation, pushes any code fixes, replies, and resolves each thread.
+**Both suffixes are mandatory.** Invoking the resolver with only a PR number makes
+it re-derive triage it cannot see, and it will edit for threads you classified
+immaterial or deferred. The false-premise suffix is what routes a thread Step 1b
+rejected to the outdated/incorrect path instead of a re-triage that loses the
+`REVIEW.md` entry.
 
-### Step 3: Loop Until Settled (REQUIRED)
+### Step 3: Loop until settled
 
-CodeRabbit re-reviews after every push. Once Step 2 pushes fixes, the `CodeRabbit` check goes pending again — go back to Step 1.
+CodeRabbit re-reviews after every push, so once Step 2 pushes fixes the check goes
+pending again — go back to Step 1. Per `fx-dev:review` Step 7, repeat Steps
+1 → 1b → 2 until **all three** hold:
 
-**Repeat Steps 1 → 2 until BOTH hold:**
-
-1. The most-recent CodeRabbit check is in a terminal state with conclusion `success` (or `skipped` / `neutral` if the repo configures it that way).
-2. Re-querying review threads shows 0 unresolved CodeRabbit threads.
+1. The most-recent `CodeRabbit` check is terminal with conclusion `success` (or
+   `skipped` / `neutral` if the repo configures it that way).
+2. Zero unresolved CodeRabbit threads.
+3. **No blocking finding is left unresolved, across every pass** — the ledger test
+   (`fx-dev/skills/dev/references/scope-contract.md` § Convergence). Conditions 1
+   and 2 describe the latest check; this one describes the ledger. A blocker an
+   earlier pass raised and this one did not still blocks, and resolving its thread
+   does not discharge it: a thread is closed by a reply, a blocker only by a fix.
 
 ```bash
 gh api graphql -f query='
@@ -179,32 +262,40 @@ query {
 }' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and (.comments.nodes[0].author.login | tostring | contains("coderabbitai")))] | length'
 ```
 
-If this count is 0 AND the CodeRabbit check is `success`, the gate is PASSED.
+Two of the three are observable from the API; the third is yours to track, and it
+is the one a zero count cannot stand in for.
 
-**Cap the loop at 4 iterations** — if CodeRabbit is still posting new feedback after 4 wait+resolve cycles, escalate to the user. Almost always this means CodeRabbit and the codebase disagree on a design decision that needs human input.
+## Concurrency with other reviewers (Mode 2)
 
-## Concurrency With Other Reviewers (Mode 2)
+Mode 2 can run **in parallel** with `fx-dev:copilot-review`. The SDLC step gating
+merge on automated review should wait for every configured reviewer to settle —
+terminal, zero unresolved threads, **and no blocking finding left unresolved**,
+for each — and loop the whole group: any reviewer
+that re-runs after a push re-triggers its waiter → resolver → possibly more
+commits → the other reviewers' waiters.
 
-Mode 2 can run **in parallel** with `fx-dev:copilot-review` and any future automated-reviewer skills. The SDLC step that gates merge on automated review should:
+**⛔ Pick the right execution mode (see `fx-dev:dev` Step 6.3):**
 
-- Wait for every configured reviewer (Copilot, CodeRabbit, ...) to settle (terminal + 0 unresolved threads each)
-- Loop the entire group: any reviewer that re-runs after a push (CodeRabbit always does) re-triggers its waiter → resolver → possibly more commits → other reviewers' waiters, and so on
-
-**⛔ Pick the right execution mode for your context (see `fx-dev:dev` Step 6.3):**
-
-- **Root session / standalone caller** → spawn one sub-agent per reviewer in a single Agent-tool message (mode A — true parallel).
-- **`fx-dev:team` coordinator OR a sub-agent yourself** → sub-agents CANNOT spawn sub-agents. Use mode B: invoke each reviewer's wait+resolve lifecycle sequentially, optionally launching this skill's wait script as a background `Bash` process while another reviewer is handled in the foreground.
+- **Root session / standalone caller** → one sub-agent per reviewer, in a single
+  Agent-tool message (mode A, true parallel).
+- **`fx-dev:team` coordinator, or you are a sub-agent** → sub-agents cannot spawn
+  sub-agents. Mode B: each reviewer's lifecycle sequentially, optionally running
+  this skill's wait script as a background `Bash` process while another reviewer
+  is handled in the foreground.
 
 Never call the Agent tool from inside a sub-agent context.
 
-## Success Criteria
+## Success criteria
 
-**Mode 1 (local, primary):**
-- ✅ `cr review --agent` reports no actionable findings after fixes, **or** the service rate-limited and the pass is recorded as `skipped (rate-limited)`
-- ✅ All actionable findings received before any limit are resolved and committed
-- ✅ No cooldown waits or retries remain when the rate-limit exception applies
+**Mode 1:** no blocking finding left unresolved across all passes — or the
+rate-limited path, where everything already delivered is resolved and the pass is
+recorded `skipped (rate-limited)`. Remaining immaterial observations travel as one
+closing note.
 
-**Mode 2 (PR-level, fallback / optional merge gate):**
-- ✅ CodeRabbit check is terminal with a passing conclusion and all threads are resolved, **or** CodeRabbit rate-limited and the gate is recorded as `skipped (rate-limited)`
-- ✅ Any valid concerns already received are fixed and pushed
-- ✅ CodeRabbit throttling alone does not block merge
+**Mode 2:** all three of Step 3's conditions — the check terminal with a passing
+conclusion, zero unresolved CodeRabbit threads, **and no blocking finding left
+unresolved across every pass**. The third is not implied by the first two: a
+thread is closed by a reply, a blocker only by a fix, so a passing check over a
+resolved-but-unfixed blocker is not settlement. Or CodeRabbit rate-limited,
+**every thread it had already delivered is settled**, and the gate recorded
+`skipped (rate-limited)`. Throttling alone never blocks merge.

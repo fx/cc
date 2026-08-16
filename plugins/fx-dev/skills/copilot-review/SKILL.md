@@ -5,6 +5,13 @@ description: "Request, wait for, and resolve GitHub Copilot's PR review. Use aft
 
 # Copilot Review
 
+**⛔ Load `fx-dev:review` first** (Skill tool: `skill="fx-dev:review"`). It is the
+canonical review procedure — carrying the Scope Brief, triaging in filter order,
+sweeping a class, converging, reporting. This skill is the **Copilot adapter**:
+requesting a review, waiting for one that covers the right commit, and the API
+behaviour that makes both harder than they look. Where the two appear to
+disagree, `fx-dev:review` wins.
+
 Request, wait for, and resolve GitHub Copilot's PR review on a pull request.
 
 ## ⛔ Copilot Is Mandatory — and MUST Be Requested
@@ -80,24 +87,25 @@ body is legal and observed — "empty" and "never fetched" are different facts t
 look identical on stdout. When you fetch bodies by hand (Step 2b), apply the same
 rule: check that the command succeeded before concluding anything from its silence.
 
-## MANDATORY: Triage Against the Scope Brief
+## Triage: the brief cannot reach Copilot
 
 Copilot accepts no prompt, so scope cannot be injected into its review — it will
-report work that was deliberately not done. Apply the **Scope Brief** (canonical
-definition: `fx-dev/skills/dev/references/scope-contract.md`) at **triage**
-instead, and establish one from the conversation and PR description if you were
-not handed it.
+report work that was deliberately not done. Apply the Scope Brief entirely at
+**triage** (`fx-dev:review` Steps 1–2), and reconstruct one if you were not handed
+it. Copilot's `[nitpick]` prefix is an input to that judgment, never a verdict.
 
-- A finding covered by the brief's out-of-scope list is **resolved as deferred
-  with the exclusion that covers it** — recorded, not silently fixed and not
-  silently dropped.
-- **The brief never suppresses a real finding.** It excludes work deliberately
-  not done; it does not excuse defects in the work that *was* done. Security,
-  data-loss, and correctness problems inside the change are always actionable and
-  always block the merge gate.
-- Copilot being unable to see the scope is not a reason to widen the change.
-  Implementing its out-of-scope suggestions is scope creep with a reviewer's name
-  on it.
+**Two things bite harder here than with any other reviewer:**
+
+**Every push re-opens the gate.** Copilot must then re-review the new head
+(Step 5), so editing for an immaterial finding costs a full wait cycle *and*
+produces a fresh commit for it to comment on. Push fixes for blocking findings;
+reply-and-resolve the rest without a commit. The one exception is the `REVIEW.md`
+entry for a misread convention (`fx-dev:review` Step 6) — required work, and its
+commit is expected.
+
+**A half-closed class costs a wait cycle per sibling.** The class sweep in
+`fx-dev:review` Step 4 pays for itself more here than anywhere else: closing a
+class halfway spends a full Copilot wait to be told about the other half.
 
 ## When to Use
 
@@ -119,7 +127,7 @@ Don't serialize reviewers when you don't have to — but do not budget for Copil
 
 ## Arguments
 
-This skill expects a PR number. Pass it as args: `skill='fx-dev:copilot-review', args='<PR_NUMBER>'`
+This skill expects a PR number **and the Scope Brief**: `skill='fx-dev:copilot-review', args='<PR_NUMBER> — <Scope Brief verbatim>'`. Copilot cannot be handed the brief itself, but this skill triages its output and dispatches a resolver, and both need it (`fx-dev:review` Step 1). A bare PR number makes the whole chain re-derive the exclusions from the PR description.
 
 ## Workflow
 
@@ -219,8 +227,9 @@ Then:
 
 1. `grep -i 'Suppressed comments'` the bodies. If present, **read the entire
    `<details>` block** — every item, not just the summary count.
-2. Triage each item exactly like a thread comment: fix what is valid, apply the
-   Scope Brief to what is out of scope.
+2. Triage each item exactly like a thread comment: fix what is blocking, and
+   record — do not reply, there is no thread to reply to (item 4) — the
+   disposition for what is merely correct-but-immaterial or out of scope.
 3. **Do not apply a suppressed suggestion on sight.** One observed suppressed
    comment, applied as written, would have introduced the very bug it claimed to
    report. Verify the finding against the code before changing anything.
@@ -232,13 +241,28 @@ Then:
 After the review is received, invoke the resolve-pr-feedback skill to process all automated review threads (Copilot, CodeRabbit, Codecov):
 
 ```
-Skill tool: skill="fx-dev:resolve-pr-feedback", args="<PR_NUMBER>"
+Skill tool: skill="fx-dev:resolve-pr-feedback",
+            args="<PR_NUMBER> — <Scope Brief verbatim> — dispositions already assigned: <suppressed item or thread id> blocking | immaterial | deferred (<exclusion>) — false premise (resolver's own handler): <item or thread id> (<what does not hold>)"
 ```
+
+**Never invoke it with only the PR number.** The Scope Brief must travel into
+every downstream review call (`fx-dev/skills/dev/references/scope-contract.md`
+§ Injecting the brief into reviews), and a resolver handed a bare number
+re-derives triage from the PR description — losing the exact exclusions and
+known-and-accepted decisions, and editing for threads you classified immaterial
+or deferred.
+
+Pass dispositions only for what you have actually triaged — in this skill that is
+the suppressed items read in Step 2b, since this skill never fetches the thread
+list. `fx-dev:resolve-pr-feedback` fetches the threads and triages the rest (its
+Steps 2 → 4). **Do not invent a disposition for a thread you have not read**; an
+absent one is filled in downstream, a wrong one is authoritative and overrides
+the resolver's own reading.
 
 This skill will:
 1. Find all unresolved Copilot threads
 2. Categorize each (nitpick, valid, incorrect, outdated, deferred)
-3. Fix valid concerns, reply to and resolve all threads
+3. Fix **blocking** findings; reply-and-resolve every other thread without editing
 4. Report a summary table of actions taken
 
 ### Step 4: Confirm Resolution
@@ -285,7 +309,20 @@ on its own never passes it (**D4**).
 
 Resolving feedback usually means pushing commits. Those commits are **unreviewed**, and Copilot will not look at them by itself.
 
-If the head SHA changed since the review in Step 2, go back to **Step 1** — nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. Repeat until a pass produces zero new threads *and* an empty-or-triaged suppressed block *on a reviewed head*. Cap at 4 iterations and escalate to the user if it has not settled.
+**If the head SHA changed** since the review in Step 2, go back to **Step 1** —
+nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. The loop, its
+bound and its escalation triggers are `fx-dev:review` Step 7; every iteration here
+costs a full Copilot wait cycle, so fix causes rather than instances.
+
+**If it did not change, do not restart.** Resolving an immaterial thread by reply
+creates no commit, so the head has not moved and a review of it already exists —
+nudging again spends a wait cycle to re-read code nobody changed. **Only a push
+restarts this loop**, which is why only blocking findings should produce one.
+
+Convergence here adds two Copilot-specific conditions to the ledger test: every
+thread resolved, and the suppressed block empty-or-triaged, **both on a reviewed
+head**. A suppressed item creates no thread, so no thread count ever discharges
+it.
 
 ```bash
 # The gate is only passed when the newest Copilot review covers the current head.
@@ -303,7 +340,7 @@ This skill is complete when ALL of:
 - ✅ Copilot review has been received (script exited 0) **for the current head commit** — `REVIEWED_COMMIT_ID` equals `PR_HEAD_SHA`, checked by you, not for an earlier commit
 - ✅ The script's `SUPPRESSED_COMMENTS=` line was read, and it is a definite `0` or a `1` whose block has been read in full and every item triaged (Step 2b). A `0` must be confirmed from the output rather than assumed, and **`unknown` does not satisfy this criterion at all** — the check failed to run (**D5**), so re-run the waiter or triage the bodies by hand before claiming the gate
 - ✅ All Copilot threads resolved (0 unresolved, **filtered to the Copilot login**)
-- ✅ Any valid code concerns have been fixed and pushed — **and the resulting head was itself reviewed**
+- ✅ Any **blocking** findings have been fixed and pushed — **and the resulting head was itself reviewed**. Correct-but-immaterial observations are resolved by reply and produce no push, so they owe no further pass
 
 **Never report this gate as passed on the grounds that polling found no new feedback.** Absence of a review is not a clean review, and a timeout (exit 1) is not a verdict. Silence here is an unasked question, not an answer.
 

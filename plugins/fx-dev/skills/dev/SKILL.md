@@ -184,13 +184,13 @@ full review cycle to filter by hand.
 
 **Then freeze the implementation contract.** If the task is sourced from, names, or discovers a relevant `docs/changes/*.md` file, read it and the spec sections it links. Confirm implementation approval from the conversation or the change's recorded workflow state; if approval is unclear, STOP and ask the user. Record the contract path and approval evidence in the working brief. The change document, its linked specs, and all mandatory project rules form the implementation contract: the plan and coder prompt MUST map work to that contract and MUST NOT infer adjacent product or architecture work.
 
-The coordinator owns one in-memory finding ledger for the run; reviewer sub-agents return findings to the coordinator and MUST NOT mutate the ledger concurrently. Give every finding a stable fingerprint (`category + file + line/range + normalized claim`) and record its source, first-seen revision, classification, disposition, and verification evidence. Classify each finding exactly once as:
+The coordinator owns one in-memory finding ledger for the run; reviewer sub-agents return findings to the coordinator and MUST NOT mutate the ledger concurrently. Give every finding a stable fingerprint (`category + file + line/range + normalized claim`) and record its source, first-seen revision, classification, materiality tier, disposition, and verification evidence. Classification and materiality are independent fields — see Step 4.5 for how the tier is assigned. The tier is `n/a` for a contract blocker: filter 2 stops before the bar, so a rule violation is never ranked, and inventing a tier for one is the mistake that lets it be argued down. Classify each finding exactly once as:
 
 - **required-by-contract** — Necessary to satisfy the change document, its linked specs, or any mandatory project, security, privacy, test, or merge rule.
 - **regression-caused-by-change** — A demonstrable correctness, security, privacy, or data-loss regression caused by this branch anywhere within its behavioral impact, including downstream consumers or integrations.
 - **follow-up/out-of-scope** — A pre-existing issue, hardening, cleanup, product addition, architecture expansion, or improvement not required by either category above.
 
-Fix only the first two classes. Deduplicate repeated or reworded findings by fingerprint and update the existing ledger entry. Record follow-up/out-of-scope findings for the PR or later tracking; do not implement them. When reviewer resolvers are invoked by `/dev`, their deferred-feedback paths MUST return follow-ups to the coordinator instead of modifying task trackers in the implementation PR. To implement out-of-scope product or architecture work, first amend the change document and obtain user approval.
+Fix the first two classes, and any entry that is blocking by tier — a reviewer-originated Material or Substantive finding blocks even where no written rule names it (`references/scope-contract.md` § Blocking). Deduplicate repeated or reworded findings by fingerprint and update the existing ledger entry. Record every **non-blocking** entry for the PR or later tracking without implementing it — `follow-up/out-of-scope` at tier `n/a` or `immaterial`. An entry of that class that blocks by tier is fixed like any other blocker; the class name never decides remediation. When reviewer resolvers are invoked by `/dev`, their deferred-feedback paths MUST return follow-ups to the coordinator instead of modifying task trackers in the implementation PR. To implement out-of-scope product or architecture work, first amend the change document and obtain user approval.
 
 ---
 
@@ -215,7 +215,7 @@ Agent tool:
            - Determine test requirements
            - Flag if multiple PRs needed
            - Treat the approved change document as the implementation contract
-           - Do not include follow-up/out-of-scope work or expand product/architecture without an approved amendment
+           - Do not include non-blocking follow-up/out-of-scope work, or expand product/architecture, without an approved amendment
 
            Output: Numbered implementation steps"
   description: "Plan implementation"
@@ -255,7 +255,7 @@ Agent tool:
            - Follow existing patterns
            - Run tests
            - Treat the approved change document as the implementation contract
-           - Do not implement follow-up/out-of-scope findings or expand product/architecture without an approved amendment
+           - Do not implement non-blocking findings, or expand product/architecture, without an approved amendment (an entry blocking by tier is fixed whatever its class)
            - Do NOT create PR"
   description: "Implement changes"
 ```
@@ -274,7 +274,11 @@ git diff main --stat
 
 **MANDATORY: Run one complete local review matrix before creating the PR.** Run each available pass once in order against the current `HEAD`, record the revision that each channel reviewed, and classify its findings before accepting fixes. If `/simplify` edits directly, retain only changes that satisfy the contract classification and record the resulting revision before starting the next pass.
 
-**⛔ EVERY pass below MUST receive the Step 2.5 Scope Brief verbatim.** A reviewer handed a bare diff reports the work you deliberately did not do — missing implementation for a docs-only change, missing tests for a spec, dependencies a later phase adds — and each such finding costs a full cycle to filter by hand. A pass run without the brief is incomplete: rerun it with the brief rather than filtering its output. Findings the brief excludes are recorded as deferred with the covering exclusion, never silently fixed and never silently dropped — unless the finding is correct and the exclusion was wrong, in which case fix the work and correct the brief.
+**Every pass below follows `fx-dev:review`** — the canonical review procedure
+(Skill tool: `skill="fx-dev:review"`), which each reviewer skill loads first. This
+step does not restate it. In particular: **every pass MUST receive the Step 2.5
+Scope Brief verbatim**, and a pass run without it is incomplete — rerun it with
+the brief rather than filtering its output.
 
 **1. `/simplify`** — reuse, quality, efficiency cleanup:
 
@@ -296,7 +300,7 @@ Skill tool: skill="code-review", args="<Scope Brief>"
 Skill tool: skill="fx-dev:coderabbit-review", args="<Scope Brief>"
 ```
 
-If `cr` is **unavailable**, fall back to the PR-level CodeRabbit review in Step 6.3. If `cr` is installed but **not authenticated**, STOP and report to the user — NEVER run `cr auth login`. If CodeRabbit reports a rate/quota limit or cooldown, report it once, classify findings already received, mark the pass `skipped (rate-limited)`, and continue immediately. Never wait or retry solely for a CodeRabbit cooldown.
+If `cr` is **unavailable**, fall back to the PR-level CodeRabbit review in Step 6.3. If `cr` is installed but **not authenticated**, STOP and report to the user — NEVER run `cr auth login`. If CodeRabbit reports a rate/quota limit or cooldown, report it once, classify findings already received and resolve the blocking ones, mark the pass `skipped (rate-limited)`, and continue immediately. Throttling waives the unrun remainder of the review, never a finding already delivered. Never wait or retry solely for a CodeRabbit cooldown.
 
 **4. Codex (local, via `codex`)** — independent one-shot branch review:
 
@@ -308,7 +312,9 @@ The Codex CLI takes the scope as its review prompt, so this pass is the one wher
 
 #### Remediation and Delta Verification
 
-Fix only findings classified `required-by-contract` or `regression-caused-by-change`. After a fix commit:
+**Record each finding's class, not just its location** (`references/scope-contract.md` § Fix the class, not the instance). A reviewer reports the instance it read; the ledger entry names the defect pattern and every site in the change's surface that exhibits it, so a fix closes the class rather than buying the next cycle its input. A ledger entry is not resolved while a sibling of its class is open, and a reviewer MUST NOT be re-run with a class half-closed.
+
+Fix every **blocking** ledger entry (`references/scope-contract.md` § Blocking): everything classified `required-by-contract` or `regression-caused-by-change`, plus any entry blocking by tier — a reviewer-originated Material or Substantive finding blocks even where no written rule names it. After a fix commit:
 
 1. Rerun the reviewer or check that originated the blocking finding.
 2. Rerun tests affected by the delta.
@@ -316,16 +322,24 @@ Fix only findings classified `required-by-contract` or `regression-caused-by-cha
 
 Do not restart the full matrix merely because `HEAD` changed. Deduplicate repeated or reworded findings against the ledger; they do not start a new cycle. When `/dev` invokes reviewer subskills, this contract classification and bounded stopping policy takes precedence over generic instructions to resolve every actionable finding or rerun until clean.
 
+**The materiality bar applies to judgment-originated findings only** — things a reviewer raised on its own reading, rather than violations of a rule the project wrote down (`references/scope-contract.md`). One of those must clear the bar before it can be treated as blocking. Materiality is a **separate ledger field**, not a fourth classification — every entry still carries exactly one of the three classifications above, plus a materiality tier. An observation that would change nothing if it shipped uncorrected is recorded as `follow-up/out-of-scope` with materiality `immaterial`, and never triggers a rerun.
+
+**Rule violations are blocking regardless of materiality.** Anything Step 2.5 defines as `required-by-contract` — project, security, privacy, test and merge rules the project wrote down — is blocking by virtue of being a rule, whatever its direct behavioural impact. The contract filter runs before the bar, exactly as `references/scope-contract.md` § Three filters specifies, so the coordinator can never demote a violation the reviewer correctly marked blocking. Two shapes in particular are non-findings and MUST NOT enter the ledger **at all**, at any tier — not as blocking, and not as an immaterial entry either: a missing entry in a list the artifact does not present as exhaustive, whether it says "for example" or declares the list illustrative, and a decision the artifact records with its rationale **where the disagreement is about preference**. Recording them as immaterial keeps the churn and merely renames it. The second, raised again in the very next pass, is an escalation to the user rather than a third cycle (`references/scope-contract.md` § Convergence defines that trigger) — but a recorded rationale never makes a decision safe. The full carve-out is in `references/scope-contract.md` § Three things that are not findings and is not narrowed here: if the decision itself leaks a credential or private identifier, loses data, violates a security or privacy invariant, **or contradicts a contract the project mandates**, it is `required-by-contract` and stays blocking.
+
 #### PR-Ready Stopping Condition
 
 Proceed to Step 5 when all of the following are true:
 
-1. Every `required-by-contract` and `regression-caused-by-change` ledger entry is resolved with evidence.
+1. Every **blocking** ledger entry is resolved with evidence. Blocking is defined once, in `references/scope-contract.md` § Blocking; this gate does not restate it.
+
+   **A finding excluded at filter 1 can never carry a Material or Substantive tier.** The two fields are assigned by different filters and cannot disagree, so that one pair is illegal. Note the rule is about the *filter*, not the class name: `follow-up/out-of-scope` holds entries of two different origins, and all three tiers can be legal for it — a finding excluded at filter 1 never reaches the bar, so its tier is `n/a`; an in-scope observation that reached filter 3 and failed it is tier `immaterial`. A finding that reaches the bar at all is one no written rule covers — a written-rule violation stops at filter 2, unranked, as a contract blocker with tier `n/a` and class `required-by-contract`, and never reaches filter 3. So a finding ranked Material or Substantive is in scope by construction, is a defect in work this change actually did, and is *not* `required-by-contract`: it is `regression-caused-by-change` where the branch caused a regression, and otherwise — a two-way ambiguity in something this change wrote, say — it stays in this class and **still blocks, by tier**. The classification answers what obliges the fix; the tier answers whether it blocks, exactly as the stopping condition below states. What is illegal is that tier pair on a finding excluded at filter 1, which never reached the bar. **The filter outcome decides the resolver disposition — not the class name, and not the tier** (§ Resolver dispositions). Tier `n/a` is carried by two unrelated outcomes and so cannot pick one: a contract blocker is `n/a` because filter 2 stopped before the bar, and it is **blocking** — fixed and pushed; a finding excluded at filter 1 is `n/a` because it never reached the bar, and it is **deferred**, replied to with the exclusion. Tier `immaterial` settles as `immaterial`, replying with the materiality reasoning. Read the outcome, never the tier alone. Citing an exclusion for an in-scope observation invents one that does not exist. If you are about to record that pair, one of the two filters was misapplied — re-run them rather than writing an entry the gate can neither clear nor waive. Materiality never promotes an out-of-scope finding back into scope (`references/scope-contract.md` § Three filters); this rule is that principle applied to the ledger.
 2. Contract-required tests and tests affected by the latest delta pass.
 3. Every available review channel completed its initial pass or has a documented permitted degradation.
-4. One verification pass over the latest affected delta produces no new finding in either blocking class.
+4. The review has **converged** as `references/scope-contract.md` § Convergence defines it — no blocking finding left unresolved, ledger-wide, not merely none new in the latest pass. As an additional gate, that state is confirmed by one verification pass over the latest affected delta.
 
-`follow-up/out-of-scope` entries and non-contract suggestions do not block PR creation. Limit each review channel to two remediation/delta-verification rounds after its initial pass, with four post-review fix rounds total. At the bound, create the PR if only follow-up/out-of-scope entries remain. If a blocking-class finding remains, STOP and report it to the user. A contract amendment may change product scope, but it cannot waive mandatory correctness, security, privacy, testing, or merge rules. Perfect local convergence is not required.
+`follow-up/out-of-scope` entries with tier `n/a` — the class and the tier together, which is what identifies a filter-1 exclusion — and immaterial observations, do not block PR creation. Tier `n/a` alone does not qualify: a `required-by-contract` entry carries it too, and blocks. Nothing else is waivable here: a reviewer-originated Material or Substantive finding blocks even though no written requirement names it, exactly as item 1 above and `references/scope-contract.md` § Blocking say. Each review channel caps at the single bound defined in `references/scope-contract.md` § The iteration bound, which counts the initial pass as iteration 1 and which no skill restates or overrides — count reviewer invocations in total, not remediation rounds on top of the first pass. **Convergence is the goal, and the bound is a runaway backstop, not a target.** Reaching it means the loop failed to converge; report it that way. Reaching the bound is a failure to converge and does not authorize Step 5. STOP, report the per-pass trend and everything still open, and let the user decide whether to create the PR — including when every remaining entry is `follow-up/out-of-scope` with tier `n/a`. A blocking entry at the bound is always an escalation; the bound never waives one. A contract amendment may change product scope, but it cannot waive mandatory correctness, security, privacy, testing, or merge rules.
+
+**Do not spend the headroom.** The bound is far above what a healthy channel needs; the signals that should actually end a loop — converged, and the same disagreement in successive passes (`references/scope-contract.md` § Convergence) — fire in single digits, as does a rising blocking count of one class, which is a cause to fix rather than an exit: address the cause and continue, and escalate only where the cause is a design choice with two defensible answers (`references/scope-contract.md` § The iteration bound). A round that resolves only immaterial items is churn at any iteration number, and the convergence rule already forbids it.
 
 ---
 
@@ -551,7 +565,7 @@ Agent tool:
   description: "Review PR"
 ```
 
-The coordinator MUST classify and deduplicate these findings in the Step 2.5 ledger before invoking a coder. Do not pass follow-up/out-of-scope findings to implementation.
+The coordinator MUST classify and deduplicate these findings in the Step 2.5 ledger before invoking a coder. Pass every **blocking** entry to implementation and nothing else (`references/scope-contract.md` § Blocking) — which includes a `follow-up/out-of-scope` entry blocking by tier, and excludes an entry that is not blocking. Select on blocking, never on the tier: `n/a` marks a contract blocker (filter 2 stopped before the bar) just as it marks a filter-1 exclusion, so dropping every `n/a` entry drops every mandatory rule violation.
 
 #### 6.2 Fix Blocking Issues (if any found)
 
@@ -559,10 +573,13 @@ The coordinator MUST classify and deduplicate these findings in the Step 2.5 led
 Agent tool:
   prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
 
-           Fix only these blocking-class issues in PR #[NUMBER]:
-           [REQUIRED-BY-CONTRACT OR REGRESSION-CAUSED-BY-CHANGE FINDINGS]
+           Fix only these blocking issues in PR #[NUMBER]:
+           [EVERY BLOCKING LEDGER ENTRY — REQUIRED-BY-CONTRACT,
+            REGRESSION-CAUSED-BY-CHANGE, AND ANY ENTRY BLOCKING BY TIER]
 
-           Do not implement ledger entries classified follow-up/out-of-scope."
+           Do not implement ledger entries that are not blocking. Judge that by
+           the blocking flag, not the tier: a required-by-contract entry also
+           carries tier n/a, and it MUST be fixed."
   description: "Fix review issues"
 ```
 
@@ -570,7 +587,7 @@ Agent tool:
 
 **MANDATORY: Wait for and resolve EVERY automated reviewer configured on the repo.** Copilot and CodeRabbit are the two we know about today; future integrations slot in here. Reviewers are **independent feedback channels** with different latencies (Copilot 85 s to 12 m 42 s observed — do not budget for it being quick; CodeRabbit 2–10+ min and re-runs after every push).
 
-> **CodeRabbit was attempted LOCALLY in Step 4.5** (`cr review --agent`). The PR-level handling here is a fallback for repos whose GitHub App auto-reviews PRs. Prefer a passing check and resolve received feedback; if either local or PR-level CodeRabbit rate-limits, record `skipped (rate-limited)` and continue without blocking.
+> **CodeRabbit was attempted LOCALLY in Step 4.5** (`cr review --agent`). The PR-level handling here is a fallback for repos whose GitHub App auto-reviews PRs. Prefer a passing check and resolve received feedback; if either local or PR-level CodeRabbit rate-limits, resolve what it already delivered — blocking findings fixed, every posted thread settled — then record `skipped (rate-limited)` and continue without blocking.
 
 ##### Reviewer-by-reviewer skills
 
@@ -637,23 +654,23 @@ Concrete recipe:
    ```
    Use `Bash` with `run_in_background: true`. Capture the task ID.
 2. In the foreground, wait for Copilot using the bundled `copilot-review` waiter, then read its unresolved threads without invoking a resolver. Classify and deduplicate them in the coordinator-owned ledger.
-3. Wait for the background CodeRabbit waiter to finish, then read its unresolved threads and classify them before invoking a resolver. Invoke each reviewer resolver only after classification, passing the blocking findings and instructing it to settle deferred findings without code or task-tracker changes.
+3. Wait for the background CodeRabbit waiter to finish, then read its unresolved threads and classify them before invoking a resolver. Invoke each reviewer resolver only after classification, passing the blocking findings and a disposition for every thread that carries a finding — `blocking`, `immaterial`, or `deferred` (`references/scope-contract.md` § Resolver dispositions) — so it settles both no-edit dispositions without code or task-tracker changes. A thread whose premise you verified and rejected is listed as undisposed with the reason, not forced into one of the three.
 4. After a resolver pushes, record the new SHA and inspect only feedback added or changed since the previous reviewed SHA. Classify and deduplicate it in the shared ledger. Rerun only the reviewer whose state or evidence the delta invalidated; do not restart every reviewer merely because `HEAD` changed.
-5. Stop after one latest-delta pass produces no new `required-by-contract` or `regression-caused-by-change` finding and every required reviewer thread is settled.
+5. Stop when the channel has **converged** per `references/scope-contract.md` § Convergence — no blocking finding left unresolved, ledger-wide — confirmed by one latest-delta pass, and every required reviewer thread is settled.
 
 If `Bash` `run_in_background` isn't available in your context, fall back to fully-serial: Copilot first, then CodeRabbit. Slower but correct.
 
 ##### Bounded delta review (both modes)
 
-Fix only blocking-class findings. Record follow-up/out-of-scope feedback without implementing it, and settle its thread with an out-of-scope disposition when repository policy permits. Allow at most two remediation rounds per reviewer. At the bound, continue when only follow-up/out-of-scope findings remain; escalate any unresolved blocking-class finding to the user. Do not seek zero suggestions or restart unrelated review channels.
+Fix every **blocking** finding and only those (`references/scope-contract.md` § Blocking), whatever its ledger class. Record the non-blocking remainder without implementing it, and settle its thread with the disposition that actually fits (`references/scope-contract.md` § Resolver dispositions): `deferred` — citing the exclusion — for a finding excluded by scope, and `immaterial` — replying with the materiality reasoning — for an in-scope observation that fails the bar. Both are no-edit, and they are not interchangeable: citing a scope exclusion for an in-scope observation invents an exclusion that does not exist. Each reviewer channel caps at the canonical bound in `references/scope-contract.md` § The iteration bound, which counts the initial pass as iteration 1 and which no local instruction restates or overrides. Convergence, not the bound, is what should end it: the early signals (converged, and the same disagreement in successive passes, both per `references/scope-contract.md` § Convergence) fire in single digits, as does a rising blocking count of one class — which is a cause to fix and continue, not an exit, and an escalation only where that cause is a design choice. Reaching the bound is a failure to converge, not an exit you may take: STOP, report the per-pass trend and what remains, and hand the decision to the user. Do not advance to the next workflow step on the strength of having hit it, even when only follow-up/out-of-scope entries remain. Do not seek zero suggestions or restart unrelated review channels.
 
 ##### Skip rules
 
 - If a reviewer is **not configured** for the repo (e.g. `wait-for-coderabbit-review.sh` exits 2 because no `CodeRabbit` check ever appears), report this once and proceed without that reviewer.
-- If **CodeRabbit reports a rate/quota limit or cooldown**, report it once, mark CodeRabbit `skipped (rate-limited)`, and proceed immediately. Do not raise timeouts, sleep, poll, or retry for CodeRabbit throttling.
+- If **CodeRabbit reports a rate/quota limit or cooldown**, report it once, mark CodeRabbit `skipped (rate-limited)`, and proceed immediately. Do not raise timeouts, sleep, poll, or retry for CodeRabbit throttling. **The degradation waives only the review passes that never ran** (`fx-dev:coderabbit-review`, rate-limit rule): anything CodeRabbit already delivered still counts — fix its blocking findings and settle every thread it already posted before recording the skip, or the PR carries an open thread past a gate that requires none.
 - Do not apply this exception to Copilot or other reviewers. A merely slow CodeRabbit check with no rate-limit signal still follows the normal timeout behavior.
 
-**⛔ DO NOT PROCEED until every required reviewer has settled. CodeRabbit is satisfied by a passing result or an explicit `skipped (rate-limited)` degradation.**
+**⛔ DO NOT PROCEED until every required reviewer has settled. CodeRabbit is satisfied by a passing result, or by an explicit `skipped (rate-limited)` degradation once everything it already delivered is resolved.**
 
 ---
 
@@ -726,8 +743,8 @@ gh pr checks [NUMBER]
 # Use the dedicated skills — NEVER raw gh api commands.
 ```
 ```
-Skill tool: skill="fx-dev:copilot-review",     args="[NUMBER]"
-Skill tool: skill="fx-dev:coderabbit-review",  args="[NUMBER]"
+Skill tool: skill="fx-dev:copilot-review",     args="[NUMBER] — [STEP 2.5 SCOPE BRIEF VERBATIM]"
+Skill tool: skill="fx-dev:coderabbit-review",  args="[NUMBER] — [STEP 2.5 SCOPE BRIEF VERBATIM]"
 ```
 ```bash
 # 3. Unresolved review threads — MUST be 0 (across ALL reviewers)
@@ -756,7 +773,7 @@ duvet# A pull request MUST NOT be merged while any review thread on it from a co
 - [ ] ALL CI checks green
 - [ ] Copilot review RECEIVED and ALL threads resolved (via `fx-dev:copilot-review` skill — NEVER raw `gh api`)
 - [ ] CodeRabbit is passing with all received threads resolved, not configured, or explicitly recorded as `skipped (rate-limited)`. CodeRabbit throttling is optional and never blocks merge.
-- [ ] Zero unresolved `required-by-contract` or `regression-caused-by-change` findings; the latest affected delta is verified within the stopping bounds
+- [ ] Zero unresolved **blocking** ledger entries (`references/scope-contract.md` § Blocking) — `required-by-contract`, `regression-caused-by-change`, and any entry blocking by tier; the latest affected delta is verified within the stopping bounds
 - [ ] Codecov coverage passing with 0 missing lines
 - [ ] No unresolved review threads from any reviewer (Copilot, CodeRabbit, human, or future automated reviewer); follow-up/out-of-scope threads are settled without expanding implementation
 
@@ -888,7 +905,7 @@ All sub-agents are launched via the Agent tool. Each loads its skill via the Ski
 | 3 | Planner | `fx-dev:planner` |
 | 3,8 | Issue Updater | `fx-dev:issue-updater` |
 | 4,6.2,8.2 | Coder | `fx-dev:coder` |
-| 4.5 | Pre-PR Self-Review | `simplify`, then `code-review`, then `fx-dev:coderabbit-review` (local `cr`), then `fx-dev:codex-review` (local `codex`) — initial passes complete, blocking-class findings resolved, latest affected delta verified |
+| 4.5 | Pre-PR Self-Review | `simplify`, then `code-review`, then `fx-dev:coderabbit-review` (local `cr`), then `fx-dev:codex-review` (local `codex`) — initial passes complete, blocking findings resolved, latest affected delta verified |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 5.5.2 | Browser Verification | `fx-dev:verify-web-change` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
@@ -913,12 +930,12 @@ Workflow complete when ALL true:
 - ✅ Requirements documented
 - ✅ Plan created
 - ✅ Code implemented with atomic commits
-- ✅ Pre-PR review matrix completed (or permitted degradation documented), findings classified in the shared ledger, blocking-class findings resolved, and the latest affected delta verified within the stopping bounds
+- ✅ Pre-PR review matrix completed (or permitted degradation documented), findings classified in the shared ledger, blocking findings resolved, and the latest affected delta verified within the stopping bounds
 - ✅ PR created with description (including links to related specs/changes and test plan)
 - ✅ ALL test plan items addressed: browser-verified, programmatically verified, or user-confirmed manual verification (NEVER silently skipped)
 - ✅ PR test plan items checked off or annotated with verification results in the PR description
 - ✅ Self-review done, issues fixed
-- ✅ Automated review feedback classified and settled; blocking-class findings resolved and the latest affected delta verified without unrelated review restarts
+- ✅ Automated review feedback classified and settled; blocking findings resolved and the latest affected delta verified without unrelated review restarts
 - ✅ All CI/CD checks pass
 - ✅ Task tracking docs updated (completed tasks marked in relevant change doc or tasks.md)
 - ✅ User notified, awaiting merge approval

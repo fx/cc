@@ -5,28 +5,21 @@ description: Check a PR for unresolved automated review feedback (Copilot, CodeR
 
 # Resolve PR Feedback
 
-Meta-skill that checks a PR for unresolved automated review feedback and invokes the appropriate resolver skills.
+**⛔ Load `fx-dev:review` first** (Skill tool: `skill="fx-dev:review"`). It is the
+canonical review procedure. This skill is the **coordinator adapter**: it finds
+every unresolved automated finding on a PR, triages it, and dispatches the right
+resolver with the brief and a disposition per thread. Where the two appear to
+disagree, `fx-dev:review` wins.
 
-## MANDATORY: Triage against the Scope Brief
+You are the coordinator here, so three of its steps are specifically yours:
 
-Automated reviewers accept no scope prompt, so they will report work that was deliberately not done. Establish the **Scope Brief** — from the coordinator, or reconstructed from the conversation and PR description — before dispatching any resolver. Definition: `fx-dev/skills/dev/references/scope-contract.md`.
-
-Pass it into every resolver you invoke, and classify each finding before acting:
-
-- **In scope** → resolve it.
-- **Covered by the brief's out-of-scope list** → resolve the thread as deferred, citing the exclusion. Never silently fix it, never silently drop it, and never widen the PR to satisfy it.
-- **Excluded but correct** → the exclusion was wrong. Fix the work and say the brief was wrong.
-
-Security, data-loss, and correctness problems **inside** the change are always in scope, whatever the brief says. Resolving out-of-scope suggestions is scope creep with a reviewer's name on it.
-
-## WHEN TO USE THIS SKILL
-
-**USE THIS SKILL** when ANY of the following occur:
-
-- User says "resolve PR feedback" / "check PR comments" / "address review comments"
-- User wants to handle all automated review feedback on a PR
-- After PR creation to ensure all automated reviewers are addressed
-- As part of the SDLC workflow before finalizing a PR
+- **Step 1** — establish the Scope Brief before dispatching anything. From the
+  caller, or reconstructed from the conversation and PR description.
+- **Steps 2–3** — you hold the brief and the ledger, so **your** triage is the
+  authoritative one; a resolver classifying from comment text alone does not have
+  what you have. Verify each premise before assigning anything.
+- **Step 6** — when resolvers run in parallel, the `REVIEW.md` writes must be
+  serialized through you.
 
 ## Supported Reviewers
 
@@ -36,31 +29,39 @@ Security, data-loss, and correctness problems **inside** the change are always i
 | CodeRabbit | `coderabbitai[bot]` | `fx-dev:rabbit-feedback-resolver` |
 | Codecov | `codecov[bot]` / `codecov-commenter` | `fx-dev:resolve-codecov-feedback` |
 
-## Shared Convention: All Resolvers Write to `REVIEW.md`
+## WHEN TO USE THIS SKILL
 
-Every resolver invoked here follows the same rule: when a reviewer's feedback is **INCORRECT** — it conflicts with a deliberate project convention — the recurrence-prevention rule goes in **`REVIEW.md`** at the repo root — never in a reviewer-specific file, and never in the obsolete `.github/copilot-instructions.md`.
+- User says "resolve PR feedback" / "check PR comments" / "address review comments"
+- User wants to handle all automated review feedback on a PR
+- After PR creation, to ensure all automated reviewers are addressed
+- As part of the SDLC workflow before finalizing a PR
 
-`REVIEW.md` is read natively by Copilot and Claude Code Review, by CodeRabbit via `.coderabbit.yaml`, and by Codex via a `## Code Review Rules` pointer in `AGENTS.md`. One entry suppresses the false positive everywhere.
+## Parallel resolvers MUST NOT write `REVIEW.md` concurrently
 
-If `REVIEW.md` does not exist, create it directly — just the file, with a `# PR Review` heading and the rule under it. **Do not run `fx-dev:setup` or `fx-dev:upgrade` from here:** both add unrelated files (`docs/`, `AGENTS.md`, `.coderabbit.yaml`), and this runs mid-PR, so they would land in the same diff as the review fix. Note in the summary that `/fx-dev:setup` completes the layout later. The full standard is in `fx-dev:setup` → `references/instruction-files.md`.
+`fx-dev:review` Step 6 states the rule; this is the coordinator's half of it.
+Re-reading before writing is **not** locking — two sub-agents can read the same
+revision and the second write silently discards the first's rule.
 
-### Parallel runs MUST NOT write `REVIEW.md` concurrently
+When dispatching resolvers in parallel (Step 4):
 
-When the Copilot and CodeRabbit resolvers run as concurrent sub-agents (Step 4), both can produce INCORRECT findings targeting the same file. Re-reading before writing is **not** locking — two agents can read the same revision and the second write silently discards the first agent's rule.
-
-**Therefore, when dispatching resolvers in parallel:**
-
-1. Instruct each sub-agent to **collect** its proposed `REVIEW.md` rules and return them in its final report **instead of editing the file**. Everything else (code fixes, thread replies, thread resolution) proceeds normally in parallel — those touch disjoint resources.
-2. After **all** parallel resolvers have returned, the root session applies the collected rules to `REVIEW.md` in a single serialized edit, then commits and pushes.
-3. Verify no rule was dropped by diffing, not by counting the whole file — an established `REVIEW.md` already contains unrelated rules, so a total-count check always fails:
+1. Instruct each sub-agent to **collect** its proposed `REVIEW.md` rules and
+   return them in its final report **instead of editing the file**. Everything
+   else — code fixes, thread replies, thread resolution — proceeds in parallel;
+   those touch disjoint resources.
+2. After **all** parallel resolvers return, apply the collected rules in a single
+   serialized edit, then commit and push.
+3. Verify by diffing, not by counting the whole file — an established `REVIEW.md`
+   already contains unrelated rules, so a total-count check always fails:
 
    ```bash
    git diff -- REVIEW.md
    ```
 
-   Every rule proposed by a sub-agent must appear as an added line. Pre-existing rules must be untouched.
+   Every proposed rule must appear as an added line, and pre-existing rules must
+   be untouched.
 
-When resolvers run **sequentially** (one reviewer only, or Mode B), the resolver edits `REVIEW.md` directly as its own skill describes — no aggregation needed.
+When resolvers run **sequentially** (one reviewer only, or Mode B), each edits
+`REVIEW.md` directly as its own skill describes — no aggregation needed.
 
 ## Prerequisites
 
@@ -99,9 +100,12 @@ query {
         nodes {
           id
           isResolved
-          comments(first: 1) {
+          path
+          line
+          comments(first: 10) {
             nodes {
               author { login }
+              body
             }
           }
         }
@@ -110,6 +114,13 @@ query {
   }
 }'
 ```
+
+**Fetch `path`, `line`, and `body`, not just the author.** Step 4 requires a
+disposition per thread, and a disposition cannot be derived from an ID and a
+login: the filters need to see what the thread actually says and where. A query
+that returns only `id`/`isResolved`/`author` forces the dispatch step to hand out
+dispositions it has not reasoned about, or to omit them — which is the bare
+invocation Step 4 forbids.
 
 ### 3. Identify Unresolved Feedback by Source
 
@@ -165,20 +176,52 @@ Codecov feedback exists if:
 
 ### 4. Invoke Appropriate Resolver Skills
 
+**Triage BEFORE dispatching, and pass the result.** A resolver invoked with a bare
+skill name has neither the Scope Brief nor your per-finding dispositions, so it
+re-derives both — and a correct-but-immaterial thread comes back as an edit,
+which is the push that reopens the loop. Every invocation below MUST carry, as
+its argument:
+
+1. The **Scope Brief**, verbatim (`fx-dev/skills/dev/references/scope-contract.md` § The Scope Brief).
+2. A **disposition for every thread that carries a finding** — `blocking`,
+   `immaterial`, or `deferred`, as defined in
+   `fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions.
+   Yours is authoritative: it is set with the Scope Brief and the ledger in hand,
+   which the resolver does not have. **Verify the premise before disposing of
+   it** — a thread describing code that no longer exists, or misreading a
+   deliberate convention, is a false positive rather than a finding. List it as
+   undisposed with the reason, and let the resolver's outdated/incorrect handler
+   take it; forcing a disposition onto one overrides that handler and loses the
+   `REVIEW.md` entry that stops the finding recurring.
+
 **If Copilot threads exist:**
 ```
-Skill tool: skill="fx-dev:copilot-feedback-resolver"
+Skill tool: skill="fx-dev:copilot-feedback-resolver",
+            args="<Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>) — false premise (resolver's own handler): <thread id> (<what does not hold>)"
 ```
 
 **If CodeRabbit threads exist:**
 ```
-Skill tool: skill="fx-dev:rabbit-feedback-resolver"
+Skill tool: skill="fx-dev:rabbit-feedback-resolver",
+            args="<Scope Brief verbatim> — dispositions: <thread id> blocking, <thread id> immaterial, <thread id> deferred (<exclusion>) — false premise (resolver's own handler): <thread id> (<what does not hold>)"
 ```
 
 **If Codecov coverage gaps detected:**
 ```
-Skill tool: skill="fx-dev:resolve-codecov-feedback"
+Skill tool: skill="fx-dev:resolve-codecov-feedback",
+            args="<Scope Brief verbatim> — uncovered lines in scope: <paths>; deliberately uncovered: <paths and why>"
 ```
+
+**No bare invocation.** A `Skill tool:` line with no `args` is an incomplete call
+here, not a shorthand — the resolver then re-derives triage it cannot see and
+edits for findings you classified immaterial or deferred.
+
+**List false positives separately, not as a disposition.** Append
+`— false premise (resolver's own handler): <thread id> (<what does not hold>)`
+for any thread you verified and rejected. That leaves the resolver's
+outdated/incorrect path — reply, resolve, and update `REVIEW.md` where a
+convention was misread — reachable, which an authoritative disposition would
+close off.
 
 **If multiple exist:** Prefer running Copilot and CodeRabbit resolvers **in parallel** by spawning each as a sub-agent in the same message (see `fx-dev:dev` Step 6.3 for the exact pattern). Codecov is sequential after them since coverage fixes typically require code from the other resolvers to be in place first.
 
@@ -188,12 +231,25 @@ After invoking resolver skills, re-query to confirm all threads are resolved AND
 
 **Cycle, don't single-shot.** CodeRabbit re-runs after every push and may post new threads on the new commits. Copilot does **not** — it must be asked again. Either way, a single-pass resolver leaves a stale "settled" state behind. Loop:
 
-1. **Nudge Copilot for the current head SHA** via `fx-dev:copilot-review` (its Step 1). **Copilot does NOT re-review pushed commits on its own.** Skipping this makes the rest of the loop meaningless: you will poll, see nothing, and "converge" on code no reviewer has read. Issue the nudge and discard its response — it is fire-and-forget, never evidence, and having issued it is never a substitute for step 6's received-review check.
+1. **If the current head SHA has no Copilot review yet — because a fix was pushed, or because none has covered this head at all — nudge Copilot for it** via `fx-dev:copilot-review` (its Step 1). **Copilot does NOT re-review pushed commits on its own.** Where the last cycle only replied and resolved, the head has not moved and a review of it already exists: skip straight to step 3. Nudging and waiting there buys a full cycle to re-read code nobody changed, which is the same churn as editing for an immaterial finding. Skipping this makes the rest of the loop meaningless: you will poll, see nothing, and "converge" on code no reviewer has read. Issue the nudge and discard its response — it is fire-and-forget, never evidence, and having issued it is never a substitute for step 6's received-review check.
 2. Wait for all reviewer checks to reach terminal state (use the dedicated waiters: `fx-dev:copilot-review` for Copilot, `fx-dev:coderabbit-review` for CodeRabbit). **Do not hand-roll a `gh api` / GraphQL polling loop in their place** — a hand-rolled loop only observes, never requests, and will happily accept a review of a superseded commit.
-3. Re-query unresolved threads (per below).
-4. If the breakdown array is non-empty, re-invoke the relevant resolver(s).
-5. After fixes are pushed, restart at step 1 — the push created unreviewed commits.
-6. Stop when a pass produces zero new feedback **on a head SHA that was actually reviewed** (verify: the newest Copilot review's `commit_id` equals `headRefOid`). Cap at 4 outer iterations and escalate to the user if not converged.
+3. Re-run **Step 2's full query** — `id`, `path`, `line` and comment bodies — and re-triage every unresolved thread, including the ones the last cycle's push created. The breakdown query below counts threads by reviewer; it cannot feed step 4, which refuses a resolver invocation without a disposition per thread, and a disposition cannot be assigned to a name and a number. Every iteration repeats the fetch and the triage, not just the first.
+4. If the breakdown array is non-empty, re-invoke the relevant resolver(s) with the dispositions from step 3.
+5. **If fixes were pushed**, restart at step 1 — the push created unreviewed commits. If this cycle produced no push, do not restart: go to step 6 and judge convergence on the review already delivered for this head.
+6. Stop when the loop has **converged** per `fx-dev:review` Step 7 — no blocking
+   finding left unresolved, ledger-wide — **and** three PR-level conditions hold
+   that the ledger test alone does not cover:
+   - the state holds on a head SHA that was **actually reviewed** (verify: the
+     newest Copilot review's `commit_id` equals `headRefOid`);
+   - **every automated thread on that head is resolved**;
+   - **the suppressed-comments block for that head is empty or fully triaged**
+     (see §3 *Identify Unresolved Feedback by Source*, not this loop's step 3 —
+     those findings create no thread, so a zero-thread count says nothing about
+     them).
+
+   Immaterial findings resolved by reply satisfy all of this: they produce no
+   push, so they are not "new feedback" owing another cycle. The bound and the
+   escalation triggers are `fx-dev:review` Step 7 and are not restated here.
 
 **⛔ Zero new threads is not convergence unless a Copilot review has been RECEIVED for the current head SHA.** "Received for the current head" is the *only* condition — do **not** phrase it as "was requested", and do not try to verify that a request happened: `requested_reviewers` is empirically always empty, so whether a review was requested is not a determinable fact (see `fx-dev:copilot-review` **D1**/**D3**). Issue the nudge because it sometimes helps, then judge convergence solely on the delivered review. Absence of feedback is not evidence of quality.
 
@@ -277,7 +333,7 @@ If unresolved threads remain, report which reviewers still have open feedback.
 
 1. All unresolved automated review threads identified — matched on the `copilot-pull-request-reviewer` login, **not** the bare `Copilot` — **plus** any findings in the "Suppressed comments" block of every Copilot review **of the current head commit**, which produce no threads
 2. Appropriate resolver skill(s) invoked (Copilot + CodeRabbit in parallel where applicable)
-3. The wait-and-resolve loop has CONVERGED — a Copilot review has been **RECEIVED for the current head SHA** and produced zero new findings. That is the whole condition: do not add "and was requested", which is not a determinable fact (**D1**). A quiet poll on an unreviewed head is not convergence
+3. The wait-and-resolve loop has CONVERGED — a Copilot review has been **RECEIVED for the current head SHA**, left **no blocking finding unresolved** — including any carried from an earlier pass and any suppressed item, which creates no thread and so is never discharged by a thread count — and every automated thread on that head is resolved. Immaterial findings resolved by reply do not block this. Do not add "and was requested", which is not a determinable fact (**D1**). A quiet poll on an unreviewed head is not convergence
 4. CodeRabbit's check is in a terminal passing state (or absent if not configured)
 5. Final verification confirms all threads resolved
 6. Summary output provided

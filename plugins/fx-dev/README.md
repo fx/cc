@@ -8,7 +8,7 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 
 ## Components
 
-### Skills (24)
+### Skills (28)
 
 #### SDLC Skills
 - **dev** - Orchestrates the complete SDLC workflow including planning, implementation, review, and finalization
@@ -20,16 +20,20 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 - **issue-updater** - Updates GitHub issues with planning information and status changes
 
 #### PR Management Skills
-- **pr-reviewer** - Reviews pull requests, identifies issues, provides actionable feedback
+- **pr-reviewer** - Reviews pull requests and reports findings by tier: blocking individually, deferred with the exclusion that covers each, immaterial in one closing note (adapter over **review**)
 - **pr-preparer** - Prepares PRs for submission, ensures compliance with project standards
 - **pr-check-monitor** - Monitors GitHub PR checks and coordinates fixes for failures
 - **pr-changeset-minimalist** - Reviews changesets to ensure only minimal necessary changes
 - **workflow-runner** - Executes complete workflows from start to finish, ensuring all phases complete
 
 #### Review & CI Skills
+- **review** - **Canonical review procedure** shared by every reviewer and resolver below: carrying the Scope Brief, triaging scope → contract → materiality, sweeping a defect class, converging, reporting. Load it first; the skills below are platform adapters
 - **copilot-feedback-resolver** - Processes and resolves GitHub Copilot automated PR review comments
 - **rabbit-feedback-resolver** - Processes and resolves CodeRabbit automated PR review comments
 - **resolve-pr-feedback** - Meta-skill that checks for all unresolved automated review feedback
+- **codex-review** - Runs OpenAI Codex's review locally via the `codex` CLI before the PR is opened (adapter over **review**)
+- **coderabbit-review** - Runs CodeRabbit locally via `cr`, or clears its PR-level check as a fallback gate (adapter over **review**)
+- **copilot-review** - Requests, waits for, and resolves GitHub Copilot's PR review (adapter over **review**)
 - **resolve-ci-failures** - Analyzes and fixes CI check failures on PRs
 - **resolve-codecov-feedback** - Processes Codecov coverage reports and adds missing tests
 

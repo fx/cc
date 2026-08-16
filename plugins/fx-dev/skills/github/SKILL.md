@@ -88,10 +88,10 @@ This skill triggers automatically when:
 | Copilot suppressed comments TRIAGED | The reviewed body's `<details><summary>Suppressed comments (N)</summary>` block read in full and every item triaged. Those findings create **no** review thread, so the row below can never surface them | ⛔ YES |
 | Copilot comments RESOLVED | All **Copilot-authored** review threads resolved (0 unresolved). Filter on the Copilot login — human threads are out of scope and must never be touched | ⛔ YES |
 | CodeRabbit review attempted (if GitHub App configured) | Prefer a received review; explicit `skipped (rate-limited)` is acceptable | Optional when rate-limited |
-| CodeRabbit comments resolved (if received) | Resolve all threads received before any rate limit | Optional when rate-limited |
+| CodeRabbit comments resolved (if received) | Resolve **every** thread CodeRabbit already posted, rate limit or not. Throttling waives the review passes that never ran, never a thread already on the PR | ⛔ YES for delivered threads |
 | Codecov passing | `codecov/patch` and `codecov/project` checks pass | ⛔ YES |
 
-> **CodeRabbit is run primarily LOCALLY (via the `cr` CLI) BEFORE the PR is opened** — see `fx-dev:coderabbit-review` (Mode 1) and `fx-dev:dev` Step 4.5. The PR-level review applies only when the GitHub App auto-reviews PRs. **CodeRabbit is optional when it reports a rate/quota limit or cooldown:** report once, resolve findings already received, record `skipped (rate-limited)`, and continue without waiting or retrying. Other merge gates remain mandatory.
+> **CodeRabbit is run primarily LOCALLY (via the `cr` CLI) BEFORE the PR is opened** — see `fx-dev:coderabbit-review` (Mode 1) and `fx-dev:dev` Step 4.5. The PR-level review applies only when the GitHub App auto-reviews PRs. **CodeRabbit is optional when it reports a rate/quota limit or cooldown:** report once, resolve findings already received **and settle every thread it already posted**, record `skipped (rate-limited)`, and continue without waiting or retrying. The degradation waives the passes that never ran, never work already on the PR. Other merge gates remain mandatory.
 
 Verify the Copilot gate with a **head-SHA-scoped** query — an unscoped one accepts a
 review of a superseded commit as coverage for the code you are about to merge:
