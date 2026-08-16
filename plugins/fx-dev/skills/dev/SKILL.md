@@ -274,7 +274,11 @@ git diff main --stat
 
 **MANDATORY: Run one complete local review matrix before creating the PR.** Run each available pass once in order against the current `HEAD`, record the revision that each channel reviewed, and classify its findings before accepting fixes. If `/simplify` edits directly, retain only changes that satisfy the contract classification and record the resulting revision before starting the next pass.
 
-**⛔ EVERY pass below MUST receive the Step 2.5 Scope Brief verbatim.** A reviewer handed a bare diff reports the work you deliberately did not do — missing implementation for a docs-only change, missing tests for a spec, dependencies a later phase adds — and each such finding costs a full cycle to filter by hand. A pass run without the brief is incomplete: rerun it with the brief rather than filtering its output. Findings the brief excludes are recorded as deferred with the covering exclusion, never silently fixed and never silently dropped — unless one of the two conditions in `references/scope-contract.md` § Three filters, filter 1 re-opens scope, in which case fix the work and correct the brief. A finding being merely correct is not one of them.
+**Every pass below follows `fx-dev:review`** — the canonical review procedure
+(Skill tool: `skill="fx-dev:review"`), which each reviewer skill loads first. This
+step does not restate it. In particular: **every pass MUST receive the Step 2.5
+Scope Brief verbatim**, and a pass run without it is incomplete — rerun it with
+the brief rather than filtering its output.
 
 **1. `/simplify`** — reuse, quality, efficiency cleanup:
 

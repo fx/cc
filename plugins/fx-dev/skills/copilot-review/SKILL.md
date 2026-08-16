@@ -5,6 +5,13 @@ description: "Request, wait for, and resolve GitHub Copilot's PR review. Use aft
 
 # Copilot Review
 
+**⛔ Load `fx-dev:review` first** (Skill tool: `skill="fx-dev:review"`). It is the
+canonical review procedure — carrying the Scope Brief, triaging in filter order,
+sweeping a class, converging, reporting. This skill is the **Copilot adapter**:
+requesting a review, waiting for one that covers the right commit, and the API
+behaviour that makes both harder than they look. Where the two appear to
+disagree, `fx-dev:review` wins.
+
 Request, wait for, and resolve GitHub Copilot's PR review on a pull request.
 
 ## ⛔ Copilot Is Mandatory — and MUST Be Requested
@@ -80,49 +87,25 @@ body is legal and observed — "empty" and "never fetched" are different facts t
 look identical on stdout. When you fetch bodies by hand (Step 2b), apply the same
 rule: check that the command succeeded before concluding anything from its silence.
 
-## MANDATORY: Triage Against the Scope Brief
+## Triage: the brief cannot reach Copilot
 
 Copilot accepts no prompt, so scope cannot be injected into its review — it will
-report work that was deliberately not done. Apply the **Scope Brief** (canonical
-definition: `fx-dev/skills/dev/references/scope-contract.md`) at **triage**
-instead, and establish one from the conversation and PR description if you were
-not handed it.
+report work that was deliberately not done. Apply the Scope Brief entirely at
+**triage** (`fx-dev:review` Steps 1–2), and reconstruct one if you were not handed
+it. Copilot's `[nitpick]` prefix is an input to that judgment, never a verdict.
 
-- A finding covered by the brief's out-of-scope list is **resolved as deferred
-  with the exclusion that covers it** — recorded, not silently fixed and not
-  silently dropped.
-- **The brief never suppresses a real finding.** It excludes work deliberately
-  not done; it does not excuse defects in the work that *was* done. Security,
-  **privacy**, data-loss, and correctness problems inside the change are always in
-  scope and always block the merge gate.
-- Copilot being unable to see the scope is not a reason to widen the change.
-  Implementing its out-of-scope suggestions is scope creep with a reviewer's name
-  on it.
+**Two things bite harder here than with any other reviewer:**
 
-Triage in the contract's order — **scope, then contract, then materiality**
-(`fx-dev/skills/dev/references/scope-contract.md` § Three filters). The middle
-one is not optional here: a violation of a project rule, or of a security or
-privacy invariant, is blocking by virtue of being a rule and never reaches the
-bar, so "it changes no behaviour" cannot demote it. Only what survives both
-earlier filters is ranked — and an in-scope item that would change nothing if it
-shipped uncorrected is then an **observation, not a finding**, and is **resolved
-by replying with that reasoning** rather than by editing. The gate is zero
-*unresolved* Copilot threads, not zero observations acted on.
+**Every push re-opens the gate.** Copilot must then re-review the new head
+(Step 5), so editing for an immaterial finding costs a full wait cycle *and*
+produces a fresh commit for it to comment on. Push fixes for blocking findings;
+reply-and-resolve the rest without a commit. The one exception is the `REVIEW.md`
+entry for a misread convention (`fx-dev:review` Step 6) — required work, and its
+commit is expected.
 
-**Fix the class, not the instance** (`fx-dev/skills/dev/references/scope-contract.md` § Fix the class, not the instance).
-Copilot reports the site it read; sweep its siblings across this change's surface
-and push them as one commit. Here that discipline is worth the most in the loop,
-because a push costs a full Copilot wait cycle — closing a class half-way spends
-one of those to be told about the other half.
-
-This matters more here than anywhere else in the loop: **every push re-opens the
-gate.** Copilot must then re-review the new head (Step 5), so editing for an
-immaterial finding costs a full wait cycle and produces a fresh commit for it to
-comment on. Push fixes for blocking findings; reply-and-resolve
-the rest without a commit — with one exception: a thread whose premise is wrong
-because Copilot misread a deliberate convention needs the `REVIEW.md` entry that
-stops it recurring, and that entry is a commit. It is required work, not an edit
-made for an immaterial finding.
+**A half-closed class costs a wait cycle per sibling.** The class sweep in
+`fx-dev:review` Step 4 pays for itself more here than anywhere else: closing a
+class halfway spends a full Copilot wait to be told about the other half.
 
 ## When to Use
 
@@ -326,9 +309,20 @@ on its own never passes it (**D4**).
 
 Resolving feedback usually means pushing commits. Those commits are **unreviewed**, and Copilot will not look at them by itself.
 
-If the head SHA changed since the review in Step 2, go back to **Step 1** — nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. Cap the loop at the canonical bound (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound — which counts the initial pass as iteration 1, and which this skill does not restate) and escalate to the user if it has not settled. The bound is a backstop, not a budget: escalate on the same disagreement in successive passes (`fx-dev/skills/dev/references/scope-contract.md` § Convergence defines that trigger and this skill does not restate it), and when the blocking count rises **with every new finding in one class**, fix that cause before escalating — a count that rises across different categories means the review is still productive. Every iteration here costs a full Copilot wait cycle.
+**If the head SHA changed** since the review in Step 2, go back to **Step 1** —
+nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. The loop, its
+bound and its escalation triggers are `fx-dev:review` Step 7; every iteration here
+costs a full Copilot wait cycle, so fix causes rather than instances.
 
-**Convergence is: no blocking finding left unresolved, every thread resolved, and the suppressed block empty-or-triaged — all on a reviewed head.** *Unresolved*, not *new*: a blocker carried from an earlier pass still blocks even if this pass did not repeat it, and a suppressed item creates no thread, so no thread count discharges it. It is NOT "zero new threads". Resolving an immaterial thread by reply creates no commit, so the head does not move and no further pass is owed; nudging for another review to chase a zero-thread pass spends a wait cycle to change nothing. **Only a push restarts this loop**, which is why only blocking findings should produce one.
+**If it did not change, do not restart.** Resolving an immaterial thread by reply
+creates no commit, so the head has not moved and a review of it already exists —
+nudging again spends a wait cycle to re-read code nobody changed. **Only a push
+restarts this loop**, which is why only blocking findings should produce one.
+
+Convergence here adds two Copilot-specific conditions to the ledger test: every
+thread resolved, and the suppressed block empty-or-triaged, **both on a reviewed
+head**. A suppressed item creates no thread, so no thread count ever discharges
+it.
 
 ```bash
 # The gate is only passed when the newest Copilot review covers the current head.

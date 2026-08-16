@@ -5,79 +5,23 @@ description: "MUST BE USED when user asks to: review code, review PR, check my c
 
 # Pragmatic PR Review Skill
 
-## MANDATORY: Establish the Scope Brief (Step 0)
+**⛔ Load `fx-dev:review` first** (Skill tool: `skill="fx-dev:review"`). It is the
+canonical review procedure — carrying the Scope Brief, triaging in filter order,
+reporting a class, converging, reporting the trend. This skill is the **agent
+adapter**: you *are* the reviewer, so there is no CLI or bot to drive. What it
+adds is the project-rule pass every fx-dev review starts from, and the output
+format. Where the two appear to disagree, `fx-dev:review` wins.
 
-**Never review a bare diff.** A reviewer that does not know what was asked for
-reports the work that was deliberately not done — missing implementation for a
-docs-only change, missing tests for a spec, absent dependencies a later phase
-adds. Those findings are noise, and each round costs a full review cycle.
+Follow `fx-dev:review` Steps 1–4 in full: establish the brief (reconstruct it from
+the conversation and PR description if you were not handed one, and say so),
+triage scope → contract → materiality, verify each premise before reporting it,
+and report a class as one finding rather than one per site.
 
-Before reading a single line of the diff, establish the **Scope Brief**
-(canonical definition and field rules:
-`fx-dev/skills/dev/references/scope-contract.md`):
+Two things this skill is responsible for, on top of that procedure:
 
-- **Verbatim request** — the user's own words, quoted, never paraphrased.
-  "just fix the typo real quick" and "fix the typo" are different instructions.
-- **Interpreted scope** — files, subsystems, deliverable type.
-- **Explicitly out of scope** — what was deliberately not done, and why.
-- **Known-and-accepted** — deliberate states that look like defects out of context.
-
-If a coordinator handed you a brief, use it verbatim. **If you were invoked
-without one, reconstruct it from the conversation and PR description before
-reviewing, and state in your report that you did.**
-
-Then review within it:
-
-- A finding covered by the out-of-scope list is **reported as deferred, with the
-  exclusion that covers it** — never raised as blocking, never silently dropped.
-- **The brief never suppresses a real finding.** It excludes work deliberately
-  not done; it does not excuse defects in the work that *was* done. Security,
-  **privacy**, data-loss, and correctness problems inside the change are always blocking,
-  whatever the brief says. An excluded finding re-enters scope only on the two
-  conditions in `fx-dev/skills/dev/references/scope-contract.md` § Three filters,
-  filter 1 — being merely correct is not one of them. When one of them holds, say
-  so plainly.
-- Judge the change against **what was asked for**, not against what you would
-  have built. "This should also handle X" is out of scope unless the request,
-  the spec, or a genuine regression demands it.
-
-## Rank by materiality, and say where the bar fell
-
-Scope decides whether a finding is the author's problem. **Materiality decides
-whether it is worth their time** — see the materiality bar in the same reference.
-
-- **Report every blocking finding individually**, as defined in `fx-dev/skills/dev/references/scope-contract.md`
-  § Blocking. Do not restate that definition here; the examples there are
-  illustrative and the rule is authoritative.
-- **Collect everything immaterial into one closing note**, unnumbered and explicitly
-  non-blocking. Wording, formatting, naming preference, a count nothing keys on.
-- When unsure of the tier, ask: *if this shipped uncorrected, what breaks?* If
-  the honest answer is "nothing, it is just not as good as it could be", it
-  belongs in the closing note.
-
-Three things are **not findings**, and raising them is how a review becomes
-noise the author learns to skim:
-
-- a missing entry in a list the change does not present as exhaustive — "for
-  example" counts, not just an explicit declaration — assess the rule instead,
-  since the supply of such entries never runs out;
-- a decision the change records with its rationale, **where your disagreement is
-  about preference** — say so once as an escalation rather than re-arguing it.
-  This never applies when the decision is itself the defect — see
-  `fx-dev/skills/dev/references/scope-contract.md` § Three things that are not
-  findings for the full carve-out, which this skill does not narrow: a recorded
-  rationale for leaking a credential or private identifier, losing data,
-  violating a security or privacy invariant, **or contradicting a contract the
-  project mandates** is a blocking finding, however well reasoned;
-- a limit the change admits and gates ("verified at implementation time",
-  "open question gated on X") — check the gate is real and sequenced, and move on.
-
-**When a finding is one instance of a pattern, report the class**, per
-`fx-dev/skills/dev/references/scope-contract.md` § Reporting a class, which
-defines this rule and which this skill does not restate.
-
-**A review that reports twenty things equally has reported nothing.** State the
-count at each tier so the author knows what to act on first.
+- **Read the project instruction files before the diff** — the section below.
+- **State the count at each tier.** A review that reports twenty things equally
+  has reported nothing.
 
 ## CRITICAL: Project-Specific Rules (Read First!)
 

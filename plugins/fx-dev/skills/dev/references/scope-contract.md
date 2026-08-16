@@ -2,6 +2,8 @@
 
 Canonical definition of the **Scope Brief**, the **materiality bar**, and the **sprawl stop rule**. All three are mandatory across fx-dev workflow and review skills.
 
+This document holds the **definitions**. The **procedure** that applies them — how a reviewer carries the brief, triages, sweeps a class, converges and reports — is the `fx-dev:review` skill, which every reviewer and feedback resolver loads first. Neither restates the other.
+
 Three failures motivate this document:
 
 1. **Reviewers flagging work nobody asked for.** A reviewer handed a bare diff has no idea what was requested. It reports missing implementation for a docs-only change, missing tests for a spec, or absent dependencies that a later phase adds. Every one of those is noise the operator must hand-filter, and each round of noise costs a full review cycle.
@@ -45,7 +47,7 @@ Build it **once**, as early as possible — the first skill to act on a user req
 
 ## Injecting the brief into reviews
 
-**Every review invocation MUST carry the Scope Brief.** This applies to `fx-dev:codex-review`, `fx-dev:coderabbit-review`, `fx-dev:pr-reviewer`, `/code-review`, `/simplify`, and any sub-agent asked to evaluate work.
+**Every review invocation MUST carry the Scope Brief.** This applies to `fx-dev:review` and every adapter over it — `fx-dev:codex-review`, `fx-dev:coderabbit-review`, `fx-dev:copilot-review`, `fx-dev:pr-reviewer`, `fx-dev:resolve-pr-feedback` and the two feedback resolvers — as well as `/code-review`, `/simplify`, and any sub-agent asked to evaluate work.
 
 - **Skills that accept arguments** — pass the brief as the argument.
 - **CLI reviewers that accept a prompt** — pass an OUT OF SCOPE / IN SCOPE prompt built from the brief.
