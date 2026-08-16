@@ -25,7 +25,7 @@ under-blocks, under-converges, or re-opens scope it should not. That is not a
 hypothetical: the divergence was found and fixed repeatedly before the rules were
 brought here.
 
-This skill is the application of `dev/references/scope-contract.md`
+This skill is the application of `fx-dev/skills/dev/references/scope-contract.md`
 § Blocking's define-once rule to the review skills themselves.
 
 ## The two canonical sources
