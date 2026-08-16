@@ -79,8 +79,15 @@ IN SCOPE — review for:
 - <dimension>
 
 Established this session and not to be relitigated:
-- <verified fact>"
+- <verified fact>
+
+<the BLOCKING / not-a-finding block from Step 3 — verbatim, on pass 1 too>"
 ```
+
+**The last line is part of the template, not an extra for re-runs.** Step 3's
+block defines what is worth reporting, and pass 1 is where a reviewer without it
+produces the largest crop of low-value findings. A prompt that stops at
+"Established this session" is incomplete.
 
 **This is not optional and not a nicety.** A Codex run without a scope prompt is
 an incomplete pass; rerun it with one rather than filtering the output by hand.
@@ -319,8 +326,15 @@ CONVERGENCE PASS line and the do-not-re-report list are added on top.
 > edit, and update it in the same commit that changes the canonical text.
 
 ```
-CONVERGENCE PASS <N>. Prior passes found <count> issues; all fixed except <the
-rejected ones and why>. Do not re-report them **while the reason still holds** —
+CONVERGENCE PASS <N>. Prior passes found <count> issues, disposed of as follows
+— give each list, not a total, because an item summarised as "fixed" that was not
+comes back without its reasoning:
+- fixed and pushed: <the blocking ones>
+- immaterial, deliberately not actioned: <item, and why it is below the bar>
+- deferred as out of scope: <item, and the exclusion that covers it>
+- rejected as a false premise: <item, and what did not hold>
+
+Do not re-report any of them **while the reason still holds** —
 each was rejected against a specific state of the tree, and later fixes have
 changed that tree. If one of those reasons no longer holds, report the finding as
 new and say which fix invalidated the rejection. Do not treat a rejection as
@@ -378,7 +392,7 @@ reasoned.
 If the artifact is internally consistent and matches the tree, say so plainly.
 ```
 
-- **Cap at 15 iterations** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound). The
+- **Cap the channel at the canonical bound** (`fx-dev/skills/dev/references/scope-contract.md` § The iteration bound). The
   bound is a runaway backstop, not a target — convergence is the goal, and
   stopping at the bound is a failure to converge that you report as an
   escalation, never as convergence. If Codex flags the same design decision in

@@ -241,8 +241,13 @@ For a blocking one:
 
 1. Parse the comment body to extract content between `<summary>🤖 Prompt for AI Agents</summary>` and the closing `</details>`
 2. **Verify the premise before acting.** The prompt asserts something about the
-   tree; when that does not hold, reply with the evidence and resolve rather than
-   changing working code to satisfy a misreading
+   tree; when that does not hold, do **not** reply-and-resolve on your own
+   authority — the coordinator's `blocking` disposition outranks your reading
+   (`fx-dev/skills/dev/references/scope-contract.md` § Resolver dispositions).
+   Return the thread to the coordinator with the evidence for reclassification,
+   and leave it open until it comes back. Only when you assigned the disposition
+   yourself may you reverse it here. Either way, never change working code to
+   satisfy a misreading
 3. Pass the extracted instructions to the coder sub-agent verbatim
 4. After the fix is implemented, resolve the thread
 
@@ -263,7 +268,11 @@ produces the push that reopens the loop.
 2. **Verify it against the code before applying.** Never apply on sight: a
    suggestion is a claim about the tree, and one applied as written has been
    observed to introduce the very bug it claimed to report. If the premise does
-   not hold, reply with the evidence and resolve instead
+   not hold and the `blocking` disposition is the coordinator's, return the
+   thread with the evidence for reclassification and leave it open — closing a
+   correctness or security blocker on a local reading is the one thing an
+   authoritative disposition exists to prevent. If you assigned it yourself,
+   reply with the evidence and resolve instead
 3. Apply the verified change using the Edit tool
 4. Commit with a message referencing the CodeRabbit suggestion
 5. Resolve the thread

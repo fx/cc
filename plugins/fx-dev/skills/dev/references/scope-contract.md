@@ -122,7 +122,9 @@ Every finding handed to a resolver carries exactly one, and they are defined her
 |---|---|---|
 | **Material** | Wrong behaviour, data loss, security, a build/CI/test that will fail, a contradiction that makes the artifact unimplementable, a stated fact that is false **and that a reader would act on** | Report individually. **Blocking.** |
 | **Substantive** | A genuine ambiguity a reader could act on two ways; a missing step that would be discovered late and cost a cycle | Report individually. **Blocking.** |
-| **Immaterial** | Wording that is merely improvable; a count off by one where nothing keys on the count; a list entry missing from a list nothing enumerates exhaustively; formatting; a synonym that reads better | **One closing note, unnumbered, non-blocking.** Never a separate finding, never a reason for another pass. |
+| **Immaterial** | Wording that is merely improvable; a count off by one where nothing keys on the count; formatting; a synonym that reads better | **One closing note, unnumbered, non-blocking.** Never a separate finding, never a reason for another pass. |
+
+An entry missing from a list the artifact does not present as exhaustive is **not reported at all** — not as a finding and not in the closing note. It is the first of the three non-findings below, and it is excluded rather than demoted because the supply of such entries never runs out: a note listing them grows without bound and invites the next pass to extend it.
 
 When unsure which tier something is, ask: *if this shipped uncorrected, what breaks?* If the honest answer is "nothing, it is just not as good as it could be", it is immaterial.
 
