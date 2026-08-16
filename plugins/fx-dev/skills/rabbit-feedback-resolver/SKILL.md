@@ -222,8 +222,11 @@ mechanics worth spelling out.
 2. **Verify the premise before acting.** If it does not hold and the `blocking`
    disposition is the coordinator's, return the thread with the evidence for
    reclassification and leave it open — do not close it on your own reading
-   (`fx-dev:review` Step 3). If you assigned the disposition yourself, reply with
-   the evidence and resolve
+   (`fx-dev:review` Step 3). If you assigned the disposition yourself, the thread
+   is a false positive: route it through the **Outdated** or **Incorrect** row,
+   which is a reply *plus*, where a deliberate convention was misread, the
+   `REVIEW.md` entry (`fx-dev:review` Step 6). Replying and resolving without that
+   entry loses the only thing that stops the finding coming back
 3. Pass the extracted instructions to the coder sub-agent **verbatim**
 4. Resolve the thread once the fix is implemented
 
@@ -244,8 +247,9 @@ produces the push that reopens the loop.
 2. **Verify it against the code before applying.** Never apply on sight: a
    suggestion applied as written has been observed to introduce the very bug it
    claimed to report. If the premise does not hold, take the same route as above —
-   return a coordinator-assigned blocker for reclassification, or reply and
-   resolve a self-assigned one
+   return a coordinator-assigned blocker for reclassification, or route a
+   self-assigned one through the **Outdated**/**Incorrect** row, `REVIEW.md` entry
+   included where a convention was misread
 3. Apply the verified change with the Edit tool
 4. Commit referencing the CodeRabbit suggestion, and resolve the thread
 

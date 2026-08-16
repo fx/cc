@@ -23,12 +23,27 @@ CodeRabbit runs two ways, and **local is primary**:
 - **Mode 1** — the Scope Brief. No PR number; it reviews the working tree/branch.
 - **Mode 2** — `args='<PR_NUMBER> — <Scope Brief verbatim>'`.
 
-## How the brief reaches CodeRabbit: it does not
+## How the brief reaches CodeRabbit
 
-Neither mode accepts a scope prompt — the CLI reviews the diff, and the App
-cannot be addressed at all. So the brief is applied **entirely at triage**
-(`fx-dev:review` Steps 1–2), in both modes. Everything else about the brief,
-including reconstructing one when you were not handed it, is in that skill.
+**Mode 1 can be handed it. Mode 2 cannot.**
+
+`cr review` takes `-c, --config <files...>` — "Additional instructions for
+CodeRabbit AI". Write the brief to a file and pass it, so Mode 1 is a
+prompt-capable reviewer and the brief reaches it *before* the review rather than
+only at triage. This is the external-mirror case in
+`fx-dev/skills/dev/references/scope-contract.md` § Blocking, which names `cr`
+explicitly: the file crosses a process boundary and cannot follow a link, so it
+inlines what it needs and is kept a faithful mirror.
+
+```bash
+# The brief, plus the BLOCKING block, as instructions cr reads before reviewing.
+cr review --agent -c /tmp/scope-brief.md
+```
+
+**Mode 2's GitHub App cannot be addressed at all**, so there the brief is applied
+**entirely at triage** (`fx-dev:review` Steps 1–2). Judge a Mode 2 run on triage
+coverage, not on how few out-of-scope findings it produced — that signal does not
+exist for a reviewer that never saw the brief (`fx-dev:review` Step 8).
 
 CodeRabbit's `🟠 Major` / `🟡 Minor` / `🧹 Nitpick` labels are an **input** to
 triage, never a verdict.
@@ -61,25 +76,34 @@ CodeRabbit alone; it does not relax Copilot, CI, tests, or other merge gates.
 
 Run `cr --help` / `cr review --help` for the full surface. Key usage:
 
-- **`cr review --agent`** — reviews all local changes and emits **structured
+- **`cr review --agent`** — reviews tracked changes and emits **structured
   findings for agent workflows**. Use this; bare `cr` or `cr review` prints a
   plain-text review.
-- `cr review --agent --base main` — scope to the branch's diff against `main`.
-- `cr review --type committed|uncommitted|all` — scope by change state (default
-  `all`).
+- **`cr review -c, --config <files...>`** — additional instructions for the AI.
+  This is how the Scope Brief reaches Mode 1; see above.
+- `cr review --base <branch>` / `--base-commit <commit>` — what to compare against.
+- `cr review --committed` / `--uncommitted` / `--include-untracked` — scope by
+  change state. There is **no** `--type` flag; verified against `cr review --help`.
+- `cr review --dir <path>` — restrict to changes inside one directory.
+- `cr review --light` — a lighter review with reduced context work.
 - `cr review findings` — reprint the previous run's findings, without reviewing.
 - `cr doctor` — check installation / readiness (read-only, safe).
+
+Run `cr review --help` before using a flag this list does not name.
 
 **⛔ NEVER run `cr auth login`** or any interactive `cr auth …`. If `cr` reports
 it is not authenticated, STOP and report to the user.
 
 ### Running it
 
-Run in the **FOREGROUND**:
+Run in the **FOREGROUND**, passing the brief as instructions:
 
 ```bash
-cr review --agent
+cr review --agent -c /tmp/scope-brief.md
 ```
+
+Add `--base main` to scope to the branch's diff. Without `-c` the review is
+unscoped and will report the work you deliberately did not do.
 
 - **Not authenticated** → STOP and report; do not work around it.
 - **Not installed / unavailable** → skip to Mode 2 (resolve at the PR level after

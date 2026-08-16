@@ -77,9 +77,12 @@ out of order produces the wrong verdict:
 
 1. **Scope** — an out-of-scope finding is **deferred** with the exclusion that
    covers it, however material it looks in isolation.
-2. **Contract** — a violation of a project rule, or of a security or privacy
-   invariant, is **blocking by virtue of being a rule**. It never reaches the bar,
-   so "it changes no behaviour" cannot demote it.
+2. **Contract** — a violation of a project rule, a security or privacy
+   invariant, **or any other mandatory requirement the project wrote down**,
+   including a change document or a spec it links, is **blocking by virtue of
+   being a rule**. It never reaches the bar, so "it changes no behaviour" cannot
+   demote it. The full definition is § Three filters, filter 2; do not read this
+   summary as narrower than it.
 3. **Materiality** — everything left is ranked by the bar.
 
 A reviewer's own severity labels — CodeRabbit's `🧹 Nitpick` / `🔵 Trivial`,
@@ -277,9 +280,17 @@ State the shape, not a verdict, so the operator can see it rather than take
   nothing.
 - **Whether you reconstructed the Scope Brief** rather than being handed one.
 
-A run that produces **zero** out-of-scope findings is the signal the brief was
-well built. Persistent out-of-scope noise means it is too thin — tighten it before
-the next iteration rather than filtering by hand again.
+**For a reviewer that receives the brief** — Codex, `cr`, a sub-agent — a run
+producing **zero** out-of-scope findings is the signal it was well built, and
+persistent out-of-scope noise means it is too thin: tighten it before the next
+iteration rather than filtering by hand again.
+
+**For one that cannot receive it** — Copilot, the CodeRabbit GitHub App — that
+signal does not exist. Their out-of-scope output is independent of how good the
+brief is, so rewriting it changes nothing and tightening it in response is a loop
+that does not converge. Judge those runs on **triage coverage** instead: every
+out-of-scope item was recognised as such and deferred with the exclusion that
+covers it, none silently fixed and none silently dropped.
 
 ---
 
