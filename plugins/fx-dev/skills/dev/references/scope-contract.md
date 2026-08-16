@@ -154,7 +154,7 @@ Track findings per pass and watch the shape, not just the count:
 
 Report the trend when you stop, so the operator can see the shape rather than take "clean" on trust: *"Findings per pass: 9, 4, 1, 0 blocking. Stopping — three immaterial wording items remain, listed below."*
 
-**A rising count is a divergence signal, not progress.** If a pass produces more blocking findings than the one before it and they are all the same class, the last round's fix is generating them. Stop and address the cause rather than the instances — and if the cause is a design choice with two defensible answers, that is an escalation to the user, not another pass.
+**A rising count is a divergence signal, not progress.** If a pass produces more blocking findings than the one before it and they are all the same class, the last round's fix is generating them. Stop and address the cause rather than the instances — then **continue the loop**, because a root fix nothing has reviewed is not convergence. Only if the cause is a design choice with two defensible answers does the loop end, as an escalation to the user.
 
 **State honestly what the last pass did not cover.** If you stop after applying fixes that were never themselves reviewed, say so. A loop that stops at the bound below has *not* converged, and reporting it as clean is a false result.
 
@@ -222,7 +222,7 @@ A loop should almost always end on one of the three signals above, all of which 
 
 - **Converged** — no blocking finding left unresolved, per § Convergence above. The only successful exit. Note that is the *ledger* test, not a property of the latest pass: a quiet pass with a carried blocker still open is not convergence.
 - **The same disagreement in successive passes** — the trigger defined in § Convergence above, not a looser one. Escalate by name, and do not spend the remaining iterations re-arguing it.
-- **A rising count of one class** — the last fix is generating them. Fix the cause, or escalate the design choice.
+- **A rising count of one class** — the last fix is generating them. This is **not an exit**: fix the cause and carry on, so the fix is itself reviewed. It ends the loop only when the cause is a design choice with two defensible answers, which is an escalation to the user.
 
 Those exits are what keep the loop short; the bound only catches a loop none of them caught. **Do not treat the headroom as licence to keep going** — an iteration that fixes only immaterial items is churn whether it is the 3rd or the 13th, and the convergence rule already forbids it.
 

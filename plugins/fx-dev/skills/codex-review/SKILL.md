@@ -52,7 +52,8 @@ prompt, in this order:
 4. **IN SCOPE** — the dimensions worth reviewing for this deliverable.
 5. **Established facts** — anything verified this session, so Codex does not
    relitigate it.
-6. **The BLOCKING block below, verbatim** — on pass 1 as well as every re-run.
+6. **`fx-dev:review` § The external-reviewer block, verbatim** — on pass 1 as
+   well as every re-run.
 
 ```bash
 codex review "${MCP_OFF[@]}" "SCOPE — READ CAREFULLY BEFORE REVIEWING.
@@ -71,7 +72,7 @@ IN SCOPE — review for:
 Established this session and not to be relitigated:
 - <verified fact>
 
-<the BLOCKING block below — verbatim, on pass 1 too>"
+<fx-dev:review § The external-reviewer block — verbatim, on pass 1 too>"
 ```
 
 **A Codex run without the scope prompt is an incomplete pass.** Rerun it with one
@@ -200,83 +201,11 @@ unstaged + untracked.
 
 ## The BLOCKING block — carried in every prompt
 
-> **This block is a MIRROR** of `fx-dev/skills/dev/references/scope-contract.md`
-> § Blocking, § Reporting a class, and § Three things that are not findings — the
-> one case the define-once rule exempts, because `codex review` receives a string
-> and cannot follow a link (`fx-dev:review` § The two canonical sources). Keep it a
-> faithful restatement, never an independent edit, and update it in the same commit
-> that changes the canonical text.
+Send **`fx-dev:review` § The external-reviewer block, verbatim**, as the last part
+of every prompt — the first pass as well as every re-run. That block is the single
+mirror both external reviewers use; this skill does not keep its own copy, and
+must not paraphrase it. Its CONVERGENCE PASS preamble goes on top from pass 2.
 
-Pass 1 is where a reviewer with no bar produces the largest crop of low-value
-findings, so omitting it there costs the most. On re-runs, the CONVERGENCE PASS
-preamble is added on top.
-
-```
-CONVERGENCE PASS <N>. Prior passes found <count> issues, disposed of as follows
-— give each list, not a total, because an item summarised as "fixed" that was not
-comes back without its reasoning:
-- fixed and pushed: <the blocking ones>
-- immaterial, deliberately not actioned: <item, and why it is below the bar>
-- deferred as out of scope: <item, and the exclusion that covers it>
-- rejected as a false premise: <item, and what did not hold>
-
-Do not re-report any of them **while the reason still holds** —
-each was rejected against a specific state of the tree, and later fixes have
-changed that tree. If one of those reasons no longer holds, report the finding as
-new and say which fix invalidated the rejection. Do not treat a rejection as
-permanent.
-
-Classes closed since the last pass — every site of each was swept, not just the
-one reported: <class, and the search that proved it closed>. Report a further
-instance of one of these only if the sweep actually missed it, and say which
-site.
-
-Report every BLOCKING finding. A finding is blocking if it is any of:
-
-1. A violation of a rule this project wrote down — anything in AGENTS.md or
-   REVIEW.md, a security or privacy invariant, or any other mandatory
-   requirement the project recorded, including a change document or a spec it
-   links. Report these whatever their direct behavioural impact; the project
-   already decided they matter, so do not weigh them against the bar below.
-2. Something that would change behaviour, break a build, a CI check or a test,
-   make the artifact unimplementable, or expose a security, privacy, or data-loss problem
-   — including a leaked credential, internal URL, or private identifier in
-   documentation or examples. A false statement counts when a reader would act
-   on it; a wrong number nothing keys on does not.
-3. A genuine ambiguity a reader could act on two ways, or a missing step that
-   would be discovered late and cost a cycle.
-
-Wording, formatting, and counts nothing keys on are NOT blocking: one closing
-note, not findings. The exception is item 1 above — where the project wrote down
-a rule about wording or formatting, violating it is blocking on those grounds,
-and this sentence does not override that.
-
-When a finding is one instance of a pattern that appears elsewhere, say so and
-list every other site you can see. Report it as ONE finding naming the class,
-not as one finding per site and not as a single site. A class reported whole is
-fixed in one pass; a class reported one instance at a time takes as many passes
-as it has members.
-
-Where this artifact marks a list as open — it says "for example", or it declares
-the list illustrative and the rule authoritative — assess the RULE. A further
-missing list entry is not a finding.
-
-Where the artifact admits a limit and gates it — "verified by X at
-implementation time", "open question gated on Y" — that is a disposition, not a
-gap. Check the gate is real and sequenced before the thing that depends on it,
-and do not report the limit itself as a missing step.
-
-Where it records a decision with its rationale — including "unknown, gated on
-X" — and your disagreement is about preference, that is settled: say so once as
-an escalation, and do not re-argue it. This does NOT cover a decision that is
-itself the defect. If the decision leaks a credential, an internal URL, or a
-private identifier, loses data, violates a security or privacy invariant, or
-contradicts a contract the project mandates — a spec, a change document, or a
-written project rule — report it as a blocking finding however carefully it is
-reasoned.
-
-If the artifact is internally consistent and matches the tree, say so plainly.
-```
 
 ## Codex-specific triage notes
 

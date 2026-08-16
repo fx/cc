@@ -35,8 +35,13 @@ only at triage. This is the external-mirror case in
 explicitly: the file crosses a process boundary and cannot follow a link, so it
 inlines what it needs and is kept a faithful mirror.
 
+Write two things into that file: the Scope Brief, and **`fx-dev:review` § The
+external-reviewer block, verbatim**. That block is the single mirror both external
+reviewers use — do not paraphrase it or write a CodeRabbit-specific variant.
+
 ```bash
-# The brief, plus the BLOCKING block, as instructions cr reads before reviewing.
+# The brief + fx-dev:review § The external-reviewer block, as instructions
+# cr reads before reviewing.
 cr review --agent -c /tmp/scope-brief.md
 ```
 
@@ -115,7 +120,9 @@ unscoped and will report the work you deliberately did not do.
 `fx-dev:review` Steps 2–7, with one local peculiarity: **there are no threads
 here.** Resolution means the code is fixed, or the finding is a recorded
 non-issue, and an immaterial observation goes straight into the closing note. A
-fix is an atomic commit; re-run `cr review --agent` against it.
+fix is an atomic commit; re-run `cr review --agent -c /tmp/scope-brief.md` against
+it. **Every rerun keeps `-c`** — an unscoped convergence pass reintroduces exactly
+the out-of-scope churn the brief exists to prevent.
 
 ### The gate
 

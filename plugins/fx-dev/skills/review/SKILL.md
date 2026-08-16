@@ -247,16 +247,18 @@ particular state of the tree, and later fixes change that tree — if a fix remo
 what made a finding a false positive, it is valid now. Report it as new and say
 which fix invalidated the rejection.
 
-### The three exits
+### The two exits, and one signal that is not one
 
 - **Converged** — no blocking finding left unresolved. The only successful exit.
 - **The same disagreement in successive passes** — a human decision, not a review
   outcome. Escalate it **by name** and stop; do not spend the remaining iterations
   re-arguing it.
-- **A rising blocking count in one class** — the last fix is generating them. Stop
-  fixing instances and fix the cause; escalate only where that cause is a design
-  choice with two defensible answers. A count rising across *different* categories
-  means the review is still productive, not diverging.
+- **A rising blocking count in one class** — the last fix is generating them.
+  **Not an exit:** stop fixing instances, fix the cause, and keep looping, so the
+  root fix is itself reviewed. It ends the loop only where that cause is a design
+  choice with two defensible answers, which is an escalation to the user. A count
+  rising across *different* categories means the review is still productive, not
+  diverging.
 
 Every loop caps at the bound in § The iteration bound, which counts the initial
 pass as iteration 1 and which no skill restates or overrides. **The bound is a
@@ -293,6 +295,92 @@ out-of-scope item was recognised as such and deferred with the exclusion that
 covers it, none silently fixed and none silently dropped.
 
 ---
+
+## The external-reviewer block
+
+**Two reviewers read a string rather than this file: `codex review`, via its
+prompt, and `cr review -c`, via an instructions file.** Neither can follow a link,
+so both need the rules inlined — the one case § The two canonical sources exempts.
+There is **one** such block, here, and both adapters send this text rather than
+writing their own.
+
+> **This block is a MIRROR** of `fx-dev/skills/dev/references/scope-contract.md`
+> § Blocking, § Reporting a class, and § Three things that are not findings. Keep
+> it a faithful restatement, never an independent edit, and update it in the same
+> commit that changes the canonical text.
+
+Send it on **every** pass, the first as well as every re-run. Pass 1 is where a
+reviewer with no bar produces the largest crop of low-value findings, so omitting
+it there costs the most. On a re-run the CONVERGENCE PASS preamble goes on top.
+
+```
+CONVERGENCE PASS <N>. Prior passes found <count> issues, disposed of as follows
+— give each list, not a total, because an item summarised as "fixed" that was not
+comes back without its reasoning:
+- fixed and pushed: <the blocking ones>
+- immaterial, deliberately not actioned: <item, and why it is below the bar>
+- deferred as out of scope: <item, and the exclusion that covers it>
+- rejected as a false premise: <item, and what did not hold>
+
+Do not re-report any of them **while the reason still holds** —
+each was rejected against a specific state of the tree, and later fixes have
+changed that tree. If one of those reasons no longer holds, report the finding as
+new and say which fix invalidated the rejection. Do not treat a rejection as
+permanent.
+
+Classes closed since the last pass — every site of each was swept, not just the
+one reported: <class, and the search that proved it closed>. Report a further
+instance of one of these only if the sweep actually missed it, and say which
+site.
+
+Report every BLOCKING finding. A finding is blocking if it is any of:
+
+1. A violation of a rule this project wrote down — anything in AGENTS.md or
+   REVIEW.md, a security or privacy invariant, or any other mandatory
+   requirement the project recorded, including a change document or a spec it
+   links. Report these whatever their direct behavioural impact; the project
+   already decided they matter, so do not weigh them against the bar below.
+2. Something that would change behaviour, break a build, a CI check or a test,
+   make the artifact unimplementable, or expose a security, privacy, or data-loss problem
+   — including a leaked credential, internal URL, or private identifier in
+   documentation or examples. A false statement counts when a reader would act
+   on it; a wrong number nothing keys on does not.
+3. A genuine ambiguity a reader could act on two ways, or a missing step that
+   would be discovered late and cost a cycle.
+
+Wording, formatting, and counts nothing keys on are NOT blocking: one closing
+note, not findings. The exception is item 1 above — where the project wrote down
+a rule about wording or formatting, violating it is blocking on those grounds,
+and this sentence does not override that.
+
+When a finding is one instance of a pattern that appears elsewhere, say so and
+list every other site you can see. Report it as ONE finding naming the class,
+not as one finding per site and not as a single site. A class reported whole is
+fixed in one pass; a class reported one instance at a time takes as many passes
+as it has members.
+
+Where this artifact marks a list as open — it says "for example", or it declares
+the list illustrative and the rule authoritative — assess the RULE. A further
+missing list entry is not a finding, and it does not belong in the closing note
+either: do not report it at all. The supply never runs out, so a note listing them
+grows without bound.
+
+Where the artifact admits a limit and gates it — "verified by X at
+implementation time", "open question gated on Y" — that is a disposition, not a
+gap. Check the gate is real and sequenced before the thing that depends on it,
+and do not report the limit itself as a missing step.
+
+Where it records a decision with its rationale — including "unknown, gated on
+X" — and your disagreement is about preference, that is settled: say so once as
+an escalation, and do not re-argue it. This does NOT cover a decision that is
+itself the defect. If the decision leaks a credential, an internal URL, or a
+private identifier, loses data, violates a security or privacy invariant, or
+contradicts a contract the project mandates — a spec, a change document, or a
+written project rule — report it as a blocking finding however carefully it is
+reasoned.
+
+If the artifact is internally consistent and matches the tree, say so plainly.
+```
 
 ## What a platform skill adds
 
