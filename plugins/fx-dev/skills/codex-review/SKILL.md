@@ -188,6 +188,41 @@ resort — you then filter out-of-scope findings by hand:
 `codex review "${MCP_OFF[@]}" --base main`, or `--uncommitted` for staged +
 unstaged + untracked.
 
+### Pick the model and effort — the default is far too slow
+
+`codex review` inherits `model` and `model_reasoning_effort` from the user's
+`~/.codex/config.toml`, and a reasoning-heavy default turns every pass into a
+10–15 minute wait. Override them **per invocation** with `-c`; never edit the
+user's config (see the MCP section — same reasoning).
+
+```bash
+codex review "${MCP_OFF[@]}" -c model=gpt-5.6-terra -c model_reasoning_effort=medium "<scope prompt>"
+```
+
+Measured on this repo, one real review prompt (~9 KB) against a 13-file branch,
+each run in an isolated `CODEX_HOME`:
+
+| model / effort | wall clock | findings |
+|---|---|---|
+| `gpt-5.6-terra` / `medium` | **88 s** | 1–2, substantive |
+| `gpt-5.6-luna` / `medium` | 85 s | none — reported clean |
+| `gpt-5.6-luna` / `low` | 45 s | 1 |
+| `gpt-5.6-terra` / `high` | 192 s | 1, with every site of the class enumerated |
+| `gpt-5.6-luna` / `high` | 343 s | none — reported clean |
+| `gpt-5.6-sol` / `xhigh` | ~900 s | baseline |
+
+**Default to `gpt-5.6-terra` at `medium`.** It is roughly ten times faster than a
+`sol`/`xhigh` default and still finds real contradictions that `luna` calls clean
+at the same speed — on this branch `luna` returned "no blocking defect" at both
+`medium` and `high` while `terra` at `medium` found a genuine P1. Reach for
+`terra`/`high` when you specifically want the whole class enumerated and can
+afford ~3 minutes.
+
+Effort above `high` is not worth it for review: `sol`/`xhigh` cost 10× the wall
+clock of `terra`/`medium` without finding more on this branch, and a pass that
+takes 15 minutes makes the convergence loop unaffordable long before the
+iteration bound.
+
 ### Flags and availability
 
 - Verified on 0.147.0, `codex review` accepts exactly nine options:
