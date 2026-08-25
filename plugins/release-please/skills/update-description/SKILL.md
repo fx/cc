@@ -1,6 +1,6 @@
 ---
 name: update-description
-description: Updates GitHub Release notes with human-readable summaries AFTER release-please creates a release. Use when user says "update release description", "improve release notes", or after merging a release-please PR. NEVER modifies the release PR body (breaks parsing).
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Updates release notes after an explicit request, without modifying release-please PR bodies."
 ---
 
 # Update Release-Please Description

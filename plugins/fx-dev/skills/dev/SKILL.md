@@ -1,15 +1,23 @@
 ---
 name: dev
-description: "MUST BE LOADED for any coding task: implementing features, fixing bugs, writing code, refactoring, or making changes. This skill provides the mandatory step-by-step SDLC (Software Development Lifecycle) workflow for orchestrating development using specialized skills and sub-agents. Load this skill when the user asks to 'add', 'create', 'build', 'fix', 'update', 'change', 'implement', or 'refactor' anything."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Runs the complete attended SDLC lifecycle through requirements, implementation, review, CI, and finalization."
 ---
 
 # Dev — SDLC Workflow Skill
 
-This skill defines the **mandatory** workflow for all coding tasks. Follow these steps IN ORDER. Skipping steps is FORBIDDEN.
+This skill defines the **mandatory** workflow for one explicitly invoked `/dev` lifecycle. Follow its steps in order for that lifecycle; do not infer or auto-start it from an ordinary coding request.
+
+## Invocation Boundary (CRITICAL)
+
+- Start this lifecycle only when the user explicitly invokes `/dev`, names `fx-dev:dev`, or directly asks to use the dev lifecycle.
+- Do not load it merely because a request involves coding, implementation, GitHub, planning, review, or a phrase that resembles one of its stages.
+- Its authority covers the lifecycle request through the Step 8 handoff. Once that handoff is complete, later user messages are standalone requests unless the user explicitly invokes `/dev` again.
+- Incidental questions and operations are not new lifecycle stages. Handle status checks, branch synchronization, PR metadata edits, and an explicitly authorized merge directly when they require no substantive implementation judgment.
+- A user may explicitly narrow, waive, or stop a procedural pass. Mandatory correctness, security, privacy, and merge-gate requirements remain in force, but the skill must not argue that its own orchestration mechanics outrank a direct user instruction.
 
 ## CRITICAL RULES
 
-**YOU MUST USE THE AGENT TOOL TO LAUNCH SUB-AGENTS FOR ALL WORK. Each sub-agent loads the appropriate skill via the Skill tool.**
+**Use the Agent tool for the substantive delegated roles owned by the active lifecycle: requirements analysis, planning, implementation, and independent review. Each such sub-agent loads the appropriate skill via the Skill tool. Do not spawn a sub-agent for a mechanical operation the coordinator can perform directly.**
 
 ### How to Launch Sub-Agents with Skills
 
@@ -29,24 +37,23 @@ Agent tool:
 **Sub-agents MUST NEVER send "idle" or "complete" states via `mcp__coder__coder_report_task`.** Only the main agent session (root conversation) is allowed to report "idle" or "complete". Sub-agents spawned via the Agent tool may only report `"state": "working"`. This prevents sub-agents from overwriting the coordinator's dashboard status and falsely signaling task completion.
 
 <!--
-duvet= docs/specs/fx-dev-authority/index.md#the-dev-coordinator-delegates-all-writes
+duvet= docs/specs/fx-dev-authority/index.md#the-dev-coordinator-delegates-implementation-writes
 duvet= type=implication
-duvet# The `fx-dev:dev` coordinator MUST NOT write code, create files, or make commits itself, and MUST delegate that work to sub-agents.
+duvet# During an explicitly invoked `fx-dev:dev` lifecycle, the coordinator MUST delegate repository implementation edits and commits to sub-agents; it MAY perform mechanical coordination and GitHub operations directly.
 -->
 
-- ❌ NEVER write code yourself
-- ❌ NEVER create files yourself
-- ❌ NEVER make commits yourself
-- ❌ NEVER skip steps
+- ❌ NEVER author repository implementation code or documentation yourself
+- ❌ NEVER create implementation commits yourself
 - ❌ NEVER skip tests (`test.skip`, `it.skip`, `describe.skip` are FORBIDDEN)
 - ❌ NEVER use `subagent_type` for skills — use `Skill tool` inside the sub-agent
-- ✅ ALWAYS launch sub-agents via the Agent tool
-- ✅ ALWAYS instruct sub-agents to load skills via the Skill tool
-- ✅ ALWAYS verify each step before proceeding
+- ✅ ALWAYS delegate requirements analysis, planning, implementation, and independent review roles
+- ✅ ALWAYS instruct delegated role agents to load their named skills via the Skill tool
+- ✅ ALWAYS perform straightforward status checks, branch synchronization, PR metadata updates, and an explicitly approved merge directly when delegation adds no independent judgment
+- ✅ ALWAYS verify each lifecycle gate before proceeding, except where the user explicitly waives a procedural pass that is not a mandatory correctness, security, privacy, test, or merge gate
 - ✅ ALWAYS fix, replace, refactor, or remove tests - never skip them
-- ✅ ALWAYS carry the Scope Brief (Step 2.5) verbatim into every sub-agent prompt and every reviewer call
+- ✅ ALWAYS carry the Scope Brief (Step 2.5) verbatim into every delegated lifecycle role and reviewer call
 
-**FAILURE TO USE SUB-AGENTS = WORKFLOW FAILURE**
+**FAILURE TO DELEGATE A SUBSTANTIVE LIFECYCLE ROLE = WORKFLOW FAILURE. Spawning a sub-agent for a mechanical coordinator operation is also a workflow failure.**
 
 ### Scope Discipline (STOP rule)
 
@@ -345,7 +352,7 @@ Proceed to Step 5 when all of the following are true:
 
 ### STEP 5: Pull Request Creation
 
-**MANDATORY: Launch a sub-agent that loads the pr-preparer skill. ALL PRs MUST be created READY FOR REVIEW — never as drafts.**
+**MANDATORY: Prepare the PR directly from the coordinator, optionally loading `fx-dev:pr-preparer` in the coordinator session. Do not spawn a sub-agent solely to push a branch or create/edit PR metadata. ALL PRs MUST be created READY FOR REVIEW — never as drafts.**
 
 **⛔ NEVER use the `--draft` flag. NEVER create draft PRs.** Draft PRs have repeatedly been used as an excuse to skip downstream steps (reviewer waits, CI monitoring, CodeRabbit/Copilot resolution). The SDLC ALWAYS executes the full review/CI cycle from PR creation onward — opening as draft defeats this. If the work isn't ready for review, don't open the PR yet.
 
@@ -362,9 +369,7 @@ cat docs/index.yml 2>/dev/null
 If the work was driven by a specific change document or spec, note the paths for inclusion in the PR description.
 
 ```
-Agent tool:
-  prompt: "Load the pr-preparer skill (Skill tool: skill='fx-dev:pr-preparer'), then:
-
+Skill tool: skill="fx-dev:pr-preparer", args="
            Create PR (ready for review, NOT draft) for current branch.
            Task: [ORIGINAL TASK]
            Summary: [WHAT WAS IMPLEMENTED]
@@ -394,7 +399,6 @@ Agent tool:
            - Do NOT include any 'this is a draft' / 'draft for review' language
              anywhere in the title or body
            - Return PR number and URL"
-  description: "Create PR"
 ```
 
 **Capture the PR number for remaining steps.**
@@ -854,6 +858,8 @@ duvet# A `fx-dev:dev` run MUST obtain explicit approval from the user before mer
 **⚠️ NEVER MERGE WITHOUT USER APPROVAL**
 **⚠️ NEVER MERGE WITHOUT ALL MERGE GATES PASSING (Step 8.1)**
 **⚠️ NEVER MERGE WITHOUT COPILOT REVIEW RECEIVED AND ADDRESSED**
+
+After this handoff, a later user message such as "merge it" is a standalone mechanical request, not a new `/dev` phase. Recheck the live gates and merge directly in the coordinator session. Do not re-invoke `/dev`, reload its internal skills, or spawn a merge sub-agent.
 
 ---
 

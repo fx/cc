@@ -14,8 +14,8 @@ SPECIFICATION: [fx-dev Agent Authority](docs/specs/fx-dev-authority/index.md)
   SECTION: [Merge Gates Apply Regardless of Change Size](#merge-gates-apply-regardless-of-change-size)
     TEXT[!MUST,implication]: The size, triviality, or follow-up status of a pull request MUST NOT be treated as grounds for waiving any merge gate.
 
-  SECTION: [The Dev Coordinator Delegates All Writes](#the-dev-coordinator-delegates-all-writes)
-    TEXT[!MUST,implication]: The `fx-dev:dev` coordinator MUST NOT write code, create files, or make commits itself, and MUST delegate that work to sub-agents.
+  SECTION: [The Dev Coordinator Delegates Implementation Writes](#the-dev-coordinator-delegates-implementation-writes)
+    TEXT[!MUST,implication]: During an explicitly invoked `fx-dev:dev` lifecycle, the coordinator MUST delegate repository implementation edits and commits to sub-agents; it MAY perform mechanical coordination and GitHub operations directly.
 
   SECTION: [The Team Coordinator Delegates All Implementation](#the-team-coordinator-delegates-all-implementation)
     TEXT[!MUST,implication]: The `fx-dev:team` coordinator MUST NOT implement a task's code itself and MUST route all implementation work through agents it spawns.

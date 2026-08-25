@@ -1,6 +1,6 @@
 ---
 name: workflow-runner
-description: MUST BE USED proactively to execute complete workflows from start to finish without stopping. Proactively ensures all phases complete and loops until success.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Runs an explicitly selected workflow through its own completion criteria without stopping between phases."
 ---
 
 # Workflow Runner Skill

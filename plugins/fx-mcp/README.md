@@ -46,13 +46,14 @@ Provides comprehensive guidance for managing MCP servers using the `claude mcp` 
 
 ## Usage
 
-The skill is automatically invoked when you need MCP-related guidance. You can also trigger it by asking questions about MCP servers:
+Invoke the skill explicitly when you want its MCP-management guidance:
 
 ```
-"How do I add an MCP server to my project?"
-"What's the difference between project and user scope for MCP?"
-"How do I add an MCP server with authentication?"
+"Use /managing-mcp-servers to add an MCP server to my project"
+"Use the managing-mcp-servers skill to compare project and user scope"
 ```
+
+Ordinary MCP questions do not auto-load this lifecycle.
 
 ## Quick Start
 

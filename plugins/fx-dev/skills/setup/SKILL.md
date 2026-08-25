@@ -1,6 +1,6 @@
 ---
 name: setup
-description: "Initialize the docs/ folder structure for spec-driven development and create the standard AI instruction files (AGENTS.md, REVIEW.md, the CLAUDE.md pointer, and .coderabbit.yaml) if missing, so task tracking defers to /project-management. Creates defaults only — never migrates existing files; that is fx-dev:upgrade. Called automatically by /spec-writer and /project-management. Also use when user says 'setup docs', 'initialize docs', 'create docs structure'."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Creates the default docs and instruction-file layout as a prerequisite of an explicitly invoked documentation workflow."
 ---
 
 # Setup

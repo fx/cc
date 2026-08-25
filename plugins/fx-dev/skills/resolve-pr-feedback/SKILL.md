@@ -1,6 +1,6 @@
 ---
 name: resolve-pr-feedback
-description: Check a PR for unresolved automated review feedback (Copilot, CodeRabbit, Codecov) and invoke the appropriate resolver skills. Use when the user says "resolve PR feedback", "check PR comments", "address review comments", "fix coverage", or wants to handle all automated review feedback on a PR.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Coordinates explicitly requested automated PR-feedback resolution across configured reviewers."
 ---
 
 # Resolve PR Feedback

@@ -1,6 +1,6 @@
 ---
 name: managing-mcp-servers
-description: Provides comprehensive guidance for managing MCP (Model Context Protocol) servers using the claude mcp CLI. Covers adding servers across scopes (project, local, user), transport types (stdio, sse, http), security best practices, and common patterns. Strongly recommends project scope for team consistency and version control.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Provides guidance for explicitly requested Claude MCP server management."
 ---
 
 # Managing MCP Servers

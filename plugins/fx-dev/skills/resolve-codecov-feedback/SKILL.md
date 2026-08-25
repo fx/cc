@@ -1,6 +1,6 @@
 ---
 name: resolve-codecov-feedback
-description: Process Codecov coverage reports on PRs and add missing tests for uncovered lines. Use when Codecov reports insufficient coverage, the user says "check codecov", "fix coverage", "add missing tests", or after CI passes and Codecov posts its report. Also invoked automatically by the SDLC workflow and resolve-pr-feedback skill.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Processes Codecov feedback and adds coverage required by an active workflow."
 ---
 
 # Resolve Codecov Feedback

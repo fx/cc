@@ -1,6 +1,6 @@
 ---
 name: research-project
-description: "MUST BE USED when user asks to research a project, validate a product idea, scope a new application, evaluate market viability, or lay out the foundational approach for building a full application. Triggers: 'research a project', 'research project', 'should we build X', 'is X viable', 'lay out the approach for X', 'scope out X', 'validate this idea', 'competitive analysis', 'market analysis', 'how should we build X'. Performs the most thorough possible end-to-end project research: competitive landscape discovery, deep competitor analysis, market viability assessment, constraint validation, and at least two fully-reasoned solution proposals — followed by adversarial self-validation via a dedicated red-team sub-agent."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Runs an explicitly requested end-to-end project, product, market, and solution research workflow."
 ---
 
 # Research Project

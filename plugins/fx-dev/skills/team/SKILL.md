@@ -1,6 +1,6 @@
 ---
 name: team
-description: "Spawn a coordinated sub-agent team to implement a spec or multi-task feature in parallel. Use when user says '/team', 'use a team', 'parallel implementation', 'work on multiple tasks', or provides a spec/issue that requires coordinated multi-PR work. The main session acts as coordinator — no code, no commits, only delegation and quality control."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Runs an explicitly requested coordinated multi-agent, multi-task implementation workflow."
 ---
 
 # Team (Coordinated Sub-Agent Implementation)

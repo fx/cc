@@ -1,6 +1,6 @@
 ---
 name: verify-web-change
-description: Verify web application changes work by launching the app stack and testing in a real browser. This skill should be used when the user asks to "verify the change", "test in browser", "check if it works", or after completing a PR to validate the implementation. Requires Playwright MCP server. MUST exit if Playwright MCP is unavailable.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Verifies specified web changes using the real application and Playwright."
 ---
 
 # Verify Web Change

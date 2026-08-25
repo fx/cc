@@ -1,6 +1,6 @@
 ---
 name: spec-writer
-description: "Write, update, and maintain living specification documents and propose change documents. Use when user says 'write a spec', 'create a spec', 'spec out', 'update spec', 'spec this', 'design a feature', 'write a feature spec', or needs to create/modify specs in docs/specs/ or propose changes in docs/changes/. Handles the complete spec lifecycle: creation, updates, gap analysis, and change proposals."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Writes and maintains living specs and proposed change documents within an explicitly requested documentation lifecycle."
 ---
 
 # Spec Writer

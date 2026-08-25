@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-description: "MUST BE USED when user says: 'create a skill', 'make a skill', 'new skill', 'build a skill', 'write a skill', 'add a skill', 'skill for X', or any variation. Also use when editing SKILL.md files, updating skill descriptions, adding skill resources, or iterating on existing skills. Load this skill BEFORE any skill-related work."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Guides explicitly requested creation or modification of a skill and its bundled resources."
 ---
 
 # Skill Creator
@@ -40,7 +40,7 @@ skill-name/
 
 #### SKILL.md (required)
 
-**Metadata Quality:** The `name` and `description` in YAML frontmatter determine when Claude will use the skill. Be specific about what the skill does and when to use it. Use the third-person (e.g. "This skill should be used when..." instead of "Use this skill when...").
+**Metadata Quality:** The `name` and `description` in YAML frontmatter tell Claude what an explicitly invoked skill does. fx/cc skills are explicit-use only: begin descriptions with that boundary and do not list generic phrases that should auto-trigger the skill. State whether an active explicitly invoked workflow may call it internally by name.
 
 #### Bundled Resources (optional)
 
@@ -78,7 +78,7 @@ Files not intended to be loaded into context, but rather used within the output 
 Skills use a three-level loading system to manage context efficiently:
 
 1. **Metadata (name + description)** - Always in context (~100 words)
-2. **SKILL.md body** - When skill triggers (<5k words)
+2. **SKILL.md body** - When the user explicitly invokes it or an active workflow calls it by name (<5k words)
 3. **Bundled resources** - As needed by Claude (Unlimited*)
 
 *Unlimited because scripts can be executed without reading into context window.
@@ -98,7 +98,7 @@ For example, when building an image-editor skill, relevant questions include:
 - "What functionality should the image-editor skill support? Editing, rotating, anything else?"
 - "Can you give some examples of how this skill would be used?"
 - "I can imagine users asking for things like 'Remove the red-eye from this image' or 'Rotate this image'. Are there other ways you imagine this skill being used?"
-- "What would a user say that should trigger this skill?"
+- "What explicit name or slash invocation should users use, and may an active workflow call this skill internally by name?"
 
 To avoid overwhelming users, avoid asking too many questions in a single message. Start with the most important questions and follow up as needed for better effectiveness.
 
@@ -229,14 +229,14 @@ Once the skill is ready, package it for distribution. For skills in Claude Code 
 
 1. **Validate** the skill structure:
    - Verify YAML frontmatter has required `name` and `description` fields
-   - Check that description clearly states when to use the skill
+   - Check that the description states the explicit-use boundary and the skill's purpose
    - Ensure SKILL.md uses imperative/infinitive language
    - Verify all referenced resources exist
 
 2. **Package** the skill:
    - For plugin-based skills, ensure the skill directory is in the correct location within the plugin
    - For standalone skills, create a zip file maintaining the directory structure
-   - Test the skill by installing it and triggering it with relevant prompts
+   - Test the skill by installing it and invoking it explicitly by name; also test any named internal call from an active workflow
 
 ### Step 6: Iterate
 

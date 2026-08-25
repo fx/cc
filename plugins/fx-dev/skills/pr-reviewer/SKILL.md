@@ -1,6 +1,6 @@
 ---
 name: pr-reviewer
-description: "MUST BE USED when user asks to: review code, review PR, check my code, look at my changes, review changes. Reviews pull requests and code changes, reporting findings by tier — blocking ones individually, deferred ones with the exclusion covering each, and immaterial ones in a single closing note."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Reviews code or a pull request under the shared Scope Brief and materiality rules."
 ---
 
 # Pragmatic PR Review Skill

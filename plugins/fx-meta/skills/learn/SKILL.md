@@ -1,6 +1,6 @@
 ---
 name: learn
-description: Update fx-cc plugin skills based on conversation learnings. Use when the user says "use /learn to...", "learn to...", "remember to...", "don't do X again", or when a skill misbehaved and needs correction. This skill modifies plugin source files but does NOT commit changes - they require manual review before committing.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Updates fx-cc plugin skills from an explicit /learn request and leaves changes uncommitted for review."
 ---
 
 # Learn
@@ -53,7 +53,8 @@ Examine the current conversation to understand:
 
 Common scenarios:
 
-- **Skill not loaded when it should have been** → Update skill description to be clearer about trigger conditions
+- **Explicitly invoked skill did not load** → Verify its namespaced name, registration, and explicit-use description without adding semantic auto-trigger phrases
+- **Skill auto-loaded without being named** → Add or repair the explicit-use boundary in its description and instructions
 - **Skill produced incorrect behavior** → Add explicit prohibition to skill instructions
 - **Skill missed a step** → Add the step to the skill's workflow
 - **Instruction was ambiguous** → Clarify the wording
@@ -145,14 +146,15 @@ User says: "use /learn to update our sdlc skills - they should update PROJECT.md
 3. Sync fx-dev plugin to cache
 4. Show diff, leave uncommitted
 
-### Example 2: Skill Not Triggered
+### Example 2: Explicit Skill Invocation Failed
 
-User says: "the github skill didn't load when I ran gh commands"
+User says: "I explicitly ran /github, but the skill did not load"
 
-1. Locate `plugins/fx-dev/skills/github/SKILL.md`
-2. Update description to include more trigger phrases (e.g., "gh CLI", "GitHub API")
-3. Sync fx-dev plugin to cache
-4. Show diff, leave uncommitted
+1. Locate `plugins/fx-dev/skills/github/SKILL.md` and its plugin registration
+2. Verify the namespaced/slash name and explicit-use description are correct
+3. Do not add generic GitHub phrases as auto-trigger conditions
+4. Sync fx-dev plugin to cache
+5. Show diff, leave uncommitted
 
 ### Example 3: Explicit Prohibition
 

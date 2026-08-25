@@ -29,12 +29,11 @@ This is the local clone of the fx/cc marketplace repository.
 
 ### Creating a New Skill
 
-The skill-creator skill is automatically invoked when you mention creating skills:
+Invoke the skill-creator explicitly when you want its lifecycle:
 
 ```
-"Create a new skill for [purpose]"
-"I want to build a skill that [description]"
-"Help me make a skill for [domain]"
+"Use /skill-creator to create a new skill for [purpose]"
+"Use the skill-creator skill to update [skill name]"
 ```
 
 The skill guides you through:
@@ -86,7 +85,7 @@ skill-name/
 
 Skills load in three levels:
 1. Metadata (always loaded, ~100 words)
-2. SKILL.md body (when triggered, <5k words)
+2. SKILL.md body (when explicitly invoked or called by an active workflow, <5k words)
 3. Bundled resources (as needed by Claude)
 
 ## Examples
@@ -109,12 +108,11 @@ Result: Skill with `assets/api-template/` containing boilerplate TypeScript file
 
 ### Creating a New Plugin
 
-The plugin-creator skill is automatically invoked when you mention creating plugins:
+Invoke the plugin-creator explicitly when you want its lifecycle:
 
 ```
-"Create a new plugin for AWS deployment automation"
-"I want to build a plugin for Kubernetes management"
-"Help me make a plugin with agents and skills for database operations"
+"Use /plugin-creator to create a new plugin for deployment automation"
+"Use the plugin-creator skill to update [plugin name]"
 ```
 
 The skill guides you through:

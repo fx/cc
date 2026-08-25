@@ -1,6 +1,6 @@
 ---
 name: upstream-contrib
-description: Contribute local component changes upstream to fx/ui. This skill should be used when the user wants to upstream local UI component changes (variants, new components, fixes) from a consumer repo to the shared @fx/ui library. Triggers include "upstream to fx/ui", "contribute to fx/ui", "add this to fx/ui", "move this to fx/ui", "send PR to fx/ui", or when local UI component changes should be shared across repos.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Runs the explicitly requested workflow for contributing consumer changes upstream to fx/ui."
 ---
 
 # Upstream Contribution to @fx/ui

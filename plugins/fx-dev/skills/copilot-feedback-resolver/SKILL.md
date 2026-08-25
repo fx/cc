@@ -1,6 +1,6 @@
 ---
 name: copilot-feedback-resolver
-description: Process and resolve GitHub Copilot automated PR review comments. Use when the user says "check copilot review", "handle copilot comments", "resolve copilot feedback", "address copilot suggestions", or mentions Copilot PR comments. Also use after PR creation when Copilot has left automated review comments.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Processes and resolves existing GitHub Copilot review threads without creating PR-level comments."
 ---
 
 # Copilot Feedback Resolver
@@ -50,16 +50,9 @@ effect on this same PR's next review.
 
 **CRITICAL: Load the `fx-dev:github` skill FIRST** before running any GitHub API operations. This skill provides essential patterns and error handling for `gh` CLI commands.
 
-## WHEN TO USE THIS SKILL
+## INVOCATION BOUNDARY
 
-**USE THIS SKILL PROACTIVELY** when ANY of the following occur:
-
-- User says "check copilot review" / "handle copilot comments" / "resolve copilot feedback"
-- User mentions "copilot" and "PR" or "comments" in the same context
-- After PR creation when you notice Copilot has reviewed the PR
-- User says "address copilot suggestions" / "deal with copilot"
-- As part of the PR workflow after `pr-reviewer` skill completes
-- When PR checks show Copilot has left review comments
+Use this resolver only when the user explicitly names or invokes it, or when an active explicitly invoked workflow calls `fx-dev:copilot-feedback-resolver` by name. A standalone mention of Copilot, a PR, comments, review state, or failing checks does not auto-load it.
 
 **Invocation:** always with the brief and your dispositions, never bare —
 

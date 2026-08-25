@@ -50,22 +50,22 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 
 ### Implement a GitHub Issue
 
-Just describe the work — the `dev` skill auto-triggers:
+Invoke the `dev` lifecycle explicitly:
 
 ```
-Implement https://github.com/owner/repo/issues/123
+/dev Implement https://github.com/owner/repo/issues/123
 ```
 
 ### Quick Bug Fix
 
 ```
-Fix the TypeError in auth.js:42 - Cannot read property 'id' of undefined
+/fix Fix the TypeError in auth.js:42 - Cannot read property 'id' of undefined
 ```
 
 ### Implement a Feature
 
 ```
-Add dark mode toggle to settings page
+/dev Add dark mode toggle to settings page
 ```
 
 ### Parallel Team Implementation
@@ -76,7 +76,7 @@ Use the team skill to implement docs/specs/auth/
 
 ## Complete Workflow
 
-The fx-dev plugin manages the entire development workflow:
+When explicitly invoked, the fx-dev lifecycle manages the entire development workflow:
 
 ```
 Requirements Analysis (requirements-analyzer skill)
@@ -154,11 +154,11 @@ Meta-skill that detects all unresolved automated feedback (Copilot, CodeRabbit, 
 
 ### Development Workflow
 
-1. **Describe what you want** - Skills auto-trigger based on your request
-2. **GitHub issues** - Provide issue URLs for tracked work
-3. **Bug fixes** - Describe the bug; the fix skill enforces test-first
-4. **Multi-PR work** - Use the team skill for parallel implementation
-5. **Let the dev skill coordinate** - It handles orchestration via sub-agents
+1. **Invoke the workflow you want** - Use `/dev`, `/fix`, `/team`, or another skill explicitly; ordinary requests do not auto-start a lifecycle
+2. **GitHub issues** - Provide issue URLs inside the explicit lifecycle request
+3. **Bug fixes** - Use `/fix` when you want the test-first lifecycle
+4. **Multi-PR work** - Use `/team` for parallel implementation
+5. **Let the named lifecycle coordinate** - Internal skills may be called by name only while that lifecycle remains active
 
 ### Pull Request Management
 

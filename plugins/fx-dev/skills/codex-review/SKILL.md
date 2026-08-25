@@ -1,6 +1,6 @@
 ---
 name: codex-review
-description: Run OpenAI Codex's AI code review LOCALLY via the `codex` CLI BEFORE opening a PR (part of pre-PR self-review). Runs one-shot, reviewing the current branch, prints findings to stdout, and you resolve them before the PR is opened. Pass a Scope Brief as args — the review MUST be scoped to the user's original request, or Codex reports the work you deliberately did not do. Use during pre-PR self-review, alongside fx-dev:coderabbit-review.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Runs a scoped one-shot Codex CLI branch review as an external review adapter."
 ---
 
 # Codex Review

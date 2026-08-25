@@ -1,6 +1,6 @@
 ---
 name: plugin-creator
-description: Guide for creating effective fx/cc marketplace plugins. This skill should be used when users want to create a new Claude Code plugin (or update an existing plugin) for the fx/cc marketplace that extends Claude's capabilities with skills, commands, or hooks.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Guides explicitly requested creation or modification of an fx/cc marketplace plugin."
 ---
 
 # Plugin Creator
@@ -10,7 +10,7 @@ This skill provides guidance for creating high-quality plugins for the fx/cc Cla
 ## About fx/cc Plugins
 
 Plugins are structured packages that extend Claude Code's capabilities by bundling related components:
-- **Skills** - Auto-invoked specialized knowledge and workflows (can also be used as sub-agent types for autonomous multi-step operations)
+- **Skills** - Explicitly invoked specialized knowledge and workflows; an active workflow may call internal skills by name
 - **Commands** - Slash commands for specific operations
 - **Hooks** - Event-driven workflow automation
 
@@ -29,7 +29,7 @@ To create an effective plugin, gather concrete examples of how it will be used:
 **Example questions to ask:**
 - "What functionality should this plugin provide?"
 - "Can you give examples of tasks users would perform with this plugin?"
-- "What would trigger each component (skills, commands)?"
+- "How will users explicitly invoke each skill or command, and which active workflows may call internal skills by name?"
 - "Are these components typically used together or separately?"
 
 **Example for `fx-git` plugin:**
@@ -61,13 +61,13 @@ Decide whether to:
 #### 3. Required Components
 
 **Skills** - When to include:
-- Auto-invoked specialized knowledge needed
+- Specialized knowledge users explicitly select
 - Procedural workflows for specific tasks
-- Domain expertise that should trigger automatically
-- Complex multi-step autonomous operations (skills can serve as sub-agent types)
+- Internal roles an active, explicitly invoked workflow calls by name
+- Complex multi-step operations that need bundled references or scripts
 
 **Commands** - When to include:
-- Explicit user-triggered operations
+- Explicit user-invoked operations
 - Shortcuts for common workflows
 - Integration with external tools/APIs
 
@@ -188,7 +188,7 @@ Brief description of plugin purpose.
 ## Components
 
 ### Skills (if applicable)
-- **skill-name** - Auto-invoked when [trigger condition]
+- **skill-name** - Explicitly invoke with `/skill-name`; may be called internally by [named workflow]
 
 ### Commands (if applicable)
 - \`/command-name\` - [What it does]
@@ -243,9 +243,9 @@ grep -r "^---$" skills/ commands/ || echo "No frontmatter found"
 
 **Test functionality:**
 1. Reload Claude Code to pick up changes
-2. **Skills**: Ask questions that should trigger auto-invocation
+2. **Skills**: Invoke each skill explicitly by name
 3. **Commands**: Execute slash commands
-4. **Integration**: Verify components work together
+4. **Integration**: Verify an active workflow can call only its named internal skills
 
 **Git workflow:**
 ```bash
@@ -289,14 +289,16 @@ After testing:
 
 ### Testing Requirements
 - Manual test all components
-- Verify auto-invocation triggers for skills
+- Verify skills load only by explicit invocation or a named internal workflow call
+- Confirm ordinary semantically similar requests do not auto-load a lifecycle
 - Confirm command execution
 - Validate JSON with jq
 
 ## Component Guidelines
 
 ### Skills
-- Use third-person descriptions ("This skill should be used when...")
+- Begin descriptions with the explicit-use boundary; describe purpose, not semantic auto-trigger phrases
+- Name any active workflow that may call the skill internally
 - Write using imperative/infinitive form
 - Keep SKILL.md under 5k words
 - Use progressive disclosure (references/ for details)
@@ -347,9 +349,9 @@ Pattern: `fx-{meta-purpose}`
 - Ensure proper directory structure
 - Reload after changes
 
-### Auto-Invocation Not Working
-- Review skill description specificity
-- Test with explicit trigger phrases
+### Explicit Invocation Not Working
+- Verify the skill appears under its exact namespaced name
+- Invoke it directly by name or slash command
 - Check for frontmatter typos
 - Verify skill path in plugin
 

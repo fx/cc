@@ -1,6 +1,6 @@
 ---
 name: steam-linux
-description: This skill should be used when working with Steam on Linux - managing non-Steam game shortcuts, configuring Proton/Wine compatibility, parsing VDF files, or finding Steam paths and prefixes. MUST BE USED when user mentions Steam launch options, modifying shortcuts.vdf, Proton environment variables (PROTON_*, WINE*), Battle.net/Blizzard games on Linux, or RTX 4000+ performance fixes. ALSO USE when troubleshooting Proton/Wine game issues (black screen, game won't launch, launcher issues, CEF/Chromium rendering problems).
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Provides explicitly requested Steam-on-Linux, Proton, Wine, shortcut, and launcher guidance."
 ---
 
 # Steam Linux Management

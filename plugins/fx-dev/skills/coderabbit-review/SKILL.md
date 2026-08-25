@@ -1,6 +1,6 @@
 ---
 name: coderabbit-review
-description: "Run CodeRabbit's optional AI review. PRIMARY path: run it LOCALLY via the `cr` CLI before opening a PR and resolve blocking findings. FALLBACK path: wait for + resolve its automated PR review when available. Pass a Scope Brief as args — findings MUST be triaged against the user's original request. Rate limits degrade gracefully: report once, skip CodeRabbit, and continue the SDLC."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Runs CodeRabbit locally or handles its PR-level review as an optional review adapter with Scope Brief triage and rate-limit degradation."
 ---
 
 # CodeRabbit Review

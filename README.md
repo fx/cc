@@ -45,8 +45,9 @@ Personal assistant tools for task extraction and productivity.
 ## Usage
 
 After installing plugins:
-- Skills are automatically invoked by Claude when relevant
-- Agents appear in `/agents` list and can be used via Task tool
+- Skills are explicit-use only: invoke them by namespaced name or slash command; active workflows may call their named internal skills
+- Ordinary semantically similar requests do not auto-start a skill lifecycle
+- Agents appear in `/agents` and can be selected explicitly
 - Commands are available as slash commands
 
 ## Development

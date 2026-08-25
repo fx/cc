@@ -1,6 +1,6 @@
 ---
 name: project-management
-description: "MUST BE LOADED BEFORE modifying docs/tasks.md, docs/changes/, or task lists. Also load when user mentions tasks.md, changes/, 'the task file', specs, or discusses tasks/tracking. Triggers include: 'add a task', 'update tasks', 'mark as done', 'mark complete', 'track this', 'next task', 'what's next', 'work on next', create tickets/issues, 'add a feature', 'improve X to allow Y', plan features, break down tasks, or ANY project/task management discussion. This skill handles all task tracking through docs/tasks.md, docs/changes/ task lists, or external tools (GitHub Issues, Jira)."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Manages project tracking through docs/tasks.md, docs/changes/, or an explicitly selected external tracker."
 ---
 
 # Project Management

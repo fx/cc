@@ -1,6 +1,6 @@
 ---
 name: copilot-review
-description: "Request, wait for, and resolve GitHub Copilot's PR review. Use after creating a PR, and AGAIN after every push to the PR branch — Copilot does NOT re-review new commits on its own. Handles the full lifecycle: request review for the current head commit, poll until received, then resolve all feedback. MUST be used before merging any PR."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Requests, waits for, inspects, and settles a head-scoped GitHub Copilot review."
 ---
 
 # Copilot Review

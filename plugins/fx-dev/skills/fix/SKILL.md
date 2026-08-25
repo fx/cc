@@ -1,6 +1,6 @@
 ---
 name: fix
-description: "MUST BE USED for bug fixes that require test-first verification. Use when user says '/fix', 'fix this bug', 'fix the error', 'debug this', or provides an error/bug report. This skill mandates writing a failing test BEFORE implementing any fix, then loads the SDLC workflow."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Runs a test-first bug-fix lifecycle and then enters the explicitly requested SDLC workflow."
 ---
 
 # Fix (Test-First Bug Resolution)

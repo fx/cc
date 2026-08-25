@@ -1,6 +1,6 @@
 ---
 name: review
-description: "Canonical review procedure shared by every fx-dev reviewer and feedback resolver. Load this FIRST, then load the platform skill for the reviewer you are actually running — fx-dev:codex-review, fx-dev:coderabbit-review, fx-dev:copilot-review, fx-dev:pr-reviewer, fx-dev:resolve-pr-feedback, fx-dev:copilot-feedback-resolver, or fx-dev:rabbit-feedback-resolver. Defines how to carry the Scope Brief, triage findings, sweep a class, converge, and report. Use directly when reviewing code with no particular tool in mind."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Provides the canonical Scope Brief, triage, materiality, convergence, and reporting procedure for explicitly invoked fx-dev reviewers."
 ---
 
 # Review

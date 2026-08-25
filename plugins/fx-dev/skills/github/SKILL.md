@@ -1,6 +1,6 @@
 ---
 name: github
-description: "MUST BE USED when working with GitHub: updating PRs, editing PR descriptions/titles, creating PRs, merging, review threads, `gh` CLI commands, GitHub API, or any pull request operations. Load this skill BEFORE running gh commands or modifying PRs. (plugin:fx-dev@fx-cc)"
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Provides reference guidance for GitHub CLI, pull-request, review-thread, and GitHub API operations."
 ---
 
 # GitHub CLI Expert
@@ -9,15 +9,11 @@ Comprehensive guidance for working with the GitHub CLI (`gh`) including common p
 
 ## Purpose
 
-To provide reliable, tested patterns for GitHub operations and prevent repeating known mistakes with the `gh` CLI. This skill automatically loads when using `gh` commands and continuously improves by documenting solutions to new issues.
+To provide reliable, tested patterns for GitHub operations and prevent repeating known mistakes with the `gh` CLI.
 
-## When to Use
+## Invocation Boundary
 
-This skill triggers automatically when:
-- Running any `gh` command (pr, api, issue, repo, etc.)
-- Working with pull requests, reviews, or issues
-- Encountering `gh` CLI errors or unexpected behavior
-- Needing GraphQL queries for GitHub operations
+Use this skill only when the user explicitly invokes or names it, or when an active explicitly invoked workflow calls `fx-dev:github` by name. Do not auto-load it merely because a standalone request mentions GitHub, a pull request, `gh`, GraphQL, review threads, or merging. Handle ordinary GitHub operations directly unless the user selected this guidance or an active workflow requires it.
 
 ## Prerequisites
 

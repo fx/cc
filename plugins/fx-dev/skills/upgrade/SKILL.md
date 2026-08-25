@@ -1,6 +1,6 @@
 ---
 name: upgrade
-description: "Migrate a repo's AI INSTRUCTION FILES to current fx-dev conventions — moving CLAUDE.md content into AGENTS.md, folding .github/copilot-instructions.md into REVIEW.md, resolving instruction-file symlinks. Also offers duvet requirements-traceability adoption (opt-in, prompted, declinable) on every run. Intentionally intrusive; rewrites and deletes those files. Use ONLY for instruction-file/convention migration: 'migrate conventions', 'update instruction files', 'upgrade fx-dev conventions', 'migrate to AGENTS.md', 'adopt duvet', or when fx-dev:setup reports a legacy layout. NOT for upgrading dependencies, packages, frameworks, language versions, or databases — those are ordinary code work, use fx-dev:dev."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Migrates repository instruction files to current fx-dev conventions after explicit request and confirmation."
 ---
 
 # Upgrade

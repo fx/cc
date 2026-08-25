@@ -95,17 +95,23 @@ The size, triviality, or follow-up status of a pull request MUST NOT be treated 
 - **WHEN** its merge decision is reached
 - **THEN** it is held to the same gates as any other pull request
 
-### The Dev Coordinator Delegates All Writes
+### The Dev Coordinator Delegates Implementation Writes
 
-The `fx-dev:dev` session is an orchestrator. Keeping its own hands off the working tree is what makes the delegated work reviewable, keeps the coordinator's context small enough to reach the end of the workflow, and prevents changes that no sub-agent's output accounts for.
+An explicitly invoked `fx-dev:dev` session is an orchestrator for substantive lifecycle roles. Keeping implementation edits and commits delegated makes the work independently reviewable and prevents changes that no role output accounts for. Mechanical coordination does not gain those properties from delegation; wrapping a status query, branch fast-forward, PR metadata update, or approved merge in another agent only adds latency and obscures ownership.
 
-The `fx-dev:dev` coordinator MUST NOT write code, create files, or make commits itself, and MUST delegate that work to sub-agents.
+During an explicitly invoked `fx-dev:dev` lifecycle, the coordinator MUST delegate repository implementation edits and commits to sub-agents; it MAY perform mechanical coordination and GitHub operations directly.
 
-#### Scenario: A trivial edit remains after review
+#### Scenario: A trivial implementation edit remains after review
 
-- **GIVEN** a `fx-dev:dev` coordinator that has identified a one-character fix in a reviewed file
+- **GIVEN** an active `fx-dev:dev` coordinator that has identified a one-character fix in a reviewed file
 - **WHEN** it acts on that finding
 - **THEN** the edit and its commit are produced by a delegated sub-agent rather than by the coordinator
+
+#### Scenario: Approval arrives after the lifecycle handoff
+
+- **GIVEN** `fx-dev:dev` has reported a verified pull request and handed control back to the user
+- **WHEN** the user later says "merge it"
+- **THEN** the coordinator rechecks the live merge gates and merges directly without re-entering the lifecycle or spawning a merge sub-agent
 
 ### The Team Coordinator Delegates All Implementation
 
@@ -166,9 +172,10 @@ The skills contain a great deal of ordering: numbered SDLC steps, a review matri
 
 ## Constraints
 
-- The requirements bind the skills as loaded. A user who acts directly, or an agent operating without these skills, is outside their reach.
+- fx-cc skills are explicit-use only. Their requirements bind only after the user names the skill or an already active explicitly invoked workflow calls it by name.
+- A skill's authority ends with its documented handoff. Later standalone requests do not inherit the prior lifecycle's orchestration rules unless the user explicitly invokes that lifecycle again.
 - `fx-dev:team`'s autonomy is inherited from an up-front user instruction. It is authority delegated by the user for a bounded body of work, not standing authority over the repository.
-- The write-authority requirements constrain the **coordinator** session, not the run as a whole. A `fx-dev:dev` or `fx-dev:team` run absolutely does write code and commit; the requirement is about which agent does it.
+- The write-authority requirements constrain substantive implementation work, not mechanical coordination. A `fx-dev:dev` or `fx-dev:team` run absolutely does write code and commit; the requirement is about which agent authors repository changes.
 
 ## Open Questions
 

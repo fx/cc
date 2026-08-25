@@ -1,6 +1,6 @@
 ---
 name: resolve-ci-failures
-description: "Analyze and fix CI check failures on a PR. Use when CI checks fail, build errors occur, or tests fail in CI. Invoked automatically by the SDLC workflow (Step 7.4) when checks fail, or manually via 'resolve CI failures', 'fix CI', 'fix failing checks'."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Analyzes and fixes CI failures within an active explicitly requested PR workflow."
 ---
 
 # Resolve CI Failures

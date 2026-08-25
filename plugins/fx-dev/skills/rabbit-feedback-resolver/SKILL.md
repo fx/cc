@@ -1,6 +1,6 @@
 ---
 name: rabbit-feedback-resolver
-description: Process and resolve CodeRabbit automated PR review comments. Use when the user says "check rabbit review", "handle coderabbit comments", "resolve rabbit feedback", or mentions CodeRabbit PR comments. Also use after PR creation when CodeRabbit has left automated review comments.
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Processes and resolves existing CodeRabbit review threads."
 ---
 
 # CodeRabbit Feedback Resolver
@@ -33,15 +33,9 @@ From `fx-dev:review`, and not restated here:
 - Reply to EXISTING CodeRabbit threads using `addPullRequestReviewThreadReply`
 - Resolve CodeRabbit threads using `resolveReviewThread`
 
-## WHEN TO USE THIS SKILL
+## INVOCATION BOUNDARY
 
-**USE THIS SKILL PROACTIVELY** when ANY of the following occur:
-
-- User says "check rabbit review" / "handle coderabbit comments" / "resolve rabbit feedback"
-- User mentions "coderabbit" or "rabbit" and "PR" or "comments" in the same context
-- After PR creation when CodeRabbit has reviewed the PR
-- As part of the PR workflow after `pr-reviewer` skill completes
-- When PR checks show CodeRabbit has left review comments
+Use this resolver only when the user explicitly names or invokes it, or when an active explicitly invoked workflow calls `fx-dev:rabbit-feedback-resolver` by name. A standalone mention of CodeRabbit, a PR, comments, review state, or failing checks does not auto-load it.
 
 ## CodeRabbit Comment Structure
 

@@ -194,6 +194,19 @@ fx-plugin-name/
 
 Only `name` is required. Version and description are highly recommended.
 
+## Skill Invocation Policy
+
+fx/cc skills are **explicit-use only by default**. A skill may run when:
+
+1. the user explicitly names or invokes it (for example, `/dev` or “use the dev skill”), or
+2. an already active, explicitly invoked workflow calls that internal skill by name.
+
+Do not write frontmatter descriptions that auto-trigger on generic task semantics such as “coding,” “GitHub,” “planning,” “review,” “fix,” or “create.” Do not use `MUST BE USED`, `MUST BE LOADED`, “automatically invoked,” or trigger-phrase lists to turn an ordinary request into a lifecycle invocation.
+
+A workflow's instructions apply only to the request that invoked it and end at its documented handoff. Later standalone requests do not inherit the old workflow's orchestration rules. In particular, a simple status query, branch synchronization, PR metadata change, or explicitly approved merge should be handled directly unless the user explicitly starts another workflow.
+
+Internal delegation remains valid: `/dev` may name `coder`, `planner`, and reviewer skills as part of its active lifecycle. That does not authorize those skills to load themselves for unrelated user requests.
+
 ## Development Workflow
 
 ### 1. Planning
@@ -215,7 +228,7 @@ Before creating a plugin:
 ### 3. Testing
 
 Test each component:
-- **Skills**: Ask questions that should trigger them
+- **Skills**: Invoke them explicitly by name and verify active workflows can call their internal skills by name
 - **Agents**: Check `/agents` list, invoke via Task tool
 - **Commands**: Run slash commands if implemented
 - **Structure**: Validate JSON with `jq empty plugin.json`

@@ -1,6 +1,6 @@
 ---
 name: coder
-description: "MUST BE USED when user asks to: implement a feature, fix a bug, write code, add functionality, build something, code this, make changes. Implements code changes — when used within the SDLC workflow, PR creation is handled separately by pr-preparer."
+description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Implements code changes while following the supplied scope and project conventions; PR creation remains a separate lifecycle stage."
 ---
 
 # Coder Skill
