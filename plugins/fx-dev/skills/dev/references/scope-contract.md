@@ -149,7 +149,7 @@ When unsure which tier something is, ask: *if this shipped uncorrected, what bre
 Track findings per pass and watch the shape, not just the count:
 
 - **Blocking findings still arriving, in new categories** — keep going. The review is still working.
-- **No blocking finding left unresolved** — converged, whatever the immaterial count did. Note the test is *unresolved*, not *new*: a blocker carried from an earlier pass still blocks even if this pass did not repeat it, and a finding that produces no thread (a suppressed Copilot item) is never discharged by a thread count. Track them and clear the list. Stop, and say so: report the trend and what remains below the bar. A pass that falls from five immaterial observations to three *different* immaterial observations has converged; the drop is churn, not progress.
+- **No blocking finding left unresolved** — converged, whatever the immaterial count did. Note the test is *unresolved*, not *new*: a blocker carried from an earlier pass still blocks even if this pass did not repeat it, so the current pass's thread count is not the whole ledger. Track them and clear the list. Stop, and say so: report the trend and what remains below the bar. A pass that falls from five immaterial observations to three *different* immaterial observations has converged; the drop is churn, not progress.
 - **The same disagreement in successive passes** — stop. That is a human decision, not a review outcome. Escalate it by name.
 
 Report the trend when you stop, so the operator can see the shape rather than take "clean" on trust: *"Findings per pass: 9, 4, 1, 0 blocking. Stopping — three immaterial wording items remain, listed below."*

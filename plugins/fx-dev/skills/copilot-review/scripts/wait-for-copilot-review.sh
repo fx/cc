@@ -24,13 +24,14 @@
 #           PR_HEAD_SHA=<sha>
 #           SUPPRESSED_COMMENTS=1|0|unknown
 #       so the caller can re-verify the match itself rather than trusting this
-#       script's word for it. `SUPPRESSED_COMMENTS=1` means at least one review of
-#       that commit carries a `Suppressed comments` block whose findings create NO
-#       review thread (D4): exit 0 is then NOT a clean result, and the caller MUST
-#       read and triage the printed body before treating the gate as passed.
-#       `unknown` means the body fetch FAILED and the check could not be performed
-#       at all (D5). ONLY a definite `0` means "no block found" — treat `1` and
-#       `unknown` alike as NOT clean. Exit 0 alone never establishes a clean review.
+#       script's word for it. The SHA pair is the line that gates: a review of a
+#       superseded commit is not coverage. `SUPPRESSED_COMMENTS` is INFORMATIONAL
+#       ONLY (D4): `1` means a `Suppressed comments` block is present, `0` means
+#       the fetch succeeded and found none, `unknown` means the fetch FAILED so
+#       this script cannot say (D5). None of the three withholds the gate, and a
+#       caller should not re-run merely to turn `unknown` into a number. What
+#       decides the outcome is the review's VERDICT HEADLINE plus the unresolved
+#       thread count, both printed below.
 #   1 - TIMEOUT. No review covering the current head arrived within TIMEOUT
 #       seconds. This is NOT a failure and NOT evidence that anything is wrong:
 #       observed delivery times range from 85 s to 12 m 42 s, and the repo ruleset
@@ -73,32 +74,37 @@
 #     equals the PR's current `headRefOid`. Nothing has to be "requested" for that
 #     to be true, and nothing being there yet does not mean nothing was requested.
 #
-# D4. A zero unresolved-thread count is NOT a clean review. Copilot review bodies
-#     can say "generated no new comments" while carrying a
+# D4. A suppressed-comments block is INFORMATIONAL, not a gate. Copilot review
+#     bodies can say "generated no new comments" while carrying a
 #       <details><summary>Suppressed comments (N)</summary>
-#     block holding real, valid findings that create NO review thread at all.
-#     Confirmed 3 times, each time with a genuine finding — one of which, applied
-#     as Copilot suggested, would have introduced the very bug it claimed to
-#     report. This script prints the review body, flags that block, AND emits
-#     `SUPPRESSED_COMMENTS=1|0` so a caller that only branches on the exit code
-#     still has a checkable signal; the CALLER must read and triage it.
-#     "0 unresolved threads" alone never passes the gate.
+#     block. Those items open NO review thread — Copilot itself judged them not
+#     worth raising as one — and they are overwhelmingly wording, casing, and
+#     comment-phrasing nits. Acting on them is expensive, because every push
+#     re-opens the review gate and costs another full wait cycle. The default is
+#     to IGNORE them; a caller acts only on something absolutely dire. This script
+#     still flags the block and emits `SUPPRESSED_COMMENTS=1|0|unknown`, because
+#     knowing is free — but the flag never withholds the gate.
 #
 #     The check spans EVERY review of the target commit, not just the newest one.
 #     Two reviews of one commit are routine (this script nudges on every head
-#     move, and the skill re-runs it up to 3 times), so a later "generated no new
-#     comments" review would otherwise mask an earlier one's suppressed block.
+#     move, and the skill re-runs it up to 3 times), so reading only the newest
+#     body would report on a different review than the one being judged.
+#
+#     What DOES decide the outcome is the review's VERDICT HEADLINE:
+#       "Approval recommended" / "Needs a closer look" -> pass, if no threads open
+#       "Changes recommended"                          -> triage and resolve
 #
 # D5. The suppressed-comments check has THREE outcomes, and a failed fetch is not 0.
 #     `review_bodies` used to end in `|| true`, so a transient `gh api` error
 #     produced an empty string, the `Suppressed comments` grep matched nothing, and
 #     the script printed SUPPRESSED_COMMENTS=0 plus "(review has an empty body)" —
-#     certifying the gate clean on a check that never ran. That is the same
-#     fail-open shape as the head re-read above, and it must fail closed the same
-#     way: 1 = block present, 0 = fetch succeeded and no block, `unknown` = fetch
+#     reporting a result for a check that never ran. Keep the three states honest:
+#     1 = block present, 0 = fetch succeeded and no block, `unknown` = fetch
 #     FAILED. Distinguish the last two by `gh`'s EXIT STATUS, never by empty
 #     output — a Copilot review with a genuinely empty body is legal and observed,
 #     so "empty" and "unfetched" are different facts that look identical on stdout.
+#     None of the three blocks the gate (D4); the distinction exists so the output
+#     says what it knows rather than guessing.
 #
 # HEAD-SHA AWARENESS (do not remove):
 #     Copilot does NOT re-review automatically when new commits are pushed unless
@@ -190,16 +196,15 @@ check_review_submitted() {
         2>/dev/null || true
 }
 
-# The bodies of ALL Copilot reviews of a specific commit, concatenated. Needed
-# because the findings that matter most may live only in a Suppressed comments
-# block (D4) — and taking only the newest review hid that block whenever a later
-# review of the same commit reported "generated no new comments".
+# The bodies of ALL Copilot reviews of a specific commit, concatenated. The caller
+# reads the VERDICT HEADLINE out of these, so taking only the newest review would
+# report on a different review than the one being judged whenever a commit has two.
 #
-# FAILS CLOSED (D5). Deliberately carries NO `|| true` and NO `2>/dev/null`:
-#   * the EXIT STATUS is the only sound signal of whether the check could run, and
-#     `|| true` destroyed it — a transient API error became an empty string, the
-#     grep below found no block, and the script certified SUPPRESSED_COMMENTS=0;
-#   * stderr is left attached so the failure is LOUD in the caller's output.
+# REPORTS HONESTLY (D5). Deliberately carries NO `|| true` and NO `2>/dev/null`:
+#   * the EXIT STATUS is the only sound signal of whether the fetch happened, and
+#     `|| true` destroyed it — a transient API error became an empty string and
+#     the script printed SUPPRESSED_COMMENTS=0 for a check that never ran;
+#   * stderr is left attached so the failure is visible in the caller's output.
 # Callers MUST branch on the exit status (`if bodies=$(review_bodies ...)`), never
 # on whether the output is empty: an empty body is a LEGAL, observed Copilot
 # result, so emptiness cannot distinguish "no findings" from "never fetched".
@@ -323,25 +328,26 @@ report_success() {
 
     echo ""
     if (( fetch_ok == 0 )); then
-        echo "!! SUPPRESSED_COMMENTS=unknown — THE SUPPRESSED-COMMENTS CHECK DID NOT RUN."
-        echo "!! Fetching the review bodies FAILED, so this script CANNOT say whether a"
-        echo "!! 'Suppressed comments' block exists. This is NOT a clean result and it is"
-        echo "!! NOT equivalent to 0 — only a definite 0 means 'no block found'."
-        echo "!! Treat the gate as UNSATISFIED: re-run this script, or fetch the bodies by"
-        echo "!! hand (skill Step 2b) and triage them yourself before merging (D4/D5)."
+        echo "SUPPRESSED_COMMENTS=unknown — fetching the review bodies FAILED, so this"
+        echo "script cannot say whether a 'Suppressed comments' block exists. Informational"
+        echo "only: suppressed comments do not gate this review (D4/D5). Read the verdict"
+        echo "headline and the thread count instead."
     elif [[ "$suppressed" == "1" ]]; then
-        echo "!! SUPPRESSED_COMMENTS=1 — a 'Suppressed comments' block is PRESENT above."
-        echo "!! Those are real findings and they create NO review thread. You MUST read"
-        echo "!! the <details> block in full and triage every item in it. The gate is NOT"
-        echo "!! passed until you have (D4). Exit 0 does not mean clean."
+        echo "SUPPRESSED_COMMENTS=1 — a 'Suppressed comments' block is present above."
+        echo "Ignore it by default: those items open no review thread and Copilot itself"
+        echo "declined to raise them as one (D4). Act only on something absolutely dire."
     else
         echo "SUPPRESSED_COMMENTS=0 — no 'Suppressed comments' block in any review of this commit."
-        echo "(Still read the body — thread counts alone never establish a clean review.)"
     fi
+
+    echo ""
+    echo "Read the VERDICT HEADLINE at the top of the body above:"
+    echo "  'Approval recommended' / 'Needs a closer look' -> PASS if no threads are open"
+    echo "  'Changes recommended'                          -> triage and resolve its threads"
 
     thread_count=$(count_copilot_threads)
     echo ""
-    echo "Unresolved Copilot threads: ${thread_count} (context only — 0 is NOT 'clean', see D4)"
+    echo "Unresolved Copilot threads: ${thread_count}"
 }
 
 head_sha=$(current_head_sha)

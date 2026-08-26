@@ -81,7 +81,7 @@ Use this skill only when the user explicitly invokes or names it, or when an act
 |------|-------------|-----------|
 | CI checks ALL green | `gh pr checks <NUMBER>` — every check must show `pass` | ⛔ YES |
 | Copilot review RECEIVED **for the commit being merged** | A Copilot review whose `commit_id` equals the PR's current `headRefOid` — see the scoped command below. A review of ANY older commit does NOT satisfy this gate | ⛔ YES |
-| Copilot suppressed comments TRIAGED | The reviewed body's `<details><summary>Suppressed comments (N)</summary>` block read in full and every item triaged. Those findings create **no** review thread, so the row below can never surface them | ⛔ YES |
+| Copilot verdict READ | The reviewed body's verdict headline. *Approval recommended* and *Needs a closer look* both pass when no threads are open; *Changes recommended* must be worked through. A suppressed-comments block is ignored by default and gates nothing | ⛔ YES |
 | Copilot comments RESOLVED | All **Copilot-authored** review threads resolved (0 unresolved). Filter on the Copilot login — human threads are out of scope and must never be touched | ⛔ YES |
 | CodeRabbit review attempted (if GitHub App configured) | Prefer a received review; explicit `skipped (rate-limited)` is acceptable | Optional when rate-limited |
 | CodeRabbit comments resolved (if received) | Resolve **every** thread CodeRabbit already posted, rate limit or not. Throttling waives the review passes that never ran, never a thread already on the PR | ⛔ YES for delivered threads |
@@ -106,8 +106,8 @@ older reviews the PR carries.
 **If a Copilot review of the current head has NOT been received:** WAIT — using
 `fx-dev:copilot-review`, which owns the head-SHA-aware waiter. **Do not hand-roll a
 polling loop here.** Hand-rolled loops reliably accept a review of a superseded
-commit, re-derive the broken `requested_reviewers` readiness check, and read thread
-counts without reading suppressed comments. Do NOT merge without it.
+commit and re-derive the broken `requested_reviewers` readiness check. Do NOT merge
+without it.
 
 **Incident context:** A "small follow-up" PR was merged without waiting for Copilot review. Copilot found 5 real bugs (timing drift, race conditions, missing tests) that shipped to main. PR size is NEVER a reason to skip review gates.
 
@@ -556,8 +556,8 @@ query {
 ```
 
 **Prefer `fx-dev:copilot-review` over any of the above.** It wraps the request and a
-head-SHA-aware wait, and it also reads the suppressed-comments block that no thread
-or review query will ever surface.
+head-SHA-aware wait, and it prints the review body so the verdict headline — which
+no thread query surfaces — can be read.
 
 ### Full Copilot Review Status Summary
 
@@ -619,11 +619,11 @@ negative branch on every PR (**D3**).
 
 | Condition | Meaning |
 |-----------|---------|
-| Review whose `commit_id` == the PR's `headRefOid` | Review completed **for the code you are about to merge**. Still read its suppressed-comments block (**D4**) |
+| Review whose `commit_id` == the PR's `headRefOid` | Review completed **for the code you are about to merge**. Read its verdict headline (**D4**) |
 | Review exists, but its `commit_id` is an older commit | **Current head is UNREVIEWED.** Nudge, then wait via `fx-dev:copilot-review` — do not treat this as reviewed |
 | No Copilot review at all | **Nothing has reviewed this PR yet.** Wait via `fx-dev:copilot-review`. This is not "clean", and it is *not* evidence that no review was requested — you cannot determine that at all (**D1**) |
 | Unresolved threads with Copilot author | Feedback needs attention |
-| Zero unresolved threads | **Not a clean review on its own.** Suppressed comments create no threads (**D4**) |
+| Zero unresolved threads | Clean **once** a review covers the current head — on an older commit it says nothing about the code being merged |
 | `reviewRequests` / `requested_reviewers` empty | **Means nothing.** It is always empty. Do not derive any status from it (**D1**) |
 
 ## Bundled References

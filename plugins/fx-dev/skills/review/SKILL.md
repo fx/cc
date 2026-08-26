@@ -225,9 +225,8 @@ non-blocking however material it looks in isolation; a contract blocker is
 blocking however small its behavioural impact.
 
 Note the test is *unresolved*, not *new*: a blocker carried from an earlier pass
-still blocks even if this pass did not repeat it, and a finding that produces no
-thread — a suppressed Copilot item — is never discharged by a thread count. Track
-them and clear the list.
+still blocks even if this pass did not repeat it, so a thread count on the current
+pass is not the whole ledger. Track them and clear the list.
 
 ### Carry the settled ground into each re-run
 

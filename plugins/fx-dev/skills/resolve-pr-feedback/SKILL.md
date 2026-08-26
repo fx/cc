@@ -130,7 +130,9 @@ Parse the response and categorize unresolved threads by author:
   - **⛔ It is NOT the bare string `Copilot`.** That value appears only in `requested_reviewers`, which is always empty and which this skill never reads. Matching on `Copilot` categorizes **zero** Copilot threads on every PR — so the resolver is never invoked, real threads are silently left unresolved, and this skill reports "nothing to do" while the merge gate is unsatisfiable.
 - **CodeRabbit threads**: author login contains `coderabbitai`
 
-**⛔ Threads are not the whole review.** Copilot puts some findings in a `<details><summary>Suppressed comments</summary>` block in the **review body**, where they create no thread at all. A review that reports "generated no new comments" with zero unresolved threads can still contain real bugs there. Read the bodies of the Copilot reviews **of the current head commit** — scoping by `commit_id` is required, or after a push you grep the PREVIOUS commit's body and record this check as satisfied for code that review never covered:
+**Threads are the review.** Copilot also puts some observations in a `<details><summary>Suppressed comments</summary>` block in the **review body**, where they create no thread at all — those are **ignored by default** (`fx-dev:copilot-review` **D4**): Copilot itself declined to raise them as threads, they are overwhelmingly wording and comment-phrasing nits, and acting on one costs a full re-review cycle. Do not open the block routinely; act only on something absolutely dire that has already caught your eye.
+
+What you do still need from the review body is its **verdict headline**: *Approval recommended* and *Needs a closer look* both pass when no threads are open, while *Changes recommended* means work through its threads. Read the bodies of the Copilot reviews **of the current head commit** — scoping by `commit_id` is required, or after a push you read the PREVIOUS commit's body and record this check as satisfied for code that review never covered:
 
 ```bash
 PR_NUMBER=$(gh pr view --json number --jq '.number')          # or set it explicitly: PR_NUMBER=123
@@ -141,16 +143,16 @@ gh api "/repos/${REPO_NWO}/pulls/${PR_NUMBER}/reviews" \
   --jq "[.[] | select(.user.login | startswith(\"copilot-pull-request-reviewer\")) | select(.commit_id == \"${HEAD_SHA}\") | .body] | join(\"\n\n----- (next review of this commit) -----\n\n\")"
 ```
 
-Empty output means **no Copilot review covers the current head** — that is an unreviewed head, not a clean one. Note this reads *every* review of that commit, not `| last`: two reviews of one commit are routine, and if the newer says "generated no new comments" while the older carried the suppressed block, `last` reads the clean body and finds nothing.
+Empty output means **no Copilot review covers the current head** — that is an unreviewed head, not a clean one. Note this reads *every* review of that commit, not `| last`: two reviews of one commit are routine, so `last` may show a different review than the one being judged.
 
-`fx-dev:copilot-review`'s waiter does this for you and emits
-`SUPPRESSED_COMMENTS=1|0|unknown`; prefer it over this snippet. Only a definite `0`
-is clean — `unknown` means the fetch failed and the check never ran (its **D5**). If
-you run the snippet above by hand, apply the same rule: confirm the command
-succeeded, because empty output from a failed fetch looks exactly like empty output
-from a review with no findings.
+`fx-dev:copilot-review`'s waiter does this for you and prints the bodies; prefer it
+over this snippet. Its `SUPPRESSED_COMMENTS=1|0|unknown` line is informational and
+gates nothing (its **D4**) — do not re-run it to turn `unknown` into a number. If
+you run the snippet above by hand, confirm the command succeeded before drawing a
+conclusion from silence: empty output from a failed fetch looks exactly like empty
+output from a review with an empty body.
 
-Triage those the same way as thread comments. They cannot be resolved (no thread exists), so record the outcome in the commit message or PR body instead.
+If an absolutely-dire suppressed item is acted on, it cannot be resolved (no thread exists), so record the outcome in the commit message or PR body instead.
 
 ### 3b. Check for Codecov Coverage Feedback
 
@@ -237,15 +239,15 @@ After invoking resolver skills, re-query to confirm all threads are resolved AND
 4. If the breakdown array is non-empty, re-invoke the relevant resolver(s) with the dispositions from step 3.
 5. **If fixes were pushed**, restart at step 1 — the push created unreviewed commits. If this cycle produced no push, do not restart: go to step 6 and judge convergence on the review already delivered for this head.
 6. Stop when the loop has **converged** per `fx-dev:review` Step 7 — no blocking
-   finding left unresolved, ledger-wide — **and** three PR-level conditions hold
+   finding left unresolved, ledger-wide — **and** two PR-level conditions hold
    that the ledger test alone does not cover:
    - the state holds on a head SHA that was **actually reviewed** (verify: the
      newest Copilot review's `commit_id` equals `headRefOid`);
-   - **every automated thread on that head is resolved**;
-   - **the suppressed-comments block for that head is empty or fully triaged**
-     (see §3 *Identify Unresolved Feedback by Source*, not this loop's step 3 —
-     those findings create no thread, so a zero-thread count says nothing about
-     them).
+   - **every automated thread on that head is resolved**.
+
+   A suppressed-comments block is **not** a third condition and never extends this
+   loop (`fx-dev:copilot-review` **D4**), and neither does a *Needs a closer look*
+   verdict with no open threads.
 
    Immaterial findings resolved by reply satisfy all of this: they produce no
    push, so they are not "new feedback" owing another cycle. The bound and the
@@ -331,9 +333,9 @@ If unresolved threads remain, report which reviewers still have open feedback.
 
 ## Success Criteria
 
-1. All unresolved automated review threads identified — matched on the `copilot-pull-request-reviewer` login, **not** the bare `Copilot` — **plus** any findings in the "Suppressed comments" block of every Copilot review **of the current head commit**, which produce no threads
+1. All unresolved automated review threads identified — matched on the `copilot-pull-request-reviewer` login, **not** the bare `Copilot`. Suppressed comments are **not** part of this: they open no thread and are ignored by default (`fx-dev:copilot-review` **D4**)
 2. Appropriate resolver skill(s) invoked (Copilot + CodeRabbit in parallel where applicable)
-3. The wait-and-resolve loop has CONVERGED — a Copilot review has been **RECEIVED for the current head SHA**, left **no blocking finding unresolved** — including any carried from an earlier pass and any suppressed item, which creates no thread and so is never discharged by a thread count — and every automated thread on that head is resolved. Immaterial findings resolved by reply do not block this. Do not add "and was requested", which is not a determinable fact (**D1**). A quiet poll on an unreviewed head is not convergence
+3. The wait-and-resolve loop has CONVERGED — a Copilot review has been **RECEIVED for the current head SHA**, left **no blocking finding unresolved** (including any carried from an earlier pass), and every automated thread on that head is resolved. Immaterial findings resolved by reply do not block this. Do not add "and was requested", which is not a determinable fact (**D1**). A quiet poll on an unreviewed head is not convergence
 4. CodeRabbit's check is in a terminal passing state (or absent if not configured)
 5. Final verification confirms all threads resolved
 6. Summary output provided

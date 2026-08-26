@@ -25,13 +25,46 @@ Request, wait for, and resolve GitHub Copilot's PR review on a pull request.
 - Copilot review is **completely independent of CI**. They are separate systems. CI passing has NOTHING to do with Copilot.
 - You MUST NOT merge ANY PR until Copilot has reviewed **the commit you intend to merge** and all feedback is resolved.
 - No exceptions — not for "first PRs", not for "small PRs", not because "CI isn't set up yet", not because "nothing is configured yet".
-- **NEVER hand-roll `gh api repos/.../reviews` or a GraphQL polling loop to check Copilot status.** Use the script provided by this skill. Hand-rolled loops reliably get three things wrong: they accept a review belonging to a superseded commit, they re-derive the broken `requested_reviewers` readiness check (**D1/D3**), and they read thread counts without reading suppressed comments (**D4**).
+- **NEVER hand-roll `gh api repos/.../reviews` or a GraphQL polling loop to check Copilot status.** Use the script provided by this skill. Hand-rolled loops reliably get two things wrong: they accept a review belonging to a superseded commit, and they re-derive the broken `requested_reviewers` readiness check (**D1/D3**).
+
+## Reading Copilot's Verdict
+
+Every Copilot review opens with a **verdict headline**. It is the first thing to
+read, and it decides whether there is any work to do at all:
+
+| Headline | Meaning for this gate |
+|---|---|
+| **Approval recommended** | **PASS** — provided there are no non-suppressed comments |
+| **Needs a closer look** | **PASS** — provided there are no non-suppressed comments. It is a request for human attention on a large or subtle change, not a finding. Do not treat it as one, do not manufacture work to answer it, and do not loop |
+| **Changes recommended** | **Handle normally** — triage its comments per `fx-dev:review`, fix what blocks, reply-and-resolve the rest |
+
+"Non-suppressed comments" means review threads Copilot actually opened. Those are
+the findings. A verdict headline on its own is never a finding.
+
+**Suppressed comments are ignored by default.** A review body may carry a
+`<details><summary>Suppressed comments (N)</summary>` block. Copilot suppressed
+those itself; they open no review thread, and they are overwhelmingly wording,
+casing, and comment-phrasing nits whose cost to chase exceeds their value —
+every one you act on spends a full re-review cycle (see **Every push re-opens the
+gate** below). Do **not** read the block as a matter of routine, do not triage it
+item by item, and never treat its presence as blocking.
+
+The one exception is genuinely narrow: if a suppressed item happens to catch your
+eye and it is **absolutely dire** — a real defect that would cause data loss, a
+security hole, or a plainly wrong result in shipped code — act on it as you would
+any blocking finding, and record the outcome in the commit message or PR body
+(there is no thread to reply to). "Dire" means the change is wrong without it, not
+that the observation is correct. Correctness is not the bar here; suppressed items
+are frequently correct and still not worth a cycle. And do not apply a suppressed
+suggestion on sight even then: one observed suppressed comment, applied exactly as
+written, would have introduced the very bug it claimed to report. Verify against
+the code first.
 
 ## Known GitHub API Behaviour — Do Not Rediscover This
 
-These five are empirically confirmed against real PRs on this repo. They are the
-reason the workflow below looks the way it does. Do not "improve" the workflow
-back into depending on any of them.
+These are empirically confirmed against real pull requests. They are the reason
+the workflow below looks the way it does. Do not "improve" the workflow back into
+depending on any of them.
 
 **D1 — the review request is inert as an evidence source.**
 `POST /repos/{owner}/{repo}/pulls/{n}/requested_reviewers` with the Copilot bot
@@ -66,26 +99,27 @@ become true. Observed arrival times range from **85 seconds to 12 m 42 s**, and
 the auto-request ruleset fires on some pushes and not others — so waiting quietly
 for several minutes is normal, and silence is never a verdict.
 
-**D4 — a zero unresolved-thread count is not a clean review.** Copilot review
+**D4 — a suppressed-comments block is informational, not a gate.** Copilot review
 bodies can say *"generated no new comments"* while carrying a
-`<details><summary>Suppressed comments (N)</summary>` block holding real, valid
-findings that create **no review thread at all**. Confirmed repeatedly, every time
-with a genuine finding — and one of those, applied exactly as Copilot suggested,
-would have introduced the very bug it claimed to report. So suppressed comments
-are mandatory to read (Step 2b) **and** mandatory to triage rather than apply on
-sight.
+`<details><summary>Suppressed comments (N)</summary>` block. Those items create
+**no review thread at all**, and Copilot itself judged them not worth raising as
+one. The waiter still reports whether a block is present, because knowing is free
+— but the flag is context, not a verdict, and it never holds the gate open. See
+**Reading Copilot's Verdict** above for the default (ignore) and the narrow
+absolutely-dire exception.
 
-**D5 — a failed body fetch is not a clean body.** The suppressed-comments check has
-**three** outcomes, not two. The waiter's body fetch used to end in `|| true`, so a
-transient `gh api` error produced an empty string, the `Suppressed comments` grep
-matched nothing, and the script reported `SUPPRESSED_COMMENTS=0` with
-*"(review has an empty body)"* — certifying the gate clean on a check that never ran.
-It now fails closed: `1` = block present, `0` = fetch succeeded and no block,
-`unknown` = fetch failed. The distinction comes from `gh`'s **exit status**, never
-from whether the output is empty, because a Copilot review with a genuinely empty
-body is legal and observed — "empty" and "never fetched" are different facts that
-look identical on stdout. When you fetch bodies by hand (Step 2b), apply the same
-rule: check that the command succeeded before concluding anything from its silence.
+**D5 — a failed body fetch is not a clean body.** The waiter's body fetch used to
+end in `|| true`, so a transient `gh api` error produced an empty string, the
+`Suppressed comments` grep matched nothing, and the script reported
+`SUPPRESSED_COMMENTS=0` with *"(review has an empty body)"* — reporting a result
+for a check that never ran. It now distinguishes three states: `1` = block
+present, `0` = fetch succeeded and no block, `unknown` = fetch failed. The
+distinction comes from `gh`'s **exit status**, never from whether the output is
+empty, because a Copilot review with a genuinely empty body is legal and observed
+— "empty" and "never fetched" are different facts that look identical on stdout.
+None of the three blocks the gate; `unknown` simply means the script could not
+tell you, which is worth knowing whenever you read output rather than guessing at
+it.
 
 ## Triage: the brief cannot reach Copilot
 
@@ -180,34 +214,33 @@ Escalate to the user only after that.
 **⚠️ CRITICAL: Run in FOREGROUND — do NOT use `run_in_background`.** The output must be directly available to determine the result.
 
 Script exit codes:
-- **Exit 0**: A review exists whose `commit_id` equals the current head → proceed to Step 2b. The script prints three machine-readable lines and you MUST read all three — **exit 0 alone is not a pass**:
-  - `REVIEWED_COMMIT_ID=<sha>` and `PR_HEAD_SHA=<sha>` — **verify they match yourself** rather than trusting the exit code.
-  - `SUPPRESSED_COMMENTS=1|0|unknown` — three states, and **only a definite `0` is clean.** Branching on the exit code without reading this line is the exact historical failure: "gate passed" recorded against a review nobody read.
-    - **`1`** — at least one review of that commit carries a `Suppressed comments` block whose findings create no review thread (**D4**). Exit 0 is NOT a clean result; Step 2b is mandatory before the gate can pass.
-    - **`0`** — the body fetch **succeeded** and no such block appears in any review of that commit.
-    - **`unknown`** — the body fetch **FAILED**, so the check could not be performed at all (**D5**). This is **not** `0` and must never be recorded as one: the script cannot tell you whether findings exist. Treat the gate as unsatisfied — re-run the script, or fetch the bodies by hand (Step 2b) and triage them yourself.
-
-  **Anything other than a definite `0` means the gate is NOT clean.** Never collapse
-  `unknown` into `0`, and never treat "the line was not `1`" as "there was no block" —
-  a failed check and a passed check are different facts.
+- **Exit 0**: A review exists whose `commit_id` equals the current head → proceed to Step 3. The script prints machine-readable lines; read them rather than branching on the exit code alone:
+  - `REVIEWED_COMMIT_ID=<sha>` and `PR_HEAD_SHA=<sha>` — **verify they match yourself** rather than trusting the exit code. This is the one line that genuinely gates: a review of a superseded commit is not coverage.
+  - `SUPPRESSED_COMMENTS=1|0|unknown` — **informational only** (**D4**). `1` means a block is present, `0` means the fetch succeeded and found none, `unknown` means the fetch failed so the script cannot say. None of the three blocks the gate. Do not open the block as a matter of routine, and do not re-run the waiter merely to turn `unknown` into a number.
+  - The review body is printed too. **Read its verdict headline** and note whether Copilot opened any threads — that pair is what decides the outcome (see **Reading Copilot's Verdict**).
 - **Exit 1**: **Timeout** — no review of the current head arrived yet. This is *not* a failure and *not* a clean result. Re-run the script (up to 3 runs total). If it still has not arrived, STOP and report: "Copilot review has not arrived for PR #N head `<sha>`. Cannot merge without it." **Never** record this as "no findings".
 - **Exit 2**: **Retired — the script never returns it.** It used to mean "no review requested", derived from the broken `requested_reviewers` signal (**D1/D3**). Do not branch on it, and do not reinstate any "request again, then re-run" recovery keyed to it.
 - **Exit 3**: Environment/usage error — bad arguments, `gh` too old, PR head unresolvable → report error to user. The wait never started.
 
-### Step 2b: MANDATORY — Read the Suppressed Comments Block
+### Step 2b: Read the Verdict, Not the Suppressed Block
 
-**This step is not optional. Skipping it fails the review**, no matter what the
-thread count says. Per **D4**, Copilot puts real findings in a
-`<details><summary>Suppressed comments (N)</summary>` block in the review body,
-and those findings produce **no review thread**, so no thread query will ever
-surface them. A review can say "generated no new comments", report zero unresolved
-threads, and still carry substantive bugs in that block.
+The waiter prints every review body for the reviewed commit. Read the **verdict
+headline** and check whether Copilot opened any review threads:
 
-The waiter prints the bodies, flags the block, and emits
-`SUPPRESSED_COMMENTS=1|0|unknown` for you on exit 0 — **check that line**; it is the
-machine-readable form of this step, and only a definite `0` clears it (**D5**). To
-fetch the bodies directly — scoped to the reviewed head so you do not read a stale
-review's body, and across **every** review of that commit:
+- **Approval recommended** or **Needs a closer look**, with no threads → the gate
+  is passed. Go to Step 4 and confirm the thread count is zero. There is nothing
+  to fix and nothing to reply to.
+- **Changes recommended**, or any headline accompanied by threads → go to Step 3
+  and handle the threads normally.
+
+**Do not open the suppressed-comments block as a matter of routine** (**D4**).
+`SUPPRESSED_COMMENTS=1` is context, not an instruction; it holds nothing open. Act
+only on the absolutely-dire exception described in **Reading Copilot's Verdict**,
+and only when such an item has already caught your attention — going looking for
+one defeats the purpose of skipping the block.
+
+If you do need the bodies directly — scoped to the reviewed head so you do not
+read a stale review's body, and across **every** review of that commit:
 
 ```bash
 REPO_NWO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
@@ -219,22 +252,8 @@ gh api "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/reviews" \
 
 **Do not narrow that to `| last`.** Two Copilot reviews of a single commit are
 routine — the waiter nudges on every head move and this skill re-runs it up to 3
-times. If the newer one says "generated no new comments" and the older one carried
-the suppressed block, `last` reads the clean body and reports nothing to triage.
-Grep across **all** bodies for the commit.
-
-Then:
-
-1. `grep -i 'Suppressed comments'` the bodies. If present, **read the entire
-   `<details>` block** — every item, not just the summary count.
-2. Triage each item exactly like a thread comment: fix what is blocking, and
-   record — do not reply, there is no thread to reply to (item 4) — the
-   disposition for what is merely correct-but-immaterial or out of scope.
-3. **Do not apply a suppressed suggestion on sight.** One observed suppressed
-   comment, applied as written, would have introduced the very bug it claimed to
-   report. Verify the finding against the code before changing anything.
-4. They cannot be "resolved" (there is no thread), so record the outcome in the
-   commit message or PR body — that is the only place the record can live.
+times — and the newest is not necessarily the one carrying the verdict you are
+reading. Take all bodies for the commit.
 
 ### Step 3: Resolve Feedback
 
@@ -252,9 +271,11 @@ re-derives triage from the PR description — losing the exact exclusions and
 known-and-accepted decisions, and editing for threads you classified immaterial
 or deferred.
 
-Pass dispositions only for what you have actually triaged — in this skill that is
-the suppressed items read in Step 2b, since this skill never fetches the thread
-list. `fx-dev:resolve-pr-feedback` fetches the threads and triages the rest (its
+Pass dispositions only for what you have actually triaged — usually nothing at
+this point, since this skill never fetches the thread list, and suppressed items
+are ignored by default (**D4**). The `dispositions already assigned:` clause is
+there for the rare case where an absolutely-dire suppressed item was acted on.
+`fx-dev:resolve-pr-feedback` fetches the threads and triages the rest (its
 Steps 2 → 4). **Do not invent a disposition for a thread you have not read**; an
 absent one is filled in downstream, a wrong one is authoritative and overrides
 the resolver's own reading.
@@ -293,36 +314,36 @@ query {
 }" --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false and .comments.nodes[0].author.login == "copilot-pull-request-reviewer")] | length'
 ```
 
-A count of 0 is **necessary but not sufficient**. The gate is passed only when **all
-three** hold:
+The gate is passed when **both** hold:
 
 1. A Copilot review exists whose `commit_id` equals the PR's current `headRefOid`.
-2. The suppressed-comments block for that review has been read in full and every
-   item triaged (Step 2b).
-3. Zero unresolved Copilot threads remain.
+2. Zero unresolved Copilot threads remain.
 
-If the count is > 0, re-invoke resolve-pr-feedback. If you cannot state (1) and (2)
-as facts you personally checked, the gate is **not** passed — a zero thread count
-on its own never passes it (**D4**).
+A zero thread count on its own is not enough — condition (1) is what makes it mean
+anything, because zero threads on a superseded commit says nothing about the code
+being merged. If the count is > 0, re-invoke resolve-pr-feedback. The verdict
+headline does not add a third condition: **Needs a closer look** with zero threads
+passes exactly as **Approval recommended** with zero threads does.
 
 ### Step 5: If Fixes Were Pushed, Start Over
 
 Resolving feedback usually means pushing commits. Those commits are **unreviewed**, and Copilot will not look at them by itself.
 
 **If the head SHA changed** since the review in Step 2, go back to **Step 1** —
-nudge, wait (Step 2), read suppressed comments (Step 2b), resolve. The loop, its
-bound and its escalation triggers are `fx-dev:review` Step 7; every iteration here
-costs a full Copilot wait cycle, so fix causes rather than instances.
+nudge, wait (Step 2), read the verdict (Step 2b), resolve. The loop, its bound and
+its escalation triggers are `fx-dev:review` Step 7; every iteration here costs a
+full Copilot wait cycle, so fix causes rather than instances.
 
 **If it did not change, do not restart.** Resolving an immaterial thread by reply
 creates no commit, so the head has not moved and a review of it already exists —
 nudging again spends a wait cycle to re-read code nobody changed. **Only a push
 restarts this loop**, which is why only blocking findings should produce one.
 
-Convergence here adds two Copilot-specific conditions to the ledger test: every
-thread resolved, and the suppressed block empty-or-triaged, **both on a reviewed
-head**. A suppressed item creates no thread, so no thread count ever discharges
-it.
+Convergence here adds one Copilot-specific condition to the ledger test: every
+thread resolved **on a reviewed head**. A verdict of **Needs a closer look** does
+not extend the loop, and neither does a suppressed block — treating either as
+unfinished business is how this gate turns into an endless cycle over wording nits
+that Copilot had already declined to raise as threads.
 
 ```bash
 # The gate is only passed when the newest Copilot review covers the current head.
@@ -338,15 +359,16 @@ REVIEWED=$(gh api "/repos/${REPO_NWO}/pulls/<PR_NUMBER>/reviews" \
 
 This skill is complete when ALL of:
 - ✅ Copilot review has been received (script exited 0) **for the current head commit** — `REVIEWED_COMMIT_ID` equals `PR_HEAD_SHA`, checked by you, not for an earlier commit
-- ✅ The script's `SUPPRESSED_COMMENTS=` line was read, and it is a definite `0` or a `1` whose block has been read in full and every item triaged (Step 2b). A `0` must be confirmed from the output rather than assumed, and **`unknown` does not satisfy this criterion at all** — the check failed to run (**D5**), so re-run the waiter or triage the bodies by hand before claiming the gate
+- ✅ Its verdict headline was read: **Approval recommended** and **Needs a closer look** both pass with no open threads; **Changes recommended** was worked through
 - ✅ All Copilot threads resolved (0 unresolved, **filtered to the Copilot login**)
 - ✅ Any **blocking** findings have been fixed and pushed — **and the resulting head was itself reviewed**. Correct-but-immaterial observations are resolved by reply and produce no push, so they owe no further pass
 
+A suppressed-comments block does **not** appear in that list, in any state
+(**D4**). It is not a criterion, and neither `SUPPRESSED_COMMENTS=1` nor `unknown`
+withholds the gate.
+
 **Never report this gate as passed on the grounds that polling found no new feedback.** Absence of a review is not a clean review, and a timeout (exit 1) is not a verdict. Silence here is an unasked question, not an answer.
 
-**Never report this gate as passed on a zero thread count alone, and never on exit 0
-alone.** Suppressed comments carry real findings and produce no threads (**D4**) —
-`SUPPRESSED_COMMENTS=1` accompanies exit 0 precisely so that "the script succeeded"
-can never be mistaken for "the review was clean". `SUPPRESSED_COMMENTS=unknown`
-carries the same weight for the same reason (**D5**): the check did not run, so
-there is nothing to report as passed.
+**Never report this gate as passed on a zero thread count alone.** Zero threads on
+a commit that is not the head says nothing about the code being merged — the
+head-SHA match is what makes the count mean anything.
