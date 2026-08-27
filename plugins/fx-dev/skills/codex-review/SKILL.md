@@ -11,10 +11,12 @@ sweeping a class, converging, reporting. This skill is the **Codex adapter**: ho
 to drive the `codex` CLI, and nothing else. Where the two appear to disagree,
 `fx-dev:review` wins.
 
-Codex is a **local, one-shot** reviewer against the current branch. Run it during
-pre-PR self-review, after `coderabbit-review` and before `pr-preparer`. It
-complements CodeRabbit rather than replacing it — each catches issues the other
-misses.
+Codex is a **local, one-shot** reviewer against the current branch, and it is the
+**only** local reviewer in this SDLC. Run it during pre-PR self-review, after
+`/simplify` and `/code-review` and before `pr-preparer` (`fx-dev:dev` Step 4.5).
+
+> There is no local CodeRabbit pass — the `cr` CLI is not used anywhere. CodeRabbit
+> applies only at the PR level, and only when the repo's GitHub App is installed.
 
 ## Project conventions: Codex is the one reviewer that needs a bridge
 
@@ -57,9 +59,12 @@ prompt, in this order:
    it from pass 2 only.
 
 ```bash
-codex review "${MCP_OFF[@]}" "SCOPE — READ CAREFULLY BEFORE REVIEWING.
+# Write the brief to a file, then hand the FILE to the script. Never invoke
+# `codex review` directly — see "Running it" below.
+cat > /tmp/scope-prompt.md <<'PROMPT'
+SCOPE — READ CAREFULLY BEFORE REVIEWING.
 
-The user asked: \"<verbatim request>\"
+The user asked: "<verbatim request>"
 
 This change is <deliverable type>: <one line on what it does>.
 
@@ -74,7 +79,8 @@ Established this session and not to be relitigated:
 - <verified fact>
 
 <fx-dev:review § The external-reviewer block, Part 2 — verbatim, on pass 1 too.
- On a re-run, Part 1 goes above this.>"
+ On a re-run, Part 1 goes above this.>
+PROMPT
 ```
 
 **A Codex run without the scope prompt is an incomplete pass.** Rerun it with one
@@ -111,15 +117,14 @@ available. It looks like it worked because a run that happens not to call a tool
 shows no MCP output — the servers are still there. Setting `CODEX_HOME` to a
 sanitized directory does not work either.
 
-What works is disabling each server **individually** by name:
+What works is disabling each server **individually** by name.
 
-```bash
-# Build one -c per configured server, then pass "${MCP_OFF[@]}" to codex review.
-MCP_OFF=()
-while read -r name; do
-  [ -n "$name" ] && MCP_OFF+=(-c "mcp_servers.${name}.enabled=false")
-done < <(codex mcp list --json 2>/dev/null | jq -r '.[].name')
-```
+**`scripts/run-codex-review.sh` does exactly this**, emitting one
+`-c mcp_servers.<name>.enabled=false` per server enumerated from
+`codex mcp list --json`. Do not hand-roll it: the script also treats an
+enumeration *failure* as a setup failure and refuses to run, whereas a hand-rolled
+loop silently yields an empty flag set and reproduces the hang. This paragraph
+documents the mechanism; the script is the only supported way to apply it.
 
 **Enumerate with `codex mcp list --json`, never by parsing `config.toml`.** Not
 every active server is declared there — servers can also arrive from
@@ -128,9 +133,9 @@ misses those. That produces a *partial* flag set, the worst outcome: the command
 looks correct, most servers are disabled, and the one it missed hangs the run
 exactly as before. `codex mcp list` is the resolved, authoritative view.
 
-Echo the built flags before running. An empty or short `MCP_OFF` against a machine
-you know has servers means the enumeration failed — fix that before starting a
-long review.
+The script echoes the resolved server list before running, so a PARTIAL set is
+visible. A short list on a machine you know has more servers means the enumeration
+returned less than it should — stop and fix that before starting a long review.
 
 Codex may also expose its own hosted tools not declared in `config.toml`; those
 survive this and are expected to. The hazard is the locally-configured servers.
@@ -154,22 +159,40 @@ ls -t ~/.codex/sessions/*/*/*/rollout-*.jsonl | head -1
 
 In that rollout, a `custom_tool_call` with **no matching `custom_tool_call_output`
 after it** is the stalled call, and its `input` names the tool that never
-returned. Kill the run, re-invoke with the per-server flags, and tell the user
-what stalled rather than silently retrying.
+returned. Kill the run, re-invoke via the script, and tell the user what stalled
+rather than silently retrying.
 
 ## Running it
 
+**Use the bundled script.** It encodes the MCP enumeration, the prompt-only
+invocation, and the `AGENTS.md` pointer check, so none of them can be
+half-remembered:
+
 ```bash
-codex review "${MCP_OFF[@]}" "<scope prompt>" | tee /tmp/codex-review.md
+mkdir -p .claude/team/waits && \
+bash [SKILL_BASE_DIR]/skills/codex-review/scripts/run-codex-review.sh /tmp/scope-prompt.md \
+  > .claude/team/waits/codex-review.log 2>&1
 ```
 
-This picks the current branch, diffs it against its base, and prints the review
-(highest-risk first) to stdout. It never modifies your working tree.
+Write the scope prompt (built as below) to a file and pass its path, or pass `-`
+to read it from stdin. The script applies the model and effort defaults below
+per invocation (`CODEX_REVIEW_MODEL` / `CODEX_REVIEW_EFFORT` override them); it
+never edits the user's `~/.codex/config.toml`. `CODEX_REVIEW_OUT=<path>` also tees the review to a file;
+`CODEX_REVIEW_DRY_RUN=1` prints the resolved command without running it, which is
+the fastest way to confirm the MCP flag set is complete.
 
-**Run it in the background and let the completion notification wake you.** A
-review of a real branch takes many minutes and `codex` buffers, so the capture
-file stays empty until it finishes — polling it teaches you nothing. Do not chain
-sleeps waiting on it.
+The script picks the current branch, diffs it against its base, and prints the
+review (highest-risk first) to stdout. It never modifies your working tree.
+
+**⛔ Run it in the BACKGROUND (`run_in_background: true`) and let the completion
+notification wake you.** A review of a real branch takes many minutes and `codex`
+buffers, so the capture file stays empty until it finishes — polling it teaches you
+nothing and costs a full context read every time. Do not chain sleeps waiting on it.
+
+The script has **no timeout**: Codex is one-shot and its runtime is its own. It
+exits 3 on a usage error (missing or empty scope prompt, `codex` not on PATH) —
+deliberately not 1 or 2, which `codex` itself uses, so "the reviewer failed" never
+looks like "the reviewer had opinions".
 
 ### ⛔ Scope flags and a custom prompt are mutually exclusive
 
@@ -181,14 +204,19 @@ error: the argument '--base <BRANCH>' cannot be used with '[PROMPT]'
 
 The usage line prints `codex review --base <BRANCH> [PROMPT]`, which looks like it
 should work — it does not. **Since the scope prompt is mandatory, the prompt-only
-form is the default invocation**, and it needs the changes committed on a branch
-so Codex can derive the diff itself. If the work is uncommitted, commit it to a
-branch first (never review from a bare `main` with a dirty tree) and say you did.
+form is the ONLY correct invocation**, and it needs the changes committed on a
+branch so Codex can derive the diff itself. If the work is uncommitted, commit it
+to a branch first (never review from a bare `main` with a dirty tree) and say you
+did.
 
-Scope flags remain available only for a **prompt-less** run, which is a last
-resort — you then filter out-of-scope findings by hand:
-`codex review "${MCP_OFF[@]}" --base main`, or `--uncommitted` for staged +
-unstaged + untracked.
+**⛔ There is no prompt-less fallback.** `--base` and `--uncommitted` exist, but
+reaching for either means abandoning the Scope Brief, and a run without the brief
+is an incomplete pass by definition — it reports the work the change deliberately
+did not do, and you then filter its output by hand, which is the cost the brief
+exists to avoid. If the work is uncommitted, **commit it to a branch** and run the
+script with a prompt; that is always available, so the fallback never has a case.
+Route every invocation through `scripts/run-codex-review.sh`, which refuses to
+start without a non-empty prompt.
 
 ### Pick the model and effort — the default is far too slow
 
@@ -197,8 +225,11 @@ unstaged + untracked.
 10–15 minute wait. Override them **per invocation** with `-c`; never edit the
 user's config (see the MCP section — same reasoning).
 
+The script applies these defaults itself. Override per run via env:
+
 ```bash
-codex review "${MCP_OFF[@]}" -c model=gpt-5.6-terra -c model_reasoning_effort=medium "<scope prompt>"
+CODEX_REVIEW_MODEL=gpt-5.6-terra CODEX_REVIEW_EFFORT=high \
+  bash [SKILL_BASE_DIR]/skills/codex-review/scripts/run-codex-review.sh /tmp/scope-prompt.md
 ```
 
 **Default to `gpt-5.6-terra` at `medium`** — roughly a tenth of the wall clock of
@@ -253,7 +284,7 @@ local run:
 ## The gate
 
 A **converged** Codex review — no blocking finding left unresolved
-(`fx-dev/skills/dev/references/scope-contract.md` § Convergence) — alongside a
-converged CodeRabbit review is the gate to PR creation (`fx-dev:dev` Step 4.5 →
-Step 5). Outstanding **immaterial** observations do not hold the PR; carry them
+(`fx-dev/skills/dev/references/scope-contract.md` § Convergence) — is the local gate
+to PR creation (`fx-dev:dev` Step 4.5 → Step 5). It is the only local gate; there is
+no local CodeRabbit review to converge alongside it. Outstanding **immaterial** observations do not hold the PR; carry them
 into its description as a closing note.

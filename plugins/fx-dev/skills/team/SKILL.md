@@ -132,7 +132,8 @@ git worktree add .claude/worktrees/<slug> -b <branch> origin/main
 
 ```bash
 git check-ignore .claude/worktrees/x >/dev/null 2>&1 || \
-  printf '\n# Claude Code team worktrees (local only)\n.claude/worktrees/\n' >> .git/info/exclude
+  printf '\n# Claude Code team scaffolding (local only)\n.claude/worktrees/\n.claude/team/\n' >> .git/info/exclude
+mkdir -p .claude/team/waits
 ```
 
 `.git/info/exclude` is never committed, so there is nothing to clean up later and `git status` stays clean.
@@ -145,7 +146,7 @@ ln -s <REPO_ROOT>/node_modules <REPO_ROOT>/.claude/worktrees/<slug>/node_modules
 
 ### 2.5.2 Smoke-test isolation BEFORE spawning real coders
 
-Spawn ONE cheap probe teammate pinned to a worktree. Have it write a marker file in the worktree and confirm (a) the marker is **absent** in the main repo, (b) `pwd`/branch/toplevel are the worktree's, then clean up. Only proceed once it reports isolation OK. This catches a broken setup before any real code is written. (If the probe lands in the main repo, the workaround failed — stop and re-check paths.)
+Spawn ONE cheap probe teammate (size **small** — see the size table in STEP 3) pinned to a worktree. Have it write a marker file in the worktree and confirm (a) the marker is **absent** in the main repo, (b) `pwd`/branch/toplevel are the worktree's, then clean up. Only proceed once it reports isolation OK. This catches a broken setup before any real code is written. (If the probe lands in the main repo, the workaround failed — stop and re-check paths.)
 
 A confirmed gotcha: **the teammate's shell cwd RESETS to the main repo root after EVERY bash command** ("Shell cwd was reset to …"). That is exactly why the preamble below forces an absolute `cd` on every command — relative paths silently resolve against the MAIN repo, not the worktree.
 
@@ -187,6 +188,7 @@ For each task (or group of parallel tasks), walk through the dev skill's SDLC st
 Agent tool:
   name:      "<short-descriptive-handle>"    # ← REQUIRED, NO EXCEPTIONS
   subagent_type: "general-purpose"
+  model:     "<per the size table below>"     # ← pick deliberately, do not default
   isolation: "worktree"                      # NO-OP for teammates — see STEP 2.5; pre-create real worktrees instead
   mode: "bypassPermissions"
   prompt: "..."
@@ -195,7 +197,24 @@ Agent tool:
 
 The `name` should be specific and human-readable so it's useful in logs and `SendMessage` (e.g., `coder-0105A`, `verify-pr-371`, `fix-0106-types`). One-shot generic names like `agent1` are bad.
 
-**Self-check before EVERY Agent call:** "Did I pass `name`?" If it's missing, fix the call before sending it. This rule is non-negotiable.
+**Self-check before EVERY Agent call:** "Did I pass `name`? Did I pick a `model` size?" If either is missing, fix the call before sending it. This rule is non-negotiable.
+
+### Pick an agent SIZE for every spawn
+
+Choose by the **shape of the task**, not by how important it feels. Sizes are named so this table survives model releases — map the size to whatever the `Agent` tool's `model` parameter currently offers.
+
+| Size | `model` | Use for |
+|---|---|---|
+| **large** | `opus` | Coder agents doing implementation. Fix agents on an **undiagnosed** bug. Anything requiring design judgment. |
+| **medium** | `sonnet` | PR preparer. Browser verification. Fix agents handed an **exact, specified** patch. Mechanical work with a clear spec. |
+| **small** | `haiku` | The worktree isolation probe (STEP 2.5.2). Pure inspection or summarisation with no judgment call. |
+
+**Coders stay `large`. Do not "optimise" them downward.** Implementation is judgment-heavy, and a weaker coder that needs more iterations costs *more* than a stronger one that needs fewer — turn count, not per-turn price, is what dominates. A downgrade that adds two review rounds is a large net loss that looks like a saving.
+
+Two constraints worth knowing rather than rediscovering:
+
+- **The `Agent` tool has no reasoning-effort parameter.** Effort is inherited from the session (`effortLevel` / `CLAUDE_EFFORT`) and cannot be set per spawn. Size selects the model; it does not select how much the agent thinks.
+- **`small` carries a 200k context ceiling.** For read-heavy roles that is a feature — it bounds context growth for free.
 
 ### Key orchestration principles
 
@@ -205,9 +224,9 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 
 **PR creation** → Either do it yourself via `gh pr create` or spawn a focused PR preparer agent. Load `fx-dev:github` skill first. **⛔ If you create the PR yourself, the `--title` MUST be a conventional-commit subject — `type(scope): description` — matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (see the github skill's "Use Conventional Formats"). Do NOT write a prose title; running `gh pr create` directly does NOT exempt you from the conventional-commit rule. Verify the title against the regex before AND after creation.** (Prose titles the coordinator wrote directly — bypassing pr-preparer — are exactly how non-conventional titles have slipped onto `main`.)
 
-**Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. **Pass the STEP 0 Scope Brief into every reviewer invocation that accepts one, and apply it when triaging every reviewer that does not** (Copilot and the CodeRabbit GitHub App accept nothing). A finding covered by the brief's out-of-scope list is recorded as deferred with the covering exclusion — never silently fixed, never silently dropped, and never a reason to widen a teammate's PR. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback. Run `gh pr checks --watch` yourself.
+**Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. **Pass the STEP 0 Scope Brief into every reviewer invocation that accepts one, and apply it when triaging every reviewer that does not** (Copilot and the CodeRabbit GitHub App accept nothing). A finding covered by the brief's out-of-scope list is recorded as deferred with the covering exclusion — never silently fixed, never silently dropped, and never a reason to widen a teammate's PR. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback.
 
-**⛔ NEVER spawn sub-agents to handle reviewer waits.** `fx-dev:dev` Step 6.3's mode A (parallel sub-agents per reviewer) is for the **root-session caller** only. As a team coordinator you ARE the root agent for the team's lifecycle and must use mode B (sequential or background-Bash overlap).
+**⛔ NEVER `sleep`, poll, or block waiting for anything.** Every wait — Copilot, CodeRabbit, CI — runs as a **backgrounded** wait script that notifies you on exit. Never run `gh pr checks --watch`, never chain sleeps, and never sit in a foreground wait. See **Waiting and reconciliation** below; this is the single largest source of wasted coordinator turns and it is non-negotiable.
 
 **Merge gates** → Always handle directly. See MANDATORY MERGE GATE CHECKLIST below.
 
@@ -219,6 +238,40 @@ When you spawn the coder for the FINAL piece of a change, your prompt MUST inclu
 - For dependent tasks, wait until the blocking task's PR is merged before spawning the next coder
 - After merging, repeat for newly-unblocked tasks
 - If you skip STEP 2.5, you MUST run coders strictly one-at-a-time (never two alive at once) — concurrent coders without real worktrees share one working tree and clobber each other
+
+### Waiting and reconciliation (NON-NEGOTIABLE)
+
+**⛔ You never `sleep`. You never poll. You never block.** Every wake costs a full read of your entire context, and your context is the largest in the team — a poll loop is the single most expensive thing you can do, and it gets more expensive with every turn you add.
+
+**Everything you wait on is backgrounded and notifies you.** Reviewer waiters, CI waiters, and teammate agents all wake you on completion. That is your only scheduling mechanism.
+
+#### The ledger
+
+Keep `.claude/team/waits/ledger.json` — one row per tracked teammate and per tracked PR, recording its last known state and what you are waiting on for it. It exists so a wake is a cheap diff instead of a re-derivation of the whole run.
+
+#### Reconcile on wake, never on a timer
+
+When **any** notification arrives — a waiter finished, a teammate finished, anything — do **one batched pass**:
+
+1. Read the ledger.
+2. Read every log whose waiter has completed since the last pass.
+3. Update every row that changed, in one go.
+4. Dispatch whatever is now unblocked.
+5. Go idle again.
+
+**Batch the inspection.** One pass over all open PRs, not one `gh` call per PR per wake. While anything is in flight you get free wakes, so stall detection costs you no dedicated turns at all.
+
+#### The silence backstop
+
+The only case reconcile-on-wake misses is *everything* going quiet at once. Guard it with a single long-interval `ScheduleWakeup` (~30 minutes) — **not** a `sleep`, which holds a turn open.
+
+Every waiter has its own 900 s budget and always exits, so it will notify you well inside that window. The backstop should essentially never fire. **Do not shorten it**: a short interval is polling at full coordinator context wearing a different hat.
+
+#### Re-launching a `PENDING` waiter
+
+`STATUS=PENDING` means the reviewer or check is still running — not a verdict, not a failure. Relaunch it (backgrounded) if you still need that gate.
+
+**Prefer to have other work in flight while it runs.** If you have other PRs to advance, do that and let the relaunched waiter notify you; that is strictly cheapest. Only when you have nothing else to do is it worth relaunching immediately and waiting on it alone.
 
 ---
 
@@ -251,25 +304,32 @@ duvet# A pull request MUST NOT be merged while any review thread on it from a co
 
 ### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
 
-> **CodeRabbit and Codex run LOCALLY first.** Implementing sub-agents attempt local CodeRabbit via `cr` and run local Codex via the `fx-dev:codex-review` skill during pre-PR self-review, passing the Scope Brief. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer both **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown. Gate 2b is the fallback PR-level CodeRabbit review when the GitHub App is configured, with the same rate-limit exception.
+> **Codex runs LOCALLY first — and it is the ONLY local reviewer.** Implementing sub-agents run local Codex via the `fx-dev:codex-review` skill during pre-PR self-review, passing the Scope Brief. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer it **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **There is no local CodeRabbit pass; the `cr` CLI is not used.** Gate 2b is the PR-level CodeRabbit review, which applies only when the GitHub App is configured — its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown.
 
-**As coordinator, YOU handle reviewer waits directly. Do NOT spawn sub-agents for reviewer waits — sub-agents in this team context cannot spawn their own sub-agents, and `fx-dev:dev` mode A would fail. You ARE the root agent for the team; invoke each reviewer skill in the foreground sequentially, OR launch the slow waiter (CodeRabbit) as a background `Bash` process while you handle Copilot in the foreground.**
+**As coordinator, YOU handle reviewer waits directly — but you never *block* on them.** Launch every configured reviewer's waiter in ONE message, all backgrounded, each redirecting to its own log. They run concurrently; a completion notification wakes you per reviewer. No sub-agents are involved and there is no execution mode to pick.
 
 ```
-# Sequential (simple, always correct):
-Skill tool: skill="fx-dev:copilot-review",     args="<PR_NUMBER> — <Scope Brief verbatim>"
-Skill tool: skill="fx-dev:coderabbit-review",  args="<PR_NUMBER> — <Scope Brief verbatim>"
+# ALL in one message, every one run_in_background: true.
+# Each command creates the log dir itself: if it does not exist the REDIRECT fails
+# before the waiter ever starts, so you get no STATUS line at all — the one failure
+# the whole protocol exists to prevent. `mkdir -p` is idempotent; never rely on an
+# earlier step having created it.
+Bash: mkdir -p .claude/team/waits && bash <skill>/copilot-review/scripts/wait-for-copilot-review.sh <PR_NUMBER> \
+        > .claude/team/waits/copilot-<PR_NUMBER>.log 2>&1
+Bash: mkdir -p .claude/team/waits && bash <skill>/coderabbit-review/scripts/wait-for-coderabbit-review.sh <PR_NUMBER> \
+        > .claude/team/waits/rabbit-<PR_NUMBER>.log 2>&1
+Bash: mkdir -p .claude/team/waits && bash <skill>/dev/scripts/wait-for-ci-checks.sh <PR_NUMBER> \
+        > .claude/team/waits/ci-<PR_NUMBER>.log 2>&1
 
-# Or background-overlapped (faster):
-# 1. Bash run_in_background:
-#      bash <skill>/coderabbit-review/scripts/wait-for-coderabbit-review.sh <PR_NUMBER>
-# 2. Foreground: Skill fx-dev:copilot-review
-# 3. When Bash task completes: Skill fx-dev:rabbit-feedback-resolver
+# On each notification: read the log, branch on its STATUS= line, classify
+# findings in the ledger, THEN invoke that reviewer's resolver skill.
 ```
+
+**Never run a waiter in the foreground.** The Bash tool caps a foreground `timeout` at 600 000 ms, below every waiter's 900 s budget — a foreground call is killed mid-poll with no STATUS and no exit code, and the caller then re-runs it blindly. **Never background one without the redirect**: the cycle is driven by what the script prints.
 
 Apply `fx-dev:dev` Steps 2.5 and 6.3 as the canonical reviewer policy: maintain the coordinator-owned finding ledger, fix every **blocking** finding and only those (`fx-dev/skills/dev/references/scope-contract.md` § Blocking — the class name does not decide it; a reviewer-originated Material or Substantive entry blocks whatever its class), and rerun only reviewer state invalidated by the latest delta. Do not restart every reviewer after each push or seek zero suggestions. Settle all required threads within the bounded remediation rounds. **If CodeRabbit reports a rate/quota limit or cooldown at any point, stop its loop immediately, report once, record `skipped (rate-limited)`, and continue without waiting or escalating — after fixing the blocking findings it already delivered and settling every thread it already posted.** The degradation waives only the passes that never ran (`fx-dev:coderabbit-review`, rate-limit rule), never work already on the PR. Copilot must still satisfy its mandatory review gate.
 
-If CodeRabbit is not configured (wait script exits 2), report once and proceed. Do not silently skip ordinary failures; the optional exception is specifically for CodeRabbit throttling.
+If CodeRabbit is not configured (its waiter reports `STATUS=NOT_CONFIGURED`, exit 3), report once and proceed — that status is terminal, so never retry or wait it out. Do not silently skip ordinary failures; the optional exception is specifically for CodeRabbit throttling.
 
 ### Browser Verification Gate (Gate 6)
 
@@ -278,6 +338,7 @@ For tasks with UI changes, spawn a dedicated verify agent:
 ```
 Agent tool:
   name: "verify-<pr-number>"            # REQUIRED — addressable handle (do NOT pass team_name; it's ignored)
+  model: "sonnet"                       # size: medium — verification is mechanical
   prompt: "Load the verify-web-change skill (Skill tool: skill='fx-dev:verify-web-change').
            Verify PR #<NUMBER> on branch <branch-name>.
            Check out the branch, start the dev server, and confirm the app loads without errors.
@@ -360,9 +421,10 @@ When all tasks are complete and all PRs merged:
 - **NEVER merge without completing the MERGE GATE CHECKLIST** — every gate must pass, every time, for every PR
 - **NEVER merge without Copilot review** — always invoke `fx-dev:copilot-review` yourself. No exceptions.
 - **ALWAYS attempt CodeRabbit when configured, but never block on its rate limits** — invoke `fx-dev:coderabbit-review`; resolve feedback already received, then record `skipped (rate-limited)` and continue immediately if throttled.
-- **NEVER spawn sub-agents to handle reviewer waits** in the team-coordinator context — sub-agents can't spawn sub-agents. Run reviewer skills in the foreground (or background-Bash for the slow ones).
+- **NEVER `sleep`, poll, or block on a wait.** Every reviewer and CI wait is a BACKGROUNDED script that notifies you on exit; reconcile on that notification. A foreground waiter is killed at the Bash tool's 600 s cap anyway. The only timer permitted in a run is one long `ScheduleWakeup` silence backstop.
 - **NEVER mark a teammate's PR as ready** until you've inspected it
-- **ALWAYS handle Copilot review and CI monitoring directly** — these are coordinator responsibilities, not sub-agent responsibilities
+- **ALWAYS handle Copilot review and CI monitoring directly** — these are coordinator responsibilities, not sub-agent responsibilities. Launch their waiters backgrounded, all in one message.
+- **ALWAYS pass a deliberate `model` size to every `Agent` call** — see the size table in STEP 3. Coders are `large`; never downgrade them.
 - **ALWAYS use `fx-dev:project-management`** to verify task tracking
 - **ALWAYS run the full merge gate checklist** even for "trivial" or "follow-up" PRs
 - **NEVER merge without browser verification** — spawn a verify agent if needed. CI alone does NOT catch runtime errors.

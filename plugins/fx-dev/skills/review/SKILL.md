@@ -39,7 +39,7 @@ Neither restates the other. Where this skill needs a definition it names the
 section; where a platform skill needs either, it names them rather than copying.
 
 **One exception, and only one: text sent verbatim to an external tool.** A prompt
-handed to `codex review`, `cr`, or any reviewer outside this repo cannot follow a
+handed to `codex review` or any reviewer outside this repo cannot follow a
 link, so it MUST inline the rule. Such a block is a **mirror**: mark it as one,
 keep it a faithful restatement, and update it in the same commit that changes the
 canonical text. Nothing an agent reads directly qualifies — only strings crossing
@@ -281,7 +281,7 @@ State the shape, not a verdict, so the operator can see it rather than take
   nothing.
 - **Whether you reconstructed the Scope Brief** rather than being handed one.
 
-**For a reviewer that receives the brief** — Codex, `cr`, a sub-agent — a run
+**For a reviewer that receives the brief** — Codex, a sub-agent — a run
 producing **zero** out-of-scope findings is the signal it was well built, and
 persistent out-of-scope noise means it is too thin: tighten it before the next
 iteration rather than filtering by hand again.
@@ -297,11 +297,13 @@ covers it, none silently fixed and none silently dropped.
 
 ## The external-reviewer block
 
-**Two reviewers read a string rather than this file: `codex review`, via its
-prompt, and `cr review -c`, via an instructions file.** Neither can follow a link,
-so both need the rules inlined — the one case § The two canonical sources exempts.
-There is **one** such block, here, and both adapters send this text rather than
-writing their own.
+**One reviewer reads a string rather than this file: `codex review`, via its
+prompt.** It cannot follow a link, so it needs the rules inlined — the one case
+§ The two canonical sources exempts. There is **one** such block, here, and the
+Codex adapter sends this text rather than writing its own.
+
+(Copilot and the CodeRabbit GitHub App accept no prompt at all, so the brief
+reaches them only at triage — see `fx-dev:review` Step 8.)
 
 > **This block is a MIRROR** of `fx-dev/skills/dev/references/scope-contract.md`
 > § Blocking, § Reporting a class, and § Three things that are not findings. Keep
@@ -416,8 +418,8 @@ step. If it genuinely needs different behaviour, change it here, for everyone.
   only permitted operations are replying to an existing *bot* thread with
   `addPullRequestReviewThreadReply` and resolving it with `resolveReviewThread`.
 - **Never run an interactive auth command** — not `codex login`, not
-  `cr auth login`, not `gh auth login`. The workspace is expected to be
-  authenticated; if it is not, STOP and report it to the user.
+  `gh auth login`. The workspace is expected to be authenticated; if it is not,
+  STOP and report it to the user.
 - **Absence of feedback is not evidence of quality.** A reviewer that has not run,
   a poll that saw nothing, and a timeout are all *unreviewed*, not clean.
 - **Resolution is not the same as a fix.** A thread ends resolved either way; only

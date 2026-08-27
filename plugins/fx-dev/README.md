@@ -31,8 +31,8 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 - **copilot-feedback-resolver** - Processes and resolves GitHub Copilot automated PR review comments
 - **rabbit-feedback-resolver** - Processes and resolves CodeRabbit automated PR review comments
 - **resolve-pr-feedback** - Meta-skill that checks for all unresolved automated review feedback
-- **codex-review** - Runs OpenAI Codex's review locally via the `codex` CLI before the PR is opened (adapter over **review**)
-- **coderabbit-review** - Runs CodeRabbit locally via `cr`, or clears its PR-level check as a fallback gate (adapter over **review**)
+- **codex-review** - Runs OpenAI Codex's review locally via the `codex` CLI before the PR is opened — the only local reviewer (adapter over **review**)
+- **coderabbit-review** - Clears CodeRabbit's PR-level check where its GitHub App is installed; optional, and PR-level only (adapter over **review**)
 - **copilot-review** - Requests, waits for, and resolves GitHub Copilot's PR review (adapter over **review**)
 - **resolve-ci-failures** - Analyzes and fixes CI check failures on PRs
 - **resolve-codecov-feedback** - Processes Codecov coverage reports and adds missing tests

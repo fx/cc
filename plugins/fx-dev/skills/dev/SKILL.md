@@ -28,9 +28,29 @@ Agent tool:
   prompt: "Load the [skill-name] skill (Skill tool: skill='[skill-name]'), then:
            [task details]"
   description: "[3-5 word summary]"
+  model: "[per the size table below]"
 ```
 
 **Do NOT use `subagent_type` for skills.** The `subagent_type` parameter is reserved for built-in agent types (Explore, Plan, etc.). Skills are loaded inside the sub-agent via the Skill tool.
+
+#### Pick an agent SIZE for every spawn
+
+Choose by the **shape of the task**, not by how important it feels. Sizes are named so this table survives model releases — map the size to whatever the `Agent` tool's `model` parameter currently offers. Every Agent template in this document omits `model` for brevity; supply it from here on every call.
+
+| Size | `model` | Use for |
+|---|---|---|
+| **large** | `opus` | Implementation (Step 4). Planning (Step 3). Requirements analysis (Step 2). Independent review. Fix agents on an **undiagnosed** failure. Anything requiring design judgment. |
+| **medium** | `sonnet` | PR preparation. Browser/test-plan verification. Fix agents handed an **exact, specified** patch. Mechanical work with a clear spec. |
+| **small** | `haiku` | Pure inspection or summarisation with no judgment call. |
+
+**Never downgrade an implementation or review agent.** Those are judgment-heavy, and a weaker agent that needs more iterations costs *more* than a stronger one that needs fewer — turn count, not per-turn price, dominates. A downgrade that adds two review rounds is a large net loss that looks like a saving.
+
+Two constraints worth knowing rather than rediscovering:
+
+- **The `Agent` tool has no reasoning-effort parameter.** Effort is inherited from the session (`effortLevel` / `CLAUDE_EFFORT`) and cannot be set per spawn. Size selects the model; it does not select how much the agent thinks.
+- **`small` carries a 200k context ceiling.** For read-heavy roles that is a feature — it bounds context growth for free.
+
+`fx-dev:team` carries the same table for its coordinator spawns; keep the two in step.
 
 ### Coder Task Reporting (Sub-Agent Restriction)
 
@@ -277,7 +297,7 @@ git diff main --stat
 
 ---
 
-### STEP 4.5: Pre-PR Self-Review (simplify → review → CodeRabbit → Codex)
+### STEP 4.5: Pre-PR Self-Review (simplify → review → Codex)
 
 **MANDATORY: Run one complete local review matrix before creating the PR.** Run each available pass once in order against the current `HEAD`, record the revision that each channel reviewed, and classify its findings before accepting fixes. If `/simplify` edits directly, retain only changes that satisfy the contract classification and record the resulting revision before starting the next pass.
 
@@ -301,19 +321,13 @@ Reviews changed code for **reuse** (duplicated logic), **quality** (copy-paste, 
 Skill tool: skill="code-review", args="<Scope Brief>"
 ```
 
-**3. CodeRabbit (local, via `cr`)** — independent local review:
-
-```
-Skill tool: skill="fx-dev:coderabbit-review", args="<Scope Brief>"
-```
-
-If `cr` is **unavailable**, fall back to the PR-level CodeRabbit review in Step 6.3. If `cr` is installed but **not authenticated**, STOP and report to the user — NEVER run `cr auth login`. If CodeRabbit reports a rate/quota limit or cooldown, report it once, classify findings already received and resolve the blocking ones, mark the pass `skipped (rate-limited)`, and continue immediately. Throttling waives the unrun remainder of the review, never a finding already delivered. Never wait or retry solely for a CodeRabbit cooldown.
-
-**4. Codex (local, via `codex`)** — independent one-shot branch review:
+**3. Codex (local, via `codex`)** — independent one-shot branch review:
 
 ```
 Skill tool: skill="fx-dev:codex-review", args="<Scope Brief>"
 ```
+
+**Codex is the ONLY local reviewer.** There is no local CodeRabbit pass — the `cr` CLI is not used anywhere in this SDLC. CodeRabbit applies only at the PR level in Step 6.3, and only when the repo's GitHub App is installed.
 
 The Codex CLI takes the scope as its review prompt, so this pass is the one where a missing brief is most expensive — it will confidently report every deliberate omission. If the `codex` CLI is unavailable or not authenticated, report it once and proceed without this pass. NEVER run `codex login`.
 
@@ -591,86 +605,53 @@ Agent tool:
 
 **MANDATORY: Wait for and resolve EVERY automated reviewer configured on the repo.** Copilot and CodeRabbit are the two we know about today; future integrations slot in here. Reviewers are **independent feedback channels** with different latencies (Copilot 85 s to 12 m 42 s observed — do not budget for it being quick; CodeRabbit 2–10+ min and re-runs after every push).
 
-> **CodeRabbit was attempted LOCALLY in Step 4.5** (`cr review --agent`). The PR-level handling here is a fallback for repos whose GitHub App auto-reviews PRs. Prefer a passing check and resolve received feedback; if either local or PR-level CodeRabbit rate-limits, resolve what it already delivered — blocking findings fixed, every posted thread settled — then record `skipped (rate-limited)` and continue without blocking.
+> **CodeRabbit is PR-level only.** There is no local CodeRabbit pass — Step 4.5 runs Codex alone. CodeRabbit applies here when the repo's GitHub App auto-reviews PRs, and its waiter reports `STATUS=NOT_CONFIGURED` when it does not, which is the common case and is terminal. Prefer a passing check and resolve received feedback; if CodeRabbit rate-limits, resolve what it already delivered — blocking findings fixed, every posted thread settled — then record `skipped (rate-limited)` and continue without blocking.
 
 ##### Reviewer-by-reviewer skills
 
 | Reviewer | Skill | Notes |
 |----------|-------|-------|
 | GitHub Copilot | `fx-dev:copilot-review` | Auto-reviews; we explicitly request via API as a defensive belt. Does NOT re-review on push by default. |
-| CodeRabbit | `fx-dev:coderabbit-review` | Already run **locally** in Step 4.5 (`cr`). Here = fallback PR-level gate when the GitHub App auto-reviews PRs: re-reviews after pushes and exposes state via the `CodeRabbit` check. Classify new feedback in the shared ledger and settle its threads within the bounds below. Skip if not configured. |
+| CodeRabbit | `fx-dev:coderabbit-review` | PR-level only — there is no local pass. Applies when the GitHub App auto-reviews PRs: re-reviews after pushes and exposes state via the `CodeRabbit` check. Classify new feedback in the shared ledger and settle its threads within the bounds below. `STATUS=NOT_CONFIGURED` means the App is absent — report once and skip. |
 
-##### Pick the right execution mode for your context
+##### Run every waiter in the background — there is no mode selection
 
-**⛔ CRITICAL:** the right mode depends on whether YOU can spawn sub-agents right now.
+**⛔ Launch each configured reviewer's wait script in the SAME message with `run_in_background: true`, each redirecting to its own log file.** They then run concurrently, and a completion notification wakes you per reviewer. This works identically in every context — root session, `fx-dev:team` coordinator, or sub-agent — so there is nothing to choose and no "can I spawn sub-agents?" branch. **Do not spawn sub-agents for reviewer waits; they buy nothing here.**
 
-- **You ARE the root session / a standalone caller of `fx-dev:dev`** → use **mode A (parallel sub-agents)**.
-- **You are a `fx-dev:team` coordinator OR a sub-agent yourself** → sub-agents CANNOT spawn sub-agents. Use **mode B (sequential, with background wait scripts)**. Do NOT call the Agent tool here.
+```bash
+# Both in ONE message, both run_in_background: true
+mkdir -p .claude/team/waits && \
+bash [SKILL_BASE_DIR]/skills/copilot-review/scripts/wait-for-copilot-review.sh [PR_NUMBER] \
+     > .claude/team/waits/copilot-[PR_NUMBER].log 2>&1
 
-If unsure: assume mode B. It's strictly slower but always correct; mode A is an optimisation that requires you to be a top-level agent.
-
-###### Mode A: parallel sub-agents (root session only)
-
-In a single message, spawn one sub-agent per reviewer using the Agent tool. Both wait scripts run concurrently and each resolves its own reviewer.
-
-Neither Copilot nor the CodeRabbit GitHub App accepts a scope prompt, so the brief cannot reach them — it MUST still go to the sub-agents, which apply it when triaging what comes back.
-
-```
-Agent tool (spawn ALL reviewer sub-agents in the same message — parallel):
-
-Agent 1:
-  prompt: "Load the copilot-review skill (Skill tool: skill='fx-dev:copilot-review'),
-           then wait for and inspect currently unresolved feedback for PR #[PR_NUMBER] at its
-           current head SHA.
-
-           [PASTE THE STEP 2.5 SCOPE BRIEF VERBATIM HERE — mark each finding
-            in-scope or out-of-scope against it; never widen the change to
-            satisfy an out-of-scope suggestion]
-
-           Return findings and evidence only; do not edit, push, resolve threads,
-           or modify task trackers. Report the reviewed SHA."
-  description: "Inspect Copilot review"
-
-Agent 2:
-  prompt: "Load the coderabbit-review skill (Skill tool: skill='fx-dev:coderabbit-review'),
-           then wait for and inspect currently unresolved feedback for PR #[PR_NUMBER] at its
-           current head SHA.
-
-           [PASTE THE STEP 2.5 SCOPE BRIEF VERBATIM HERE — same triage rule]
-
-           Return findings and evidence only; do not edit, push, resolve threads,
-           or modify task trackers. Report the reviewed SHA."
-  description: "Inspect CodeRabbit review"
+mkdir -p .claude/team/waits && \
+bash [SKILL_BASE_DIR]/skills/coderabbit-review/scripts/wait-for-coderabbit-review.sh [PR_NUMBER] \
+     > .claude/team/waits/rabbit-[PR_NUMBER].log 2>&1
 ```
 
-Wait for **all** sub-agents to report completion. The coordinator then deduplicates and classifies their findings, dispatches blocking remediation serially, and settles all reviewer threads. Never let parallel reviewer agents push fixes before coordinator classification.
+**Never run a waiter in the foreground.** The Bash tool caps a foreground `timeout` at 600 000 ms, which is below every waiter's 900 s budget — a foreground call is guaranteed to be killed mid-poll, printing no STATUS and no exit code, and the caller then re-runs it blindly. Backgrounded processes are not subject to that cap. **Never background one without the redirect**: the cycle is driven by what the script prints.
 
-###### Mode B: sequential, with background wait scripts (team-coordinator / sub-agent)
+###### Then, per reviewer, on its notification
 
-You can't spawn sub-agents, so handle each reviewer's wait+resolve lifecycle yourself, sequentially. To recover some parallelism, kick off the slow waiter (CodeRabbit) in the background while you handle the fast one (Copilot) in the foreground. When Copilot is done, switch to CodeRabbit.
-
-Concrete recipe:
-
-1. Start the CodeRabbit waiter as a background bash process — its output streams to a file you can poll later:
-   ```bash
-   bash [SKILL_BASE_DIR]/skills/coderabbit-review/scripts/wait-for-coderabbit-review.sh [PR_NUMBER] \
-        > /tmp/coderabbit-wait-[PR_NUMBER].log 2>&1
-   ```
-   Use `Bash` with `run_in_background: true`. Capture the task ID.
-2. In the foreground, wait for Copilot using the bundled `copilot-review` waiter, then read its unresolved threads without invoking a resolver. Classify and deduplicate them in the coordinator-owned ledger.
-3. Wait for the background CodeRabbit waiter to finish, then read its unresolved threads and classify them before invoking a resolver. Invoke each reviewer resolver only after classification, passing the blocking findings and a disposition for every thread that carries a finding — `blocking`, `immaterial`, or `deferred` (`references/scope-contract.md` § Resolver dispositions) — so it settles both no-edit dispositions without code or task-tracker changes. A thread whose premise you verified and rejected is listed as undisposed with the reason, not forced into one of the three.
-4. After a resolver pushes, record the new SHA and inspect only feedback added or changed since the previous reviewed SHA. Classify and deduplicate it in the shared ledger. Rerun only the reviewer whose state or evidence the delta invalidated; do not restart every reviewer merely because `HEAD` changed.
+1. Read the log and branch on its `STATUS=` line (each reviewer skill documents its own table; the five states are shared):
+   - `TERMINAL_PASS` / `TERMINAL_FAIL` — settled. Do **not** re-run for a better answer.
+   - `PENDING` — not a verdict and not a failure. Re-running is safe if you still need it. **Never** record it as "no findings" or "CI passed".
+   - `NOT_CONFIGURED` — that reviewer does not apply to this repo. Terminal: report once, proceed without it, never retry.
+   - `ERROR` — the wait never started. Report it.
+2. Read its unresolved threads and classify them in the shared ledger **before** invoking any resolver. Neither Copilot nor the CodeRabbit GitHub App accepts a scope prompt, so the brief cannot reach them — you apply it at triage.
+3. Invoke each reviewer's resolver only after classification, passing the blocking findings and a disposition for every thread that carries a finding — `blocking`, `immaterial`, or `deferred` (`references/scope-contract.md` § Resolver dispositions) — so it settles both no-edit dispositions without code or task-tracker changes. A thread whose premise you verified and rejected is listed as undisposed with the reason, not forced into one of the three.
+4. After a resolver pushes, record the new SHA and inspect only feedback added or changed since the previous reviewed SHA. Classify and deduplicate it in the shared ledger. Relaunch only the waiter whose state or evidence the delta invalidated; do not restart every reviewer merely because `HEAD` changed.
 5. Stop when the channel has **converged** per `references/scope-contract.md` § Convergence — no blocking finding left unresolved, ledger-wide — confirmed by one latest-delta pass, and every required reviewer thread is settled.
 
-If `Bash` `run_in_background` isn't available in your context, fall back to fully-serial: Copilot first, then CodeRabbit. Slower but correct.
+Never let a reviewer's findings reach an implementer before you have classified them.
 
-##### Bounded delta review (both modes)
+##### Bounded delta review
 
 Fix every **blocking** finding and only those (`references/scope-contract.md` § Blocking), whatever its ledger class. Record the non-blocking remainder without implementing it, and settle its thread with the disposition that actually fits (`references/scope-contract.md` § Resolver dispositions): `deferred` — citing the exclusion — for a finding excluded by scope, and `immaterial` — replying with the materiality reasoning — for an in-scope observation that fails the bar. Both are no-edit, and they are not interchangeable: citing a scope exclusion for an in-scope observation invents an exclusion that does not exist. Each reviewer channel caps at the canonical bound in `references/scope-contract.md` § The iteration bound, which counts the initial pass as iteration 1 and which no local instruction restates or overrides. Convergence, not the bound, is what should end it: the early signals (converged, and the same disagreement in successive passes, both per `references/scope-contract.md` § Convergence) fire in single digits, as does a rising blocking count of one class — which is a cause to fix and continue, not an exit, and an escalation only where that cause is a design choice. Reaching the bound is a failure to converge, not an exit you may take: STOP, report the per-pass trend and what remains, and hand the decision to the user. Do not advance to the next workflow step on the strength of having hit it, even when only follow-up/out-of-scope entries remain. Do not seek zero suggestions or restart unrelated review channels.
 
 ##### Skip rules
 
-- If a reviewer is **not configured** for the repo (e.g. `wait-for-coderabbit-review.sh` exits 2 because no `CodeRabbit` check ever appears), report this once and proceed without that reviewer.
+- If a reviewer is **not configured** for the repo (its waiter reports `STATUS=NOT_CONFIGURED` — e.g. no `CodeRabbit` check ever appears), report this once and proceed without that reviewer. That status is terminal: never retry or wait it out.
 - If **CodeRabbit reports a rate/quota limit or cooldown**, report it once, mark CodeRabbit `skipped (rate-limited)`, and proceed immediately. Do not raise timeouts, sleep, poll, or retry for CodeRabbit throttling. **The degradation waives only the review passes that never ran** (`fx-dev:coderabbit-review`, rate-limit rule): anything CodeRabbit already delivered still counts — fix its blocking findings and settle every thread it already posted before recording the skip, or the PR carries an open thread past a gate that requires none.
 - Do not apply this exception to Copilot or other reviewers. A merely slow CodeRabbit check with no rate-limit signal still follows the normal timeout behavior.
 
@@ -688,26 +669,33 @@ transition to manage in this workflow.
 
 #### 7.1 Wait for CI Checks to Start and Complete
 
-**Run the bundled CI check script in the FOREGROUND:**
+**⛔ Run the bundled CI check script in the BACKGROUND** (`run_in_background: true`), redirecting to a log file, then read that log when the completion notification arrives:
 
 ```bash
-# CRITICAL: Run in FOREGROUND — do NOT use run_in_background
-bash [SKILL_BASE_DIR]/skills/dev/scripts/wait-for-ci-checks.sh [PR_NUMBER]
+mkdir -p .claude/team/waits && \
+bash [SKILL_BASE_DIR]/skills/dev/scripts/wait-for-ci-checks.sh [PR_NUMBER] \
+     > .claude/team/waits/ci-[PR_NUMBER].log 2>&1
 ```
 
-**⚠️ CRITICAL: Run this script in the FOREGROUND with `timeout: 600000` (10 minutes) on the Bash tool call.** Do NOT use `run_in_background`. Running in the background causes output to be lost and prevents the workflow from properly reacting to the results.
+**Do NOT run it in the foreground.** The Bash tool caps a foreground `timeout` at 600 000 ms, which is below the script's 900 s budget — a foreground call is guaranteed to be killed mid-poll, losing the output entirely. Backgrounded processes are not subject to that cap. **Never background it without the redirect**: the workflow reacts to what the script prints.
 
 Script behavior:
-- Phase 1: Waits for checks to appear (some repos have a startup delay)
-- Phase 2: Polls every 30s until all checks complete (timeout: 900s / 15 minutes)
-- Exit 0: All checks passed → **proceed to Step 8**
-- Exit 1: One or more checks failed → **proceed to Step 7.2**
-- Exit 2: Timeout waiting for checks → report to user, ask whether to continue waiting or proceed
-- Exit 3: Invalid arguments or gh error
+- Phase 1 (discovery): waits up to 90 s for any check to appear.
+- Phase 2: polls every 30 s until all checks settle, against a shared 900 s wall-clock budget.
+
+Branch on the trailing `STATUS=` line:
+
+| STATUS | Exit | What to do |
+|---|---|---|
+| `TERMINAL_PASS` | 0 | Every check completed, none failed → **proceed to Step 8** |
+| `TERMINAL_FAIL` | 1 | Every check completed, at least one failed → **proceed to Step 7.2** |
+| `PENDING` | 2 | Still running at budget expiry. Not a verdict. Re-run to keep waiting, or report the wait as unfinished. **Never** record it as "CI passed". |
+| `NOT_CONFIGURED` | 3 | No checks appeared within the discovery grace — this PR has no CI configured. **This is NOT a pass**: a merge gate requiring green CI is not satisfied by the absence of CI. Report it and confirm against branch protection. |
+| `ERROR` | 4 | Bad arguments, `gh` unauthenticated, or the checks API could not be read → report. A failed read is not "no checks". |
 
 #### 7.2 Handle CI Failures (LOOP — max 3 iterations)
 
-**If Step 7.1 exits with code 1 (failures detected):**
+**If Step 7.1 reports `STATUS=TERMINAL_FAIL` (failures detected):**
 
 ```
 Skill tool: skill="fx-dev:resolve-ci-failures"
@@ -911,12 +899,12 @@ All sub-agents are launched via the Agent tool. Each loads its skill via the Ski
 | 3 | Planner | `fx-dev:planner` |
 | 3,8 | Issue Updater | `fx-dev:issue-updater` |
 | 4,6.2,8.2 | Coder | `fx-dev:coder` |
-| 4.5 | Pre-PR Self-Review | `simplify`, then `code-review`, then `fx-dev:coderabbit-review` (local `cr`), then `fx-dev:codex-review` (local `codex`) — initial passes complete, blocking findings resolved, latest affected delta verified |
+| 4.5 | Pre-PR Self-Review | `simplify`, then `code-review`, then `fx-dev:codex-review` (local `codex`, the ONLY local reviewer) — initial passes complete, blocking findings resolved, latest affected delta verified |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 5.5.2 | Browser Verification | `fx-dev:verify-web-change` |
 | 6.1 | PR Reviewer | `fx-dev:pr-reviewer` |
-| 6.3 | Copilot Review | `fx-dev:copilot-review` (run in parallel with coderabbit-review) |
-| 6.3 | CodeRabbit Review | `fx-dev:coderabbit-review` (run in parallel with copilot-review; classify/deduplicate feedback and verify only affected deltas within bounds) |
+| 6.3 | Copilot Review | `fx-dev:copilot-review` (waiter backgrounded, concurrent with coderabbit-review) |
+| 6.3 | CodeRabbit Review | `fx-dev:coderabbit-review` (PR-level only, waiter backgrounded, concurrent with copilot-review; classify/deduplicate feedback and verify only affected deltas within bounds) |
 | 6.3 | PR Feedback Resolver | `fx-dev:resolve-pr-feedback` (meta — called by reviewer skills) |
 | 7.2 | CI Failure Resolver | `fx-dev:resolve-ci-failures` |
 

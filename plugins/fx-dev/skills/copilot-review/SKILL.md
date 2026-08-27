@@ -20,7 +20,7 @@ Request, wait for, and resolve GitHub Copilot's PR review on a pull request.
 
 **CRITICAL: Copilot does NOT reliably re-review a PR when you push new commits.** Some repos' rulesets enable "review new pushes" and it fires on some pushes and not others. After pushing fixes you MUST run this skill again for the new head SHA — the waiter re-issues the request and, crucially, re-scopes the wait to the new commit.
 
-- **A review of an earlier commit is NOT coverage for the current one.** Coverage is per-head-SHA. `wait-for-copilot-review.sh` enforces this: it only accepts a review whose `commit_id` equals the PR's current `headRefOid`, and it keeps waiting (then times out with exit 1) when the newest review is for an older commit.
+- **A review of an earlier commit is NOT coverage for the current one.** Coverage is per-head-SHA. `wait-for-copilot-review.sh` enforces this: it only accepts a review whose `commit_id` equals the PR's current `headRefOid`, and it keeps waiting (then reports `STATUS=PENDING`) when the newest review is for an older commit.
 - **"No new feedback appeared" is NOT evidence that code is clean.** Only a *received* review whose `commit_id` equals the head SHA is evidence. Note the converse trap too: because the request API is inert (**D1**), you can never confirm a review "was requested" — so *never* gate your conclusion on that question, and never conclude "not requested, therefore nothing to wait for". Wait for the review itself. This is the single most common way this gate gets falsely reported as passed.
 - Copilot review is **completely independent of CI**. They are separate systems. CI passing has NOTHING to do with Copilot.
 - You MUST NOT merge ANY PR until Copilot has reviewed **the commit you intend to merge** and all feedback is resolved.
@@ -152,12 +152,15 @@ class halfway spends a full Copilot wait to be told about the other half.
 
 This skill can run **in parallel** with `fx-dev:coderabbit-review` and any future automated-reviewer skills.
 
-**Pick the execution mode based on your context (see `fx-dev:dev` Step 6.3 for the full table):**
+**There is no mode selection.** Every waiter is backgrounded, so reviewers run
+concurrently in every context — root session, `fx-dev:team` coordinator, or
+sub-agent alike. Launch each reviewer's waiter in the same message and handle
+whichever completion notification arrives first. No sub-agents are involved, so the
+old "can I spawn?" branch no longer applies.
 
-- **Root session / standalone caller** → spawn one sub-agent per reviewer in a single message via the Agent tool (mode A). Best wall-clock latency.
-- **`fx-dev:team` coordinator OR a sub-agent yourself** → sub-agents CANNOT spawn sub-agents. Run each reviewer's lifecycle sequentially yourself, optionally with the slow waiter (CodeRabbit) launched as a background `Bash` process while you handle Copilot in the foreground (mode B).
-
-Don't serialize reviewers when you don't have to — but do not budget for Copilot being quick. Observed Copilot delivery ranges from **85 s to 12 m 42 s** (D3), which is why the wait budget below is three runs; CodeRabbit is 2–10+ min and re-runs on every push. Both are slow enough that parallelism pays. But never spawn sub-agents from a sub-agent context.
+Do not budget for Copilot being quick. Observed delivery ranges from **85 s to
+12 m 42 s** (D3), which is why the wait budget is a single 900 s run; CodeRabbit is
+2–10+ min and re-runs on every push. Both are slow enough that concurrency pays.
 
 ## Arguments
 
@@ -189,38 +192,43 @@ an empty `requested_reviewers` as "the request did not land", and never treat a
 
 ### Step 2: Wait for a Review of the Current Head
 
-Run the bundled script **in the FOREGROUND**. The Bash tool caps `timeout` at
-`600000` ms (600 s), so the script's budget must leave room for it to reach its own
-timeout path and *return* exit 1 — a script killed by the tool prints no exit code
-and no diagnostics, which makes the re-run protocol below unreachable:
+**⛔ Run the waiter in the BACKGROUND** (`run_in_background: true`), redirecting
+stdout and stderr to a log file, then read that file when the completion
+notification arrives:
 
 ```bash
-bash [SKILL_BASE_DIR]/skills/copilot-review/scripts/wait-for-copilot-review.sh <PR_NUMBER> 480
+mkdir -p .claude/team/waits && \
+bash [SKILL_BASE_DIR]/skills/copilot-review/scripts/wait-for-copilot-review.sh <PR_NUMBER> \
+  > .claude/team/waits/copilot-<PR_NUMBER>.log 2>&1
 ```
 
-Use `timeout: 540000` on the Bash tool call. The numbers are chosen to be
-consistent, and must stay that way if you change one:
+**Do NOT run it in the foreground.** The Bash tool caps a foreground `timeout` at
+600 000 ms, which is below the script's 900 s budget — a foreground call is
+guaranteed to be killed mid-poll, printing no STATUS and no exit code. That kill is
+what previously made the re-run protocol unreachable and forced blind retries.
+Backgrounded processes are not subject to the cap, which is why the budget can now
+cover the worst observed delivery time (12 m 42 s) in **one run**.
 
-| Value | Setting | Why |
-|-------|---------|-----|
-| 480 s | script argument (also its default) | The script budgets this against the **wall clock**, so it covers poll sleeps *and* the 2+ network round-trips per poll |
-| 540 s | Bash tool `timeout: 540000` | 60 s of headroom over the script's budget, for the timeout diagnostics and API latency at the end |
-| 600 s | the tool's hard cap | Never exceed it; raise the run count, not the budget |
+### Read the `STATUS=` line
 
-On **exit 1** (timeout) re-run the same command — up to **3 runs total** (~24
-minutes), which comfortably covers the worst observed delivery time of 12 m 42 s.
-Escalate to the user only after that.
+The script's last stdout line is `STATUS=<state>`; the exit code mirrors it. Branch
+on STATUS, not on prose.
 
-**⚠️ CRITICAL: Run in FOREGROUND — do NOT use `run_in_background`.** The output must be directly available to determine the result.
+| STATUS | Exit | What to do |
+|---|---|---|
+| `TERMINAL_PASS` | 0 | A review covers the current head and no Copilot thread is open → **Step 2b**, then Step 4 to confirm. |
+| `TERMINAL_FAIL` | 1 | A review covers the current head and threads remain open (or the count could not be read) → **Step 2b**, then Step 3. Settled — do not re-run for a better answer. |
+| `PENDING` | 2 | No review of the current head arrived within 900 s. **Not a failure and not a clean result.** Re-running is safe. If it still has not arrived, STOP and report: "Copilot review has not arrived for PR #N head `<sha>`. Cannot merge without it." **Never** record this as "no findings". |
+| `NOT_CONFIGURED` | 3 | **Never returned by this script.** Whether Copilot is "configured" has no answerable form — `requested_reviewers` does not work at all (**D1/D3**). Do not branch on it, and do not reinstate any "request again, then re-run" recovery keyed to it. |
+| `ERROR` | 4 | Bad arguments, `gh` too old, PR head unresolvable → report to the user. The wait never started. |
 
-Script exit codes:
-- **Exit 0**: A review exists whose `commit_id` equals the current head → proceed to Step 3. The script prints machine-readable lines; read them rather than branching on the exit code alone:
-  - `REVIEWED_COMMIT_ID=<sha>` and `PR_HEAD_SHA=<sha>` — **verify they match yourself** rather than trusting the exit code. This is the one line that genuinely gates: a review of a superseded commit is not coverage.
-  - `SUPPRESSED_COMMENTS=1|0|unknown` — **informational only** (**D4**). `1` means a block is present, `0` means the fetch succeeded and found none, `unknown` means the fetch failed so the script cannot say. None of the three blocks the gate. Do not open the block as a matter of routine, and do not re-run the waiter merely to turn `unknown` into a number.
-  - The review body is printed too. **Read its verdict headline** and note whether Copilot opened any threads — that pair is what decides the outcome (see **Reading Copilot's Verdict**).
-- **Exit 1**: **Timeout** — no review of the current head arrived yet. This is *not* a failure and *not* a clean result. Re-run the script (up to 3 runs total). If it still has not arrived, STOP and report: "Copilot review has not arrived for PR #N head `<sha>`. Cannot merge without it." **Never** record this as "no findings".
-- **Exit 2**: **Retired — the script never returns it.** It used to mean "no review requested", derived from the broken `requested_reviewers` signal (**D1/D3**). Do not branch on it, and do not reinstate any "request again, then re-run" recovery keyed to it.
-- **Exit 3**: Environment/usage error — bad arguments, `gh` too old, PR head unresolvable → report error to user. The wait never started.
+On a settled review the script also prints machine-readable lines; read them rather
+than branching on STATUS alone:
+
+- `REVIEWED_COMMIT_ID=<sha>` and `PR_HEAD_SHA=<sha>` — **verify they match yourself**. This is the one line that genuinely gates: a review of a superseded commit is not coverage.
+- `UNRESOLVED_THREADS=<n|unknown>` — `unknown` means the read **failed**, not that there are none. The script fails closed on it and reports `TERMINAL_FAIL`; verify the threads yourself.
+- `SUPPRESSED_COMMENTS=1|0|unknown` — **informational only** (**D4**). `1` means a block is present, `0` means the fetch succeeded and found none, `unknown` means the fetch failed so the script cannot say. None of the three blocks the gate. Do not open the block as a matter of routine, and do not re-run the waiter merely to turn `unknown` into a number.
+- The review body is printed too. **Read its verdict headline** and note whether Copilot opened any threads — that pair is what decides the outcome (see **Reading Copilot's Verdict**). STATUS reflects the mechanical thread gate only.
 
 ### Step 2b: Read the Verdict, Not the Suppressed Block
 
@@ -367,7 +375,7 @@ A suppressed-comments block does **not** appear in that list, in any state
 (**D4**). It is not a criterion, and neither `SUPPRESSED_COMMENTS=1` nor `unknown`
 withholds the gate.
 
-**Never report this gate as passed on the grounds that polling found no new feedback.** Absence of a review is not a clean review, and a timeout (exit 1) is not a verdict. Silence here is an unasked question, not an answer.
+**Never report this gate as passed on the grounds that polling found no new feedback.** Absence of a review is not a clean review, and `STATUS=PENDING` is not a verdict. Silence here is an unasked question, not an answer.
 
 **Never report this gate as passed on a zero thread count alone.** Zero threads on
 a commit that is not the head says nothing about the code being merged — the

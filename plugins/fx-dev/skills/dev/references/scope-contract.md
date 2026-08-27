@@ -104,7 +104,7 @@ Every downstream rule is written in terms of **blocking**, deliberately. Fix blo
 
 **This generalises, and it is the rule that keeps this document workable: every normative rule here is defined once and referenced, never restated.** That covers the blocking definition, the convergence test, the iteration bound, the two conditions that re-open scope, and the resolver dispositions below. A skill that paraphrases one of them creates a copy that goes stale the moment the original changes — and a stale copy is always the *narrower* one, so it under-blocks, under-converges, or re-opens scope it should not. Name the rule and link the section. If a skill genuinely needs different behaviour, change it here, for everyone.
 
-**One exception, and only one: text sent verbatim to an external tool.** A prompt handed to `codex review`, `cr`, or any reviewer outside this repo cannot follow a link, so it MUST inline the rule. Such a block is a **mirror**: mark it as one, keep it a faithful restatement of the canonical section rather than an independent edit, and update it in the same commit that changes the canonical text. Nothing an agent reads directly qualifies — only strings crossing a process boundary.
+**One exception, and only one: text sent verbatim to an external tool.** A prompt handed to `codex review` or any reviewer outside this repo cannot follow a link, so it MUST inline the rule. Such a block is a **mirror**: mark it as one, keep it a faithful restatement of the canonical section rather than an independent edit, and update it in the same commit that changes the canonical text. Nothing an agent reads directly qualifies — only strings crossing a process boundary.
 
 ### Resolver dispositions
 
