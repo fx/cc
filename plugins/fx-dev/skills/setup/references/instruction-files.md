@@ -32,7 +32,6 @@ CLAUDE.md    -> `@AGENTS.md` import (Claude Code does not read AGENTS.md)
 | Tool | Reads `AGENTS.md` | Reads `REVIEW.md` | Bridge needed |
 |------|---|---|---|
 | **Copilot code review** | yes | **yes, natively** | none |
-| **Claude Code Review** (GitHub App) | no (reads `CLAUDE.md` as nits) | **yes, natively** | none |
 | **Codex** (CLI + PR review) | yes | no | `## Code Review Rules` section in `AGENTS.md` |
 | **CodeRabbit** | yes (default pattern) | no | add `**/REVIEW.md` to `knowledge_base.code_guidelines.filePatterns` |
 | **Claude Code** (CLI) | no | no | `CLAUDE.md` containing `@AGENTS.md` |
@@ -56,9 +55,9 @@ so `CLAUDE.md` exists as a one-line `@AGENTS.md` import.
 
 ## `REVIEW.md` is pasted verbatim
 
-Claude Code Review injects `REVIEW.md` into the review system prompt as-is.
-`@` imports are **not** expanded and referenced files are **not** read. Write the
-rules directly in the file — never `See docs/conventions.md`.
+Every reviewer that consumes `REVIEW.md` takes it as-is: `@` imports are **not**
+expanded and referenced files are **not** read. Write the rules directly in the
+file — never `See docs/conventions.md`.
 
 Keep it focused. A long `REVIEW.md` dilutes the rules that matter. Put the
 highest-value rules first: Copilot weights roughly the first 4000 characters
@@ -69,7 +68,7 @@ most heavily.
 When an automated reviewer's feedback is **INCORRECT** (it conflicts with a
 deliberate project convention), the fix goes in **`REVIEW.md`** — always, for
 every reviewer. One file, so suppressing a false positive suppresses it for
-Copilot, CodeRabbit, Codex, and Claude Code Review at once.
+Codex, Copilot, and CodeRabbit at once.
 
 `AGENTS.md` is for how the code is *written*. `REVIEW.md` is for how the code is
 *reviewed*. When a rule is "this pattern is intentional, don't flag it", it is a

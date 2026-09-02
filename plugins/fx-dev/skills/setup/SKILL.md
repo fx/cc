@@ -277,7 +277,7 @@ That single line is the whole file. Claude Code expands the import at load time,
 
 ### Step 8: Ensure `REVIEW.md`
 
-`REVIEW.md` at the repo root is the canonical **review-conventions** file. **Copilot code review and Claude Code Review both read it natively**; Codex reaches it via the pointer in 8.3; CodeRabbit reaches it via Step 9.
+`REVIEW.md` at the repo root is the canonical **review-conventions** file. **Copilot code review reads it natively**; Codex reaches it via the pointer in 8.3; CodeRabbit reaches it via Step 9. Those three are the whole reviewer roster.
 
 #### 8.1 Preconditions
 

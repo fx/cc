@@ -9,7 +9,7 @@ This repo uses the standard layout that `fx-dev:setup` scaffolds — two canonic
 | Path | Role |
 |------|------|
 | `AGENTS.md` | **This file.** Project conventions: how code is written. Read natively by Codex, Copilot, and CodeRabbit |
-| `REVIEW.md` | Review conventions: what reviewers should and should not flag. Read natively by Copilot code review and Claude Code Review |
+| `REVIEW.md` | Review conventions: what reviewers should and should not flag. Read natively by Copilot code review |
 | `CLAUDE.md` | Pointer — a single `@AGENTS.md` import, because Claude Code does not read `AGENTS.md` |
 | `.coderabbit.yaml` | Lists `**/REVIEW.md`, which is not in CodeRabbit's default patterns |
 

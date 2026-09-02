@@ -14,7 +14,7 @@ Claude Code plugins for development workflows, research, and productivity.
 Complete development workflow including SDLC, pull requests, and GitHub integration.
 
 **Components**:
-- 10 agents: sdlc, coder, planner, requirements-analyzer, issue-updater, pr-reviewer, pr-preparer, pr-check-monitor, pr-changeset-minimalist, workflow-runner
+- 8 agents: sdlc, coder, planner, requirements-analyzer, issue-updater, pr-preparer, pr-check-monitor, workflow-runner
 - 1 skill: copilot-feedback-resolver
 - 2 commands: /dev, /gitingest
 

@@ -6,9 +6,8 @@ description: "Explicit-use only — invoke when the user explicitly names this s
 # Review
 
 **The one procedure every fx-dev reviewer follows.** The platform skills —
-`codex-review`, `coderabbit-review`, `copilot-review`, `pr-reviewer`,
-`resolve-pr-feedback`, `copilot-feedback-resolver`, `rabbit-feedback-resolver` —
-are adapters. They describe how to drive one particular tool: its command, its
+`codex-review`, `coderabbit-review`, `copilot-review`, `resolve-pr-feedback`,
+`copilot-feedback-resolver`, `rabbit-feedback-resolver` — are adapters. They describe how to drive one particular tool: its command, its
 flags and quirks, the shape of its output, the threads or checks it exposes.
 Everything else — what to review, what to report, what to fix, when to stop —
 lives here and is identical for all of them.
@@ -183,8 +182,8 @@ brief and the ledger, and a resolver classifying from comment text alone does no
 ## Step 6: Record incorrect findings in `REVIEW.md`
 
 When a reviewer flags a pattern that is a deliberate project convention, write the
-rule into **`REVIEW.md` at the repo root**. One entry stops Codex, Copilot,
-CodeRabbit and Claude Code Review from raising it again — they all resolve to that
+rule into **`REVIEW.md` at the repo root**. One entry stops Codex, Copilot and
+CodeRabbit — the whole roster — from raising it again; they all resolve to that
 file.
 
 That entry is **required work, not an edit made for an immaterial finding**: it is
@@ -197,9 +196,9 @@ the only thing that stops the false positive recurring, and its commit is expect
   burying one review rule in a large unrelated diff is not an acceptable change.
   Mention that `/fx-dev:setup` completes the layout later.
 - **Keep the top section under 4000 characters.** Copilot reads roughly the first
-  4000 when reviewing, and `REVIEW.md` is pasted verbatim into Claude Code
-  Review's prompt, where length dilutes the rules that matter. Put the most
-  important rules in a `## PR Review Checklist (CRITICAL)` section at the top.
+  4000 when reviewing, and every reviewer takes the file verbatim, where length
+  dilutes the rules that matter. Put the most important rules in a
+  `## PR Review Checklist (CRITICAL)` section at the top.
 - `REVIEW.md` is pasted verbatim: `@` imports are not expanded and referenced
   files are not read. Write the rule out in full; never write `See docs/…`.
 

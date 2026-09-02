@@ -225,7 +225,7 @@ outdated/incorrect path — reply, resolve, and update `REVIEW.md` where a
 convention was misread — reachable, which an authoritative disposition would
 close off.
 
-**If multiple exist:** Prefer running Copilot and CodeRabbit resolvers **in parallel** by spawning each as a sub-agent in the same message (see `fx-dev:dev` Step 6.3 for the exact pattern). Codecov is sequential after them since coverage fixes typically require code from the other resolvers to be in place first.
+**If multiple exist:** Prefer running Copilot and CodeRabbit resolvers **in parallel** by spawning each as a sub-agent in the same message (see `fx-dev:dev` Step 6.1 for the exact pattern). Codecov is sequential after them since coverage fixes typically require code from the other resolvers to be in place first.
 
 ### 5. Verify All Resolved AND Loop Until Convergence
 
@@ -243,7 +243,7 @@ After invoking resolver skills, re-query to confirm all threads are resolved AND
    that the ledger test alone does not cover:
    - the state holds on a head SHA that was **actually reviewed** (verify: the
      newest Copilot review's `commit_id` equals `headRefOid`);
-   - **every automated thread on that head is resolved**.
+   - **every thread on that head from a reviewer this skill categorised is resolved** — say which reviewers that covered, since a bot with no adapter is outside this query and is the caller's to settle.
 
    A suppressed-comments block is **not** a third condition and never extends this
    loop (`fx-dev:copilot-review` **D4**), and neither does a *Needs a closer look*
@@ -277,6 +277,15 @@ This skill resolves automated feedback and `fx-dev:github` forbids touching huma
 review threads at all, so an unfiltered query makes one open human comment
 permanently unsatisfiable and loops this skill against work it must not do:
 
+**Say what this verdict covers when you report it.** The categorisation above
+matches Copilot and CodeRabbit by author login, so a clean result here means
+*those* reviewers are settled — it is not evidence about a third automated
+reviewer a repo has configured, whose threads this skill never categorised and
+never resolved. Those still gate the merge, and the caller settles them by hand
+(`fx-dev/skills/dev/references/scope-contract.md` § Injecting the brief into
+reviews). Reporting a bare "0 unresolved" hands the caller a merge gate it has
+not actually verified.
+
 ```bash
 # Replace OWNER, REPO, PR_NUMBER with actual values (GraphQL body — no shell expansion here)
 gh api graphql -f query='
@@ -306,8 +315,10 @@ query {
 ```
 
 That reports a per-reviewer breakdown, so "unresolved threads remain" comes with the
-reviewer name attached. An empty array means no automated reviewer has open feedback;
-any human threads it excluded are deliberately not your concern.
+reviewer name attached. An empty array means **the reviewers this skill categorised
+by login** have no open feedback — not that the PR has none. Human threads it
+excluded are deliberately not your concern; a third bot's threads are the caller's,
+per the caveat above.
 
 If unresolved threads remain, report which reviewers still have open feedback.
 
@@ -327,17 +338,17 @@ If unresolved threads remain, report which reviewers still have open feedback.
 - Invoked fx-dev:resolve-codecov-feedback
 
 ### Final Status
-- All automated review threads resolved
+- All Copilot and CodeRabbit threads resolved (no other reviewer categorised)
 - Coverage improved to 85%
 ```
 
 ## Success Criteria
 
-1. All unresolved automated review threads identified — matched on the `copilot-pull-request-reviewer` login, **not** the bare `Copilot`. Suppressed comments are **not** part of this: they open no thread and are ignored by default (`fx-dev:copilot-review` **D4**)
+1. All unresolved threads **from the reviewers this skill categorises** identified — matched on the `copilot-pull-request-reviewer` login, **not** the bare `Copilot`. State the roster the verdict covers when reporting it; a reviewer with no adapter is outside it and is settled by the caller. Suppressed comments are **not** part of this: they open no thread and are ignored by default (`fx-dev:copilot-review` **D4**)
 2. Appropriate resolver skill(s) invoked (Copilot + CodeRabbit in parallel where applicable)
-3. The wait-and-resolve loop has CONVERGED — a Copilot review has been **RECEIVED for the current head SHA**, left **no blocking finding unresolved** (including any carried from an earlier pass), and every automated thread on that head is resolved. Immaterial findings resolved by reply do not block this. Do not add "and was requested", which is not a determinable fact (**D1**). A quiet poll on an unreviewed head is not convergence
+3. The wait-and-resolve loop has CONVERGED — a Copilot review has been **RECEIVED for the current head SHA**, left **no blocking finding unresolved** (including any carried from an earlier pass), and every thread on that head from a reviewer this skill categorised is resolved. Immaterial findings resolved by reply do not block this. Do not add "and was requested", which is not a determinable fact (**D1**). A quiet poll on an unreviewed head is not convergence
 4. CodeRabbit's check is in a terminal passing state (or absent if not configured)
-5. Final verification confirms all threads resolved
+5. Final verification confirms every categorised reviewer's threads resolved, and says which reviewers that covered
 6. Summary output provided
 
 ## Error Handling

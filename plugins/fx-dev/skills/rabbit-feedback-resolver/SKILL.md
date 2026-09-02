@@ -135,7 +135,7 @@ Patterns are **case-sensitive**: `review.md` does not match `**/REVIEW.md`.
 
 #### When to Update REVIEW.md
 
-If CodeRabbit feedback conflicts with project conventions (INCORRECT category), document the correct pattern in `REVIEW.md`. Since every reviewer reads it, one entry stops Copilot, CodeRabbit, Codex, and Claude Code Review from flagging it again.
+If CodeRabbit feedback conflicts with project conventions (INCORRECT category), document the correct pattern in `REVIEW.md`. Since every reviewer reads it, one entry stops Codex, Copilot, and CodeRabbit from flagging it again.
 
 **Never create or edit `.github/copilot-instructions.md`** — it is obsolete; Copilot reads `REVIEW.md` directly.
 

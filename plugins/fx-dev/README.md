@@ -8,7 +8,7 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 
 ## Components
 
-### Skills (28)
+### Skills (26)
 
 #### SDLC Skills
 - **dev** - Orchestrates the complete SDLC workflow including planning, implementation, review, and finalization
@@ -20,10 +20,8 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 - **issue-updater** - Updates GitHub issues with planning information and status changes
 
 #### PR Management Skills
-- **pr-reviewer** - Reviews pull requests and reports findings by tier: blocking individually, deferred with the exclusion that covers each, immaterial in one closing note (adapter over **review**)
 - **pr-preparer** - Prepares PRs for submission, ensures compliance with project standards
 - **pr-check-monitor** - Monitors GitHub PR checks and coordinates fixes for failures
-- **pr-changeset-minimalist** - Reviews changesets to ensure only minimal necessary changes
 - **workflow-runner** - Executes complete workflows from start to finish, ensuring all phases complete
 
 #### Review & CI Skills
@@ -87,11 +85,11 @@ Issue Update (issue-updater skill)
     ↓
 Implementation (coder skill)
     ↓
+Local Review (codex-review skill — the only local reviewer)
+    ↓
 PR Preparation (pr-preparer skill)
     ↓
-Changeset Review (pr-changeset-minimalist skill)
-    ↓
-Code Review (pr-reviewer skill)
+PR Review (copilot-review, coderabbit-review skills)
     ↓
 Automated Feedback (copilot-feedback-resolver, rabbit-feedback-resolver skills)
     ↓
@@ -127,17 +125,11 @@ Updates GitHub issues with planning information, status changes, and implementat
 
 ### PR Management Skills
 
-#### pr-reviewer
-Reviews pull requests with a pragmatic approach. Focuses on bugs, security, and performance.
-
 #### pr-preparer
 Analyzes branch changes, reviews commit history, and ensures PRs adhere to project standards.
 
 #### pr-check-monitor
 Monitors GitHub pull request checks and coordinates fixes for failing checks via sub-agents.
-
-#### pr-changeset-minimalist
-Reviews changesets to ensure only minimal necessary changes without extraneous modifications.
 
 #### workflow-runner
 Executes complete workflows from start to finish, looping until success criteria are met.
@@ -163,17 +155,16 @@ Meta-skill that detects all unresolved automated feedback (Copilot, CodeRabbit, 
 ### Pull Request Management
 
 1. **Always prepare PRs** - pr-preparer runs before creating PRs
-2. **Review for minimalism** - pr-changeset-minimalist catches extraneous changes
-3. **Pragmatic reviews** - pr-reviewer focuses on blocking issues, not perfection
-4. **Auto-resolve feedback** - copilot-feedback-resolver and rabbit-feedback-resolver handle automated comments
-5. **Monitor checks** - pr-check-monitor catches and fixes CI failures
+2. **Pragmatic reviews** - the roster is Codex locally, then Copilot and CodeRabbit on the PR; each fixes blocking findings only, not perfection
+3. **Auto-resolve feedback** - copilot-feedback-resolver and rabbit-feedback-resolver handle automated comments
+4. **Monitor checks** - pr-check-monitor catches and fixes CI failures
 
 ## Configuration
 
 The skills respect project conventions from two canonical files:
 
 - **`AGENTS.md`** — project conventions: how code is written. Read natively by Codex, Copilot, and CodeRabbit; reached by Claude Code through a `CLAUDE.md` containing `@AGENTS.md`.
-- **`REVIEW.md`** — review conventions: what reviewers should and should not flag. Read natively by Copilot code review and Claude Code Review; reached by CodeRabbit via `.coderabbit.yaml`, and by Codex via a `## Code Review Rules` pointer in `AGENTS.md`.
+- **`REVIEW.md`** — review conventions: what reviewers should and should not flag. Read natively by Copilot code review; reached by CodeRabbit via `.coderabbit.yaml`, and by Codex via a `## Code Review Rules` pointer in `AGENTS.md`.
 
 Plus:
 - Git commit and branch conventions

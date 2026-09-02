@@ -16,7 +16,7 @@ Quote the user's request **verbatim** — "spec out X, it must do Y and only tha
 Two scope failures are specific to this skill:
 
 - **Spec sprawl.** A spec is an invitation to document adjacent behavior nobody asked to change. Specify what the request covers; note the rest as open questions.
-- **Reviews with no context.** Specs and change documents get reviewed like code, and a reviewer that does not know this is a docs-only change reports missing implementation, missing tests, and absent dependencies. **Any review of the output — `fx-dev:codex-review`, `fx-dev:coderabbit-review`, `/code-review`, a reviewing sub-agent — MUST receive a Scope Brief stating that this change is documentation only, that the described work is planned rather than implemented, and which divergences from current code are deliberate.**
+- **Reviews with no context.** Specs and change documents get reviewed like code, and a reviewer that does not know this is a docs-only change reports missing implementation, missing tests, and absent dependencies. **Any review of the output — `fx-dev:codex-review`, `fx-dev:copilot-review`, `fx-dev:coderabbit-review`, or a reviewer a user invokes by hand — MUST receive a Scope Brief stating that this change is documentation only, that the described work is planned rather than implemented, and which divergences from current code are deliberate.**
 
 **Stop and tell the user** when specifying reveals the work needs materially more than the request implies — a subsystem they never named, several change documents where one was implied, or an architectural decision they have not made. Write the spec for what IS in scope, then state the boundary problem. Never quietly widen the spec.
 

@@ -37,14 +37,15 @@ Pay attention to the user's framing. "Just fix the login bug real quick" is a bu
 2. Analyze requirements
 3. Plan logical PR structure if needed
 4. Implement with tests
-5. Create PR
-6. Launch a sub-agent with the pr-reviewer skill
-7. Address feedback
-8. Launch a sub-agent with the pr-check-monitor skill for failing checks
-9. Continue until ready for user review
-10. Update issue to Done
+5. Run the local Codex review (`fx-dev:codex-review`) and converge it **before** opening the PR — it is the only local reviewer, and it is mandatory here exactly as in `fx-dev:dev` Step 4.5
+6. Create PR
+7. Settle the automated reviewers with `fx-dev:copilot-review` and, where its GitHub App is installed, `fx-dev:coderabbit-review`
+8. Address feedback
+9. Launch a sub-agent with the pr-check-monitor skill for failing checks
+10. Continue until ready for user review
+11. Update issue to Done
 
-**When invoked from SDLC:** Stop after step 4 (implement with tests + commit). Do NOT create PRs or launch reviewers.
+**When invoked from SDLC:** Stop after step 4 (implement with tests + commit). Do NOT create PRs or launch reviewers — the SDLC owns steps 5 onward.
 
 ## Multi-PR Coordination
 - Only ONE PR should be open at a time (sequential PRs per SDLC)

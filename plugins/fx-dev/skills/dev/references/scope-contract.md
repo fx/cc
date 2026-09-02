@@ -47,7 +47,13 @@ Build it **once**, as early as possible — the first skill to act on a user req
 
 ## Injecting the brief into reviews
 
-**Every review invocation MUST carry the Scope Brief.** This applies to `fx-dev:review` and every adapter over it — `fx-dev:codex-review`, `fx-dev:coderabbit-review`, `fx-dev:copilot-review`, `fx-dev:pr-reviewer`, `fx-dev:resolve-pr-feedback` and the two feedback resolvers — as well as `/code-review`, `/simplify`, and any sub-agent asked to evaluate work.
+**Every review invocation MUST carry the Scope Brief.** This applies to `fx-dev:review` and every adapter over it — `fx-dev:codex-review`, `fx-dev:coderabbit-review`, `fx-dev:copilot-review`, `fx-dev:resolve-pr-feedback` and the two feedback resolvers — and to any other reviewer a user invokes directly over the same change.
+
+**The reviewers fx-dev *drives* are Codex, Copilot and CodeRabbit, and no others.** Codex runs locally before the PR; Copilot and CodeRabbit — the latter only where its GitHub App is installed — run on the PR. No fx-dev workflow runs a Claude-side review pass: `/code-review`, `/simplify`, and reviewing sub-agents are not lifecycle gates. A user can still invoke them by hand, and when they do, the brief applies to them too.
+
+**That is a rule about what to *request*, not about whose threads to settle.** A repo may have other reviewers configured that fx-dev never invokes. Their threads still gate the merge — `docs/specs/fx-dev-authority/index.md` § Unresolved Reviewer Threads Gate Every Merge requires that no thread from *any* configured automated reviewer be left open under a merge, and that requirement is not narrowed by this roster. Triage and settle whatever arrives; just do not add a reviewer pass of your own.
+
+**Settling a reviewer fx-dev has no adapter for is done by hand, and there is a route.** There is a waiter and a resolver for Copilot and for CodeRabbit only, so a third reviewer's threads reach no resolver: the coordinator triages them against the brief exactly as it does Copilot's (which accepts no prompt either), replies with the disposition, and resolves the thread with the `resolveReviewThread` mutation documented in `fx-dev:github`. **`fx-dev:resolve-pr-feedback` reporting zero unresolved threads is not evidence for such a reviewer** — it categorises by author login and re-queries automated reviewers it knows, so a third bot's threads are outside what its verdict covers. Check them directly before claiming the gate is met, and if the thread cannot be settled, that is an escalation to the user, never a merge.
 
 - **Skills that accept arguments** — pass the brief as the argument.
 - **CLI reviewers that accept a prompt** — pass an OUT OF SCOPE / IN SCOPE prompt built from the brief.

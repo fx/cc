@@ -143,14 +143,14 @@ class halfway spends a full Copilot wait to be told about the other half.
 
 ## When to Use
 
-- After creating a PR (SDLC Step 6.3)
+- After creating a PR (SDLC Step 6.1)
 - **After every push to the PR branch** — including pushes that only fix review feedback. This is not optional and it is the step most often skipped.
 - Before merging any PR (team coordinator merge gate), against the head commit being merged
 - When user says "check copilot", "wait for copilot", "copilot review"
 
 ## Parallel With Other Reviewers
 
-This skill can run **in parallel** with `fx-dev:coderabbit-review` and any future automated-reviewer skills.
+This skill can run **in parallel** with `fx-dev:coderabbit-review`, the only other PR-level reviewer fx-dev requests.
 
 **There is no mode selection.** Every waiter is backgrounded, so reviewers run
 concurrently in every context — root session, `fx-dev:team` coordinator, or
@@ -265,7 +265,7 @@ reading. Take all bodies for the commit.
 
 ### Step 3: Resolve Feedback
 
-After the review is received, invoke the resolve-pr-feedback skill to process all automated review threads (Copilot, CodeRabbit, Codecov):
+After the review is received, invoke the resolve-pr-feedback skill to process the automated review threads it categorises (Copilot, CodeRabbit, Codecov):
 
 ```
 Skill tool: skill="fx-dev:resolve-pr-feedback",
