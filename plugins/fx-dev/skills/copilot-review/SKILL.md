@@ -192,9 +192,9 @@ an empty `requested_reviewers` as "the request did not land", and never treat a
 
 ### Step 2: Wait for a Review of the Current Head
 
-**⛔ Run the waiter in the BACKGROUND** (`run_in_background: true`), redirecting
-stdout and stderr to a log file, then read that file when the completion
-notification arrives:
+**⛔ Run the waiter in the BACKGROUND**, per
+`fx-dev/skills/dev/references/background-waits.md`, then read the log when the
+completion notification arrives:
 
 ```bash
 mkdir -p .claude/team/waits && \
@@ -202,12 +202,9 @@ bash [SKILL_BASE_DIR]/skills/copilot-review/scripts/wait-for-copilot-review.sh <
   > .claude/team/waits/copilot-<PR_NUMBER>.log 2>&1
 ```
 
-**Do NOT run it in the foreground.** The Bash tool caps a foreground `timeout` at
-600 000 ms, which is below the script's 900 s budget — a foreground call is
-guaranteed to be killed mid-poll, printing no STATUS and no exit code. That kill is
-what previously made the re-run protocol unreachable and forced blind retries.
-Backgrounded processes are not subject to the cap, which is why the budget can now
-cover the worst observed delivery time (12 m 42 s) in **one run**.
+The 900 s budget covers the worst observed delivery time (12 m 42 s) in **one
+run** — but only backgrounded; a foreground call is killed at the tool's cap long
+before that (background-waits.md § Why not the foreground).
 
 ### Read the `STATUS=` line
 

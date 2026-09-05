@@ -230,7 +230,7 @@ This is not hypothetical. In an observed run, all three coders received the TITL
 
 **Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. **Pass the STEP 0 Scope Brief into every reviewer invocation that accepts one, and apply it when triaging every reviewer that does not** (Copilot and the CodeRabbit GitHub App accept nothing). A finding covered by the brief's out-of-scope list is recorded as deferred with the covering exclusion — never silently fixed, never silently dropped, and never a reason to widen a teammate's PR. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback.
 
-**⛔ NEVER `sleep`, poll, or block waiting for anything.** Every wait — Copilot, CodeRabbit, CI — runs as a **backgrounded** wait script that notifies you on exit. Never run `gh pr checks --watch`, never chain sleeps, and never sit in a foreground wait. See **Waiting and reconciliation** below; this is the single largest source of wasted coordinator turns and it is non-negotiable.
+**⛔ NEVER `sleep`, poll, or block waiting for anything** (`fx-dev/skills/dev/references/background-waits.md`). Every wait — Copilot, CodeRabbit, CI — runs as a **backgrounded** wait script that notifies you on exit. Never run `gh pr checks --watch`. See **Waiting and reconciliation** below; this is the single largest source of wasted coordinator turns and it is non-negotiable.
 
 **Merge gates** → Always handle directly. See MANDATORY MERGE GATE CHECKLIST below.
 
@@ -245,9 +245,21 @@ This is not hypothetical. In an observed run, all three coders received the TITL
 
 ### Waiting and reconciliation (NON-NEGOTIABLE)
 
-**⛔ You never `sleep`. You never poll. You never block.** Every wake costs a full read of your entire context, and your context is the largest in the team — a poll loop is the single most expensive thing you can do, and it gets more expensive with every turn you add.
+**⛔ You never `sleep`. You never poll. You never block.** The rule, its rationale, and the ways a hand-rolled wait fails are in `fx-dev/skills/dev/references/background-waits.md` — read it once and apply it to every wait below.
 
 **Everything you wait on is backgrounded and notifies you.** Reviewer waiters, CI waiters, and teammate agents all wake you on completion. That is your only scheduling mechanism.
+
+#### ⛔ `idle` is not `completed` — silence is never progress
+
+**A teammate reporting `idle` has STOPPED. It will not wake you.** Only a *completed* teammate sends a completion notification. An idle one has ended its turn — parked awaiting input, or reporting progress mid-task — and sits indefinitely until `SendMessage` nudges it.
+
+Reading an `idle_notification` as "still working, it will wake me when it lands" produces a **mutual stall**: you go quiet waiting for a completion that will never fire, while the teammate waits for a message you will never send. Neither side is blocked, nothing errors, nothing is logged, and the run just stops. Observed: a 49-minute stall in which the delegated work had finished within the first minute.
+
+- **Never file an `idle_notification` and go idle yourself.** Read it, then nudge or accept completion.
+- **On unexplained silence, call `ListAgents` before waiting any longer.** Any teammate showing `idle` that you believe is still working needs a message, not more patience.
+- **Suspect a stall whenever a teammate reports progress rather than a result** — check the artifact it says it is waiting on (log mtime, process, PR) yourself.
+
+**The no-polling rule binds every teammate you spawn, not just you** (`fx-dev/skills/dev/references/background-waits.md` § The rule binds delegates too). Carry it into every coder prompt that could wait on a long-running tool.
 
 #### The ledger
 

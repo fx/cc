@@ -70,22 +70,15 @@ CodeRabbit alone; it does not relax Copilot, CI, tests, or other merge gates.
 
 CodeRabbit auto-runs — there is **no review-request step**.
 
-**⛔ Run the waiter in the BACKGROUND** (`run_in_background: true`), redirecting
-stdout and stderr to a log file, then read that file when the completion
-notification arrives:
+**⛔ Run the waiter in the BACKGROUND**, per
+`fx-dev/skills/dev/references/background-waits.md`, then read the log when the
+completion notification arrives:
 
 ```bash
 mkdir -p .claude/team/waits && \
 bash [SKILL_BASE_DIR]/skills/coderabbit-review/scripts/wait-for-coderabbit-review.sh <PR_NUMBER> \
   > .claude/team/waits/rabbit-<PR_NUMBER>.log 2>&1
 ```
-
-**Do NOT run it in the foreground.** The Bash tool caps a foreground `timeout` at
-600 000 ms, which is below the script's 900 s budget — a foreground call is
-guaranteed to be killed mid-poll, printing no STATUS and no exit code, which is
-exactly what used to force blind re-runs. Backgrounded processes are not subject to
-that cap. Never background it *without* the redirect: the cycle is driven by what
-the script prints.
 
 ### Read the `STATUS=` line
 

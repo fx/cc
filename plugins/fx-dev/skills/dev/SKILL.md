@@ -566,7 +566,7 @@ If any Test Plan items failed verification:
 
 ##### Run every waiter in the background — there is no mode selection
 
-**⛔ Launch each configured reviewer's wait script in the SAME message with `run_in_background: true`, each redirecting to its own log file.** They then run concurrently, and a completion notification wakes you per reviewer. This works identically in every context — root session, `fx-dev:team` coordinator, or sub-agent — so there is nothing to choose and no "can I spawn sub-agents?" branch. **Do not spawn sub-agents for reviewer waits; they buy nothing here.**
+**⛔ Launch each configured reviewer's wait script in the SAME message**, backgrounded per `references/background-waits.md`, each redirecting to its own log file. They then run concurrently and wake you per reviewer.
 
 ```bash
 # Both in ONE message, both run_in_background: true
@@ -619,15 +619,13 @@ transition to manage in this workflow.
 
 #### 7.1 Wait for CI Checks to Start and Complete
 
-**⛔ Run the bundled CI check script in the BACKGROUND** (`run_in_background: true`), redirecting to a log file, then read that log when the completion notification arrives:
+**⛔ Run the bundled CI check script in the BACKGROUND**, per `references/background-waits.md`, then read the log when the completion notification arrives:
 
 ```bash
 mkdir -p .claude/team/waits && \
 bash [SKILL_BASE_DIR]/skills/dev/scripts/wait-for-ci-checks.sh [PR_NUMBER] \
      > .claude/team/waits/ci-[PR_NUMBER].log 2>&1
 ```
-
-**Do NOT run it in the foreground.** The Bash tool caps a foreground `timeout` at 600 000 ms, which is below the script's 900 s budget — a foreground call is guaranteed to be killed mid-poll, losing the output entirely. Backgrounded processes are not subject to that cap. **Never background it without the redirect**: the workflow reacts to what the script prints.
 
 Script behavior:
 - Phase 1 (discovery): waits up to 90 s for any check to appear.
