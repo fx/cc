@@ -304,7 +304,7 @@ duvet# A pull request MUST NOT be merged while any review thread on it from a co
 | 4 | **Spec task marked complete** | Check via project-management skill | YES |
 | 5 | **PR description is clear** | Read PR body | YES |
 | 5b | **PR title is clean AND conventional** | Title (a) is a conventional-commit subject — run the canonical check from the `fx-dev:github` skill's "Use Conventional Formats" (a plain prose title with no `type:` prefix FAILS) — AND (b) has NO stray `#<number>` (only a real PR/issue ref) and NO wave/phase/step/change-doc number. Fix with `gh pr edit <N> --title "type(scope): …"` before merge — squash bakes the title into `main` | YES |
-| 5c | **PR body is NOT hard-wrapped** | `gh pr view <N> --json body -q .body \| awk '{print length}' \| sort -rn \| head -3` — prose paragraphs must be long single lines. Prose clustering at 70-90 characters means the body was hard-wrapped: rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>` before merging. Lists, tables and code blocks are exempt | YES |
+| 5c | **PR body is NOT hard-wrapped** | Run the canonical **"Mechanical body check"** from the `fx-dev:github` skill — it exempts lists, tables and code blocks, judges only prose, and exits 1 printing `HARD-WRAPPED` when prose clusters in the 60-100 column band. Do NOT substitute a `sort -rn \| head` on line lengths: the longest lines are usually exempt ones, so it passes a body whose prose is entirely wrapped. Fix with `gh pr edit <N> --body-file <file>` and re-run before merging | YES |
 | 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
 
 ### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL

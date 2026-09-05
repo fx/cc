@@ -56,13 +56,27 @@ Then, your primary responsibilities:
 
    **Never hard-wrap the description.** GitHub reflows markdown to the reader's viewport, so hard-wrapping prose at 80 columns (or any column) only renders ragged and re-wraps badly on narrow screens. Write each paragraph as ONE long line and let it soft-wrap. Commit messages are the opposite — those stay wrapped at ~72 columns, because git renders them as plain text. See the `fx-dev:github` skill's "Never hard-wrap anything GitHub renders as markdown".
 
-   **Verify it, do not merely intend it.** After creating or editing the PR, run the body check and read the result:
+   **Verify it, do not merely intend it.** After creating or editing the PR, run the canonical body check from the `fx-dev:github` skill's "Mechanical body check" — restated here in full so it reaches you even when that skill is not loaded — and read its output:
 
    ```bash
-   gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
+   gh pr view <N> --json body -q .body | awk '
+     /^[[:space:]]*```/            { fence = !fence; next }   # fenced code: toggle and skip
+     fence                         { next }
+     /^[[:space:]]*$/              { next }                   # blank
+     /^[[:space:]]*#/              { next }                   # heading
+     /^[[:space:]]*>/              { next }                   # blockquote
+     /^[[:space:]]*\|/             { next }                   # table row
+     /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]/ { next }    # list item
+     { n++; if (length($0) >= 60 && length($0) <= 100) w++ }
+     END {
+       if (n == 0) { print "no prose lines to check"; exit 0 }
+       printf "prose lines: %d; in the 60-100 col hard-wrap band: %d\n", n, w
+       if (w * 2 > n) { print "HARD-WRAPPED - rewrite each paragraph as ONE long line"; exit 1 }
+       print "OK - prose is not hard-wrapped"
+     }'
    ```
 
-   Prose paragraphs are long single lines, so the top lengths should far exceed 100. Prose clustering at 70-90 characters means the body went out hard-wrapped — rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>`.
+   It exempts fenced code, headings, blockquotes, tables and lists, and judges only prose. It **exits 1 and prints `HARD-WRAPPED`** when prose clusters in the 60-100 column band. If it does, rewrite each paragraph as one long line and `gh pr edit <N> --body-file <file>`, then run it again.
 
 5. **Check Compliance**: Verify adherence to:
    - Project-specific guidelines from AGENTS.md files

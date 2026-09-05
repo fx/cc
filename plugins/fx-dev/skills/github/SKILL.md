@@ -196,24 +196,37 @@ This applies however the body is authored — heredoc, `--body-file`, or `gh api
 
 A convention that lives only in this skill does not survive delegation: an agent spawned with an ad-hoc prompt never loads it. Whenever you delegate PR creation — a `/team` coder opening its own PR, a fix agent editing a body, any sub-agent running `gh pr create` — paste this block into that agent's prompt verbatim. Quote it by name ("the github skill's PR conventions block") when referring to it from another skill.
 
-```markdown
+~~~markdown
 ### PR conventions (mandatory)
-- TITLE: a conventional-commit subject matching `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` — lowercase after the colon, imperative, no trailing period.
+- TITLE: a conventional-commit subject. The **mechanical floor** is `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` — that regex checks the type prefix and nothing else, so passing it is necessary, not sufficient.
+- TITLE: three more rules the floor regex cannot express. Two are checkable against the title (`grep -Eq '^[a-z]+(\(.+\))?!?: [a-z]'` must match — lowercase after the colon; `grep -Eq '\.$'` must NOT match — no trailing period). The third, **imperative mood** ("add", not "adds" or "added"), has no mechanical check: read the title and confirm it by eye.
 - TITLE: no `#<number>` unless it references a real existing PR/issue, and no wave/phase/step/batch or change-doc number. Squash-merge bakes the title into the default branch, where `#N` auto-links permanently.
 - BODY: **never hard-wrapped.** GitHub reflows markdown to the reader's viewport, so write each paragraph as ONE long line and let it soft-wrap. Lists, tables and fenced code blocks keep their own line structure. This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`.
 - COMMIT MESSAGE: the opposite — wrap the body at ~72 columns, because git renders it as plain text. The rule follows the renderer, not the content.
-- Verify before AND after creating: the title against the regex, and the body against the longest-prose-line check.
-```
-
-Mechanical body check — run it after creating or editing any PR body:
+- Verify before AND after creating: the title against every rule above, and the body with the command below. It judges only prose — fenced code, headings, blockquotes, tables and list items are skipped — and **exits 1 printing `HARD-WRAPPED`** when prose clusters in the 60-100 column band. Read its output; do not assume it passed. Fix with `gh pr edit <N> --body-file <file>` and re-run.
 
 ```bash
-gh pr view <N> --json body -q .body \
-  | awk '!/^(\s*([-*+]|[0-9]+\.)\s|\s*\||\s*```|#)/ && length > 200 {n++} END {exit 0} '
-# Prose paragraphs should be LONG single lines. If most prose lines cluster at 70-90
-# characters, the body is hard-wrapped — rewrite it and `gh pr edit <N> --body-file`.
-gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
+gh pr view <N> --json body -q .body | awk '
+  /^[[:space:]]*```/            { fence = !fence; next }   # fenced code: toggle and skip
+  fence                         { next }
+  /^[[:space:]]*$/              { next }                   # blank
+  /^[[:space:]]*#/              { next }                   # heading
+  /^[[:space:]]*>/              { next }                   # blockquote
+  /^[[:space:]]*\|/             { next }                   # table row
+  /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]/ { next }    # list item
+  { n++; if (length($0) >= 60 && length($0) <= 100) w++ }
+  END {
+    if (n == 0) { print "no prose lines to check"; exit 0 }
+    printf "prose lines: %d; in the 60-100 col hard-wrap band: %d\n", n, w
+    if (w * 2 > n) { print "HARD-WRAPPED - rewrite each paragraph as ONE long line"; exit 1 }
+    print "OK - prose is not hard-wrapped"
+  }'
 ```
+~~~
+
+**That command is the canonical "Mechanical body check"**, and `fx-dev:team` merge gate 5c refers to it by that name. Run it yourself after creating or editing any PR body, not only when delegating.
+
+Do not substitute `awk '{print length}' | sort -rn | head -3`. The three longest lines in a body are usually a table row or a code line, both exempt, so it reports a healthy number for a body whose prose is entirely hard-wrapped.
 
 **Use Conventional Formats:**
 - **Commit messages**: Follow conventional commit format (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)

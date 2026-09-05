@@ -1,0 +1,1814 @@
+AGENTS.md -> REVIEW.md pointer: present
+MCP servers disabled for this run: 1
+  disabled: co
+Model: gpt-5.6-terra  Effort: medium
+
+Running codex review (one-shot, no timeout — this takes many minutes)...
+
+OpenAI Codex v0.152.1
+--------
+workdir: /shared/home/claude-2/.claude/plugins/marketplaces/fx-cc
+model: gpt-5.6-terra
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a072e3-d369-79b1-97a9-c2a3d1fd3df1
+--------
+user
+SCOPE — READ CAREFULLY BEFORE REVIEWING.
+
+The user asked: "converge /codex-review for the changes we made here then open a PR and /copilot-review converge it, and merge it"
+
+This change is documentation-only, to Claude Code skill instruction files (Markdown) in the fx-cc plugin marketplace: it propagates GitHub PR conventions (conventional-commit titles, never-hard-wrapped PR bodies) from the `fx-dev:github` skill into the prompts of delegated agents, because a spawned agent inherits its parent's prompt, not its parent's skills. Concretely it (a) adds a verbatim-pasteable "PR conventions block" plus a mechanical body-length check to `plugins/fx-dev/skills/github/SKILL.md`, (b) requires `plugins/fx-dev/skills/team/SKILL.md` to paste that block into every spawn prompt whose agent may open or edit a PR, and adds merge gate 5c for hard-wrapped bodies, (c) adds a "verify it, do not merely intend it" body check to `plugins/fx-dev/skills/pr-preparer/SKILL.md`, and (d) inserts an explicit PR-conventions step into the `plugins/fx-dev/skills/coder/SKILL.md` numbered workflow. It also bumps `plugins/fx-dev/.claude-plugin/plugin.json` to 5.1.0 and `.claude-plugin/marketplace.json` metadata.version to 0.26.0, which the repo's pre-commit hook mandates.
+
+OUT OF SCOPE — do NOT report any of these:
+- Missing tests. This repo has no test suite for Markdown skill instruction files; CI validates JSON structure and frontmatter presence only. There is nothing to add a test to.
+- Missing implementation, code, or scripts. This change is instructions for an LLM agent to follow; there is no runtime component by design.
+- Missing CHANGELOG entries, README updates, or documentation of the documentation. The repo does not maintain a CHANGELOG for fx-dev.
+- Anything about files not modified on this branch. In particular the pre-existing `duvet=` / `duvet#` spec-annotation lines in team/SKILL.md are an established repo convention, unmodified here.
+- The choice of semver bump (minor). It is the repo maintainer's call and the pre-commit hook accepted it.
+- Suggestions to deduplicate the PR conventions between github/SKILL.md, team/SKILL.md, and pr-preparer/SKILL.md by replacing restatements with cross-references. The change's entire thesis, stated explicitly in team/SKILL.md, is that a rule which lives only behind a reference does not survive delegation and must be restated. Disagreeing with that thesis is a preference, not a defect.
+
+IN SCOPE — review for:
+- Correctness of the shell/awk snippets that the instructions tell an agent to run. Do they actually do what the surrounding prose claims? A snippet that silently does nothing, or whose output cannot support the stated conclusion, is a defect a reader would act on.
+- Correctness of the regular expression given for conventional-commit PR titles, including whether the prose describing it ("lowercase after the colon, imperative, no trailing period") matches what the regex actually enforces.
+- Internal consistency across the four modified files: the same rule stated in more than one place must not be stated in mutually contradictory ways, and cross-references by name ("the github skill's PR conventions block", "Use Conventional Formats") must resolve to a section that actually exists under that name.
+- Correctness of the renumbered step list in coder/SKILL.md, including whether every other reference to those step numbers — inside that file and in the files that cite it — still points at the intended step. The file contains a "Stop after step 4" instruction and a reference to "fx-dev:dev Step 4.5".
+- Compliance with this repo's AGENTS.md and REVIEW.md, in particular the rule against leaking private repository names, internal URLs, or company-specific identifiers in documentation and examples.
+- Any instruction that is genuinely ambiguous such that an agent could act on it two different ways.
+
+Established this session and not to be relitigated:
+- `AGENTS.md` contains the `## Code Review Rules` pointer to `REVIEW.md`; the Codex bridge is present.
+- The repo's `core.hooksPath` is set to `.githooks` and the pre-commit version-bump hook ran and accepted this commit.
+- The `duvet=` annotation lines predate this change; they are verified present in HEAD~1.
+
+Report every BLOCKING finding. A finding is blocking if it is any of:
+
+1. A violation of a rule this project wrote down — anything in AGENTS.md or
+   REVIEW.md, a security or privacy invariant, or any other mandatory
+   requirement the project recorded, including a change document or a spec it
+   links. Report these whatever their direct behavioural impact; the project
+   already decided they matter, so do not weigh them against the bar below.
+2. Something that would change behaviour, break a build, a CI check or a test,
+   make the artifact unimplementable, or expose a security, privacy, or data-loss problem
+   — including a leaked credential, internal URL, or private identifier in
+   documentation or examples. A false statement counts when a reader would act
+   on it; a wrong number nothing keys on does not.
+3. A genuine ambiguity a reader could act on two ways, or a missing step that
+   would be discovered late and cost a cycle.
+
+Wording, formatting, and counts nothing keys on are NOT blocking: one closing
+note, not findings. The exception is item 1 above — where the project wrote down
+a rule about wording or formatting, violating it is blocking on those grounds,
+and this sentence does not override that.
+
+When a finding is one instance of a pattern that appears elsewhere, say so and
+list every other site you can see. Report it as ONE finding naming the class,
+not as one finding per site and not as a single site. A class reported whole is
+fixed in one pass; a class reported one instance at a time takes as many passes
+as it has members.
+
+Where this artifact marks a list as open — it says "for example", or it declares
+the list illustrative and the rule authoritative — assess the RULE. A further
+missing list entry is not a finding, and it does not belong in the closing note
+either: do not report it at all. The supply never runs out, so a note listing them
+grows without bound.
+
+Where the artifact admits a limit and gates it — "verified by X at
+implementation time", "open question gated on Y" — that is a disposition, not a
+gap. Check the gate is real and sequenced before the thing that depends on it,
+and do not report the limit itself as a missing step.
+
+Where it records a decision with its rationale — including "unknown, gated on
+X" — and your disagreement is about preference, that is settled: say so once as
+an escalation, and do not re-argue it. This does NOT cover a decision that is
+itself the defect. If the decision leaks a credential, an internal URL, or a
+private identifier, loses data, violates a security or privacy invariant, or
+contradicts a contract the project mandates — a spec, a change document, or a
+written project rule — report it as a blocking finding however carefully it is
+reasoned.
+
+If the artifact is internally consistent and matches the tree, say so plainly.
+warning: Codex could not find bubblewrap on PATH. Install bubblewrap with your OS package manager. See the sandbox prerequisites: https://developers.openai.com/codex/concepts/sandboxing#prerequisites. Codex will use the bundled bubblewrap in the meantime.
+exec
+/bin/bash -lc "cat REVIEW.md && printf '\\n--- DIFF ---\\n' && git diff --check HEAD~1 HEAD && git diff --unified=80 HEAD~1 HEAD && printf '\\n--- STATUS ---\\n' && git status --short && printf '\\n--- LOG ---\\n' && git log --oneline -3" in /shared/home/claude-2/.claude/plugins/marketplaces/fx-cc
+ succeeded in 0ms:
+# PR Review
+
+Canonical review conventions for this repository. Every automated reviewer reads
+this file: GitHub Copilot natively, CodeRabbit via `.coderabbit.yaml`, and Codex
+via the `## Code Review Rules` pointer in `AGENTS.md`. Those three are the whole
+roster — Codex locally before the PR, Copilot and CodeRabbit on the PR.
+
+Rules here improve review quality and suppress known false positives. This file
+is pasted verbatim into reviewer prompts — write rules out in full, never
+reference another file.
+
+## PR Review Checklist (CRITICAL)
+<!-- KEEP THIS SECTION UNDER 4000 CHARS - Copilot only reads the first ~4000 -->
+
+### Security and Privacy
+
+- **Do not allow private information leaks**: Flag any use of private repository names, internal URLs, API keys, credentials, or company-specific identifiers in code, documentation, or examples.
+- **Require generic placeholders**: Examples should use generic placeholders like `owner/repo`, `example.com`, `your-org`, etc.
+- **Check all files**: This applies to documentation (README.md, AGENTS.md, REVIEW.md), code examples, skill references, test cases, and commit messages.
+
+### HTML/Web Standards
+
+- Do not flag valid HTML closing tag structures. Standard HTML files should have `</body>` followed by `</html>` at the end of the file.
+- HTML files ending with proper closing tags followed by a newline are valid and follow standard formatting conventions.
+- Verify actual file content before suggesting structural issues with closing tags.
+
+### Versioning Requirements
+
+- If a PR modifies files inside `plugins/<name>/`, that plugin's `plugins/<name>/.claude-plugin/plugin.json` must have its `version` field bumped compared to main.
+- If any plugin version is bumped OR top-level repo files change, `.claude-plugin/marketplace.json` `metadata.version` must also be bumped.
+- Semver rules: patch for fixes/typos, minor for new features/skills, major for breaking changes (e.g., renamed or removed skills).
+- Flag PRs that change plugin content without corresponding version bumps.
+
+### GitHub CLI (gh) Capabilities
+
+- The `gh` CLI does NOT have built-in commands like `gh pr review-thread resolve` or `gh pr review-thread list`.
+- Do not suggest these non-existent commands as alternatives to the GraphQL API approach.
+- The correct method for programmatically resolving PR review threads is using the GitHub GraphQL API via `gh api graphql` with the `resolveReviewThread` mutation.
+- Verify command existence before suggesting `gh` CLI alternatives.
+
+### jq Semantics
+
+- `jq`'s `group_by(f)` sorts its input by `f` internally before grouping — that is documented behaviour, not incidental. A missing `sort` before `group_by` is NOT a defect and MUST NOT be flagged; `group_by` does not require pre-sorted input and does not only group adjacent elements.
+
+### Instruction File Layout
+
+- `AGENTS.md` holds project conventions; `REVIEW.md` holds review conventions. Do not suggest moving rules between them or reviving `CLAUDE.md` as a conventions file.
+- `CLAUDE.md` is intentionally a one-line `@AGENTS.md` import. Do not flag it as empty or incomplete.
+- There is intentionally **no** `.github/copilot-instructions.md`. Copilot code review reads `REVIEW.md` directly, so a second copy would only drift. Do not suggest adding one.
+
+## Repository Context
+
+This repository hosts a Claude Code marketplace for personal plugins, skills, and subagents. The `index.html` file serves as the marketplace landing page hosted on GitHub Pages.
+
+--- DIFF ---
+diff --git a/.claude-plugin/marketplace.json b/.claude-plugin/marketplace.json
+index 0370ef4..c5914e2 100644
+--- a/.claude-plugin/marketplace.json
++++ b/.claude-plugin/marketplace.json
+@@ -1,38 +1,38 @@
+ {
+   "name": "fx-cc",
+   "owner": {
+     "name": "Marian Rudzynski",
+     "url": "https://github.com/fx"
+   },
+   "metadata": {
+     "description": "Personal Claude Code plugins, skills, and subagents",
+-    "version": "0.25.0",
++    "version": "0.26.0",
+     "homepage": "https://cc.fx.gd"
+   },
+   "plugins": [
+     {
+       "name": "fx-dev",
+       "source": "./plugins/fx-dev"
+     },
+     {
+       "name": "fx-research",
+       "source": "./plugins/fx-research"
+     },
+     {
+       "name": "fx-mcp",
+       "source": "./plugins/fx-mcp"
+     },
+     {
+       "name": "fx-meta",
+       "source": "./plugins/fx-meta"
+     },
+     {
+       "name": "release-please",
+       "source": "./plugins/release-please"
+     },
+     {
+       "name": "steam",
+       "source": "./plugins/steam"
+     }
+   ]
+ }
+diff --git a/plugins/fx-dev/.claude-plugin/plugin.json b/plugins/fx-dev/.claude-plugin/plugin.json
+index 14470e2..7d1a58d 100644
+--- a/plugins/fx-dev/.claude-plugin/plugin.json
++++ b/plugins/fx-dev/.claude-plugin/plugin.json
+@@ -1,5 +1,5 @@
+ {
+   "name": "fx-dev",
+-  "version": "5.0.0",
++  "version": "5.1.0",
+   "description": "Complete development workflow including SDLC, pull requests, git utilities, and GitHub integration"
+ }
+diff --git a/plugins/fx-dev/skills/coder/SKILL.md b/plugins/fx-dev/skills/coder/SKILL.md
+index 85cb120..5a2d96e 100644
+--- a/plugins/fx-dev/skills/coder/SKILL.md
++++ b/plugins/fx-dev/skills/coder/SKILL.md
+@@ -1,76 +1,77 @@
+ ---
+ name: coder
+ description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Implements code changes while following the supplied scope and project conventions; PR creation remains a separate lifecycle stage."
+ ---
+ 
+ # Coder Skill
+ 
+ ## SDLC vs Direct Invocation
+ 
+ When invoked by the SDLC workflow (as a sub-agent), the coder is **implementation-only**: write code, run tests, commit. Do NOT create PRs — the SDLC orchestrator delegates that to pr-preparer. When invoked directly by the user (not via SDLC), the coder owns the full lifecycle including PR creation.
+ 
+ ## Scope Discipline (MANDATORY)
+ 
+ You implement **what was asked for**, not what you would have built.
+ 
+ If a coordinator handed you a **Scope Brief**, it is binding — stay inside it, and carry it verbatim into any reviewer you invoke. If you were invoked directly, reconstruct one from the user's own words before writing code. Full definition and calibration: `fx-dev/skills/dev/references/scope-contract.md`.
+ 
+ Pay attention to the user's framing. "Just fix the login bug real quick" is a budget, not filler; "refactor the auth module properly" authorizes depth. Treat "just", "only", "real quick", "small", and "minimal" as a `narrow` signal.
+ 
+ **Stop and tell the user** when the work turns out to need materially more than its framing implies — subsystems they never named, a migration or breaking change, several PRs where one was implied, or an architectural decision they have not made. Report what you found, why it exceeds the request, and the cheapest path forward; offer the narrow option first. Deliver everything unambiguously in scope first — never stop with nothing done.
+ 
+ **Do NOT stop for work inside the request's natural boundary:** tests for code you just wrote, docs the change invalidates, fixing a build you broke, or following an approved plan or change document to completion. Over-triggering wastes the user's attention as surely as sprawl wastes their time.
+ 
+ ## Capabilities
+ - Implement features/bug fixes
+ - Work on GitHub issues
+ - Auto-select next issue if none provided
+ - Run tests and commit changes
+ 
+ ## PR Strategy (direct invocation only)
+ 1. **Feature branch**: `feature/<issue>-<name>` from main
+ 2. **Sub-branches**: `feature/<issue>-<name>-part-<n>` for logical separation
+ 3. **Keep PRs focused**: Logical, reviewable chunks
+ 
+ ## Workflow (direct invocation)
+ 1. Get/select issue
+ 2. Analyze requirements
+ 3. Plan logical PR structure if needed
+ 4. Implement with tests
+ 5. Run the local Codex review (`fx-dev:codex-review`) and converge it **before** opening the PR — it is the only local reviewer, and it is mandatory here exactly as in `fx-dev:dev` Step 4.5
+-6. Create PR
+-7. Settle the automated reviewers with `fx-dev:copilot-review` and, where its GitHub App is installed, `fx-dev:coderabbit-review`
+-8. Address feedback
+-9. Launch a sub-agent with the pr-check-monitor skill for failing checks
+-10. Continue until ready for user review
+-11. Update issue to Done
++6. Load `fx-dev:github` and follow its **PR conventions block** — conventional-commit title, no `#<number>` or wave/phase wording in the title, and a body that is **never hard-wrapped** (one long line per paragraph; only the commit message wraps, at ~72 columns). Verify both before and after creating.
++7. Create PR
++8. Settle the automated reviewers with `fx-dev:copilot-review` and, where its GitHub App is installed, `fx-dev:coderabbit-review`
++9. Address feedback
++10. Launch a sub-agent with the pr-check-monitor skill for failing checks
++11. Continue until ready for user review
++12. Update issue to Done
+ 
+ **When invoked from SDLC:** Stop after step 4 (implement with tests + commit). Do NOT create PRs or launch reviewers — the SDLC owns steps 5 onward.
+ 
+ ## Multi-PR Coordination
+ - Only ONE PR should be open at a time (sequential PRs per SDLC)
+ - Track PR status in TodoWrite
+ - Shepherd each PR to completion before opening next
+ 
+ ## Standards
+ - Follow AGENTS.md rules
+ - Test bug fixes first
+ - Match code style
+ - Security best practices
+ - **Commit subjects: no `#<number>`, no waves/phases.** A commit subject auto-links `#N` to PR/issue #N, and it propagates into the PR title (GitHub pre-fills the title from a single commit's subject) and the squash-merge commit subject — so the PR-title rule applies here too: never put `#<number>` (`#4`, `(#4)`, `#123`) in a commit subject unless N is a real PR/issue ref on this repo, and never use a wave/phase/step/change-doc number there. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule".
+ 
+ ## Test Policy
+ 
+ **NEVER skip tests.** Using `test.skip`, `it.skip`, `describe.skip` is FORBIDDEN.
+ 
+ If a test cannot pass:
+ - **Fix it** - Update assertions to match correct behavior
+ - **Replace it** - Write a new test that validates the behavior
+ - **Refactor it** - Restructure to test what's actually testable
+ - **Remove it** - Delete entirely if testing something obsolete
+ 
+ If tests require infrastructure (auth, database, APIs):
+ - **Set it up** - Create test fixtures, auth helpers, mocks as needed
+ - Do NOT skip tests because infrastructure setup is "hard"
+ 
+ Remember: Ship working code in small PRs. You own the entire lifecycle - implement, review, fix, and prepare for user approval.
+diff --git a/plugins/fx-dev/skills/github/SKILL.md b/plugins/fx-dev/skills/github/SKILL.md
+index e0cc709..a830c79 100644
+--- a/plugins/fx-dev/skills/github/SKILL.md
++++ b/plugins/fx-dev/skills/github/SKILL.md
+@@ -115,160 +115,183 @@ without it.
+ 
+ ## ⛔ Release PR Prohibition (CRITICAL)
+ 
+ **NEVER merge release PRs.** This includes PRs created by:
+ 
+ - ❌ release-please (`chore(main): release X.Y.Z`)
+ - ❌ semantic-release
+ - ❌ changesets (`Version Packages`)
+ - ❌ Any automated versioning/release bot
+ 
+ Release PRs control package versioning. Merging them autonomously can publish unintended major/minor versions, which is irreversible. **The user must always merge release PRs manually.**
+ 
+ If a workflow requires a new version to be published (e.g., updating a dependency after an upstream PR merges), STOP and inform the user:
+ 
+ > A release PR exists. Please merge it manually when ready, then confirm so I can proceed.
+ 
+ ## Core Principles
+ 
+ ### 1. Verify All Operations
+ 
+ Always verify that `gh` commands produced the expected result:
+ 
+ ```bash
+ # After editing PR description
+ gh pr edit 13 --body-file /tmp/pr-body.md
+ gh pr view 13 --json body -q .body | head -20  # Verify it worked
+ 
+ # After resolving threads
+ gh api graphql -f query='mutation { ... }'
+ gh api graphql -f query='query { ... }' --jq '.data'  # Verify resolution
+ ```
+ 
+ ### 2. Prefer GitHub API for Complex Operations
+ 
+ For multi-step operations or data transformations, use `gh api graphql` directly:
+ 
+ ```bash
+ # More reliable than chaining CLI commands
+ gh api graphql -f query='...' --jq '.data.repository.pullRequest'
+ ```
+ 
+ ### 3. Use Correct Methods for Each Task
+ 
+ Check `references/known-issues.md` before attempting operations that have failed before. Common issues include:
+ 
+ - PR description updates with heredocs
+ - Review thread resolution vs. PR comments
+ - Command substitution in heredoc strings
+ 
+ ### 4. Follow Messaging Conventions
+ 
+ **Be Direct and Concise:**
+ - All PR descriptions, commit messages, and comments must be direct and to the point
+ - Eliminate unnecessary prose and filler content
+ - Focus on what changed and why, not how the work was organized
+ 
+ **⛔ Never hard-wrap anything GitHub renders as markdown:**
+ 
+ PR descriptions, PR/issue comments, and issue bodies MUST NOT be hard-wrapped at 80 columns — or any column. GitHub reflows markdown to the reader's viewport, so manual line breaks only produce ragged text that re-wraps badly on narrow screens. **Write each paragraph as ONE long line** and let it soft-wrap.
+ 
+ Commit messages are the **opposite**: git renders them as plain text, so wrap commit bodies at ~72 columns as usual. The rule follows the renderer, not the content.
+ 
+ | Target | Wrap? |
+ |---|---|
+ | Commit message body | Yes, ~72 columns |
+ | PR description / PR comment / issue body | **No — one line per paragraph** |
+ 
+ ```markdown
+ ❌ WRONG — hard-wrapped PR body, renders ragged on GitHub
+ ## Summary
+ Standardizes every skill on two canonical instruction files, with a
+ pointer for each tool that cannot read them natively.
+ 
+ ✅ RIGHT — one line per paragraph, GitHub reflows it
+ ## Summary
+ Standardizes every skill on two canonical instruction files, with a pointer for each tool that cannot read them natively.
+ ```
+ 
+ This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`. Tables, lists, and fenced code blocks keep their own line structure; the rule is about prose paragraphs.
+ 
++### PR conventions block (paste verbatim into any agent prompt that may open or edit a PR)
++
++A convention that lives only in this skill does not survive delegation: an agent spawned with an ad-hoc prompt never loads it. Whenever you delegate PR creation — a `/team` coder opening its own PR, a fix agent editing a body, any sub-agent running `gh pr create` — paste this block into that agent's prompt verbatim. Quote it by name ("the github skill's PR conventions block") when referring to it from another skill.
++
++```markdown
++### PR conventions (mandatory)
++- TITLE: a conventional-commit subject matching `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` — lowercase after the colon, imperative, no trailing period.
++- TITLE: no `#<number>` unless it references a real existing PR/issue, and no wave/phase/step/batch or change-doc number. Squash-merge bakes the title into the default branch, where `#N` auto-links permanently.
++- BODY: **never hard-wrapped.** GitHub reflows markdown to the reader's viewport, so write each paragraph as ONE long line and let it soft-wrap. Lists, tables and fenced code blocks keep their own line structure. This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`.
++- COMMIT MESSAGE: the opposite — wrap the body at ~72 columns, because git renders it as plain text. The rule follows the renderer, not the content.
++- Verify before AND after creating: the title against the regex, and the body against the longest-prose-line check.
++```
++
++Mechanical body check — run it after creating or editing any PR body:
++
++```bash
++gh pr view <N> --json body -q .body \
++  | awk '!/^(\s*([-*+]|[0-9]+\.)\s|\s*\||\s*```|#)/ && length > 200 {n++} END {exit 0} '
++# Prose paragraphs should be LONG single lines. If most prose lines cluster at 70-90
++# characters, the body is hard-wrapped — rewrite it and `gh pr edit <N> --body-file`.
++gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
++```
++
+ **Use Conventional Formats:**
+ - **Commit messages**: Follow conventional commit format (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)
+ - **PR titles**: MUST use conventional commit format — `type(scope): description` (e.g., `feat: add user authentication`, `fix(api): handle null token`). **BLOCKING**: on squash-merge the PR title becomes the commit subject, so a plain prose title (no `type:` prefix) permanently pollutes a conventional-commit history. **Canonical check** — every PR title, no matter who creates it (pr-preparer, the `/dev` workflow, or a `/team` coordinator running `gh pr create` directly), MUST match this regex; verify before creating AND before merging:
+   ```bash
+   gh pr view <N> --json title -q .title | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+' \
+     && echo "OK: conventional" || echo "⛔ NOT conventional — gh pr edit <N> --title \"type(scope): …\""
+   ```
+   A prose title like `Add anti-fabrication grounding rules` is FORBIDDEN — reform it (`feat(scope): add anti-fabrication grounding rules`). Creating the PR directly (not via pr-preparer) does NOT exempt you from this.
+ - **Branch names**: Use conventional naming (e.g., `feat/user-auth`, `fix/login-bug`)
+ - **Comments**: Use conventional comment markers where applicable
+ 
+ **Content Rules:**
+ - Describe the work being done and changes being made
+ - **Never mention** in the title: implementation phases, waves, steps of a process, project management terminology, workflow stages, or change-doc numbers
+ - **Never include** in the title: "Phase 1", "Step 2", "Part 3", "Wave 4", "First iteration", "Initial implementation", "0004-..."
+ - These belong in the PR **body** (description) if anywhere — never the title
+ 
+ ### ⛔ The `#<number>` PR-Title Rule (CRITICAL — BLOCKING)
+ 
+ **A `#` immediately followed by a number — `#4`, `(#4)`, `#123` — in a PR title is a latent reference to PR/issue #N in the target repo.** The title bar itself renders it as plain text, so it looks harmless — but on **squash merge with GitHub's default commit-message setting, the PR title becomes the merge commit's subject line**, and `#N` in a *commit message* DOES auto-link and create a hard cross-reference to PR/issue #N. So a title saying `(#4)` to mean "implementation wave 4" ends up permanently cross-linking your merged commit (and the PR) to whatever PR/issue #4 happens to be. This has repeatedly created messy, wrong cross-links on `main`.
+ 
+ **Rules — no exceptions:**
+ 
+ 1. **NEVER put `#<number>` in a PR title to mean anything other than a real PR/issue reference.** Implementation waves, phases, steps, parts, iterations, change-doc numbers (`0004`), and task numbers are FORBIDDEN as `#N` in titles.
+ 2. **A `#<number>` is allowed in a title ONLY if N is a genuine, existing PR or issue in the target repo that this PR is actually about** — and even then, prefer putting the reference in the body (`Closes #123`). If you're not certain the number maps to a real PR/issue on this exact repo, do NOT write it.
+ 3. **Do NOT pre-add a `(#N)` suffix.** When squash-merging with the default commit-message setting, GitHub appends `(#<real-PR-number>)` to the commit subject for you — a hand-added `(#4)` either duplicates or contradicts it. Leave your title clean and let GitHub add the real number at merge time.
+ 4. To reference a change document or wave in the body, write the **path** (`docs/changes/0004-add-oauth.md`) or plain words ("the second batch of tasks") — never `#0004`, `#4`, or `(#4)`.
+ 
+ **Examples:**
+ 
+ ✅ **Good PR Title** (no `#N`, no wave/phase):
+ ```
+ feat: add user authentication with JWT tokens
+ ```
+ 
+ ❌ **Bad PR Title** (`(#4)` means "wave 4" — becomes the squash-merge commit subject and cross-links to PR/issue #4):
+ ```
+ feat: add user authentication (#4)
+ ```
+ 
+ ❌ **Bad PR Title** (phase/wave in title):
+ ```
+ feat: add user authentication - Phase 1: Initial Implementation
+ ```
+ 
+ ✅ **Allowed** only when #123 is a real issue this PR resolves on this repo (prefer doing this in the body instead):
+ ```
+ fix: resolve login timeout reported in #123
+ ```
+ 
+ ✅ **Good Commit Message:**
+ ```
+ fix: resolve login timeout issue
+ 
+ - Increase session timeout to 30 minutes
+ - Add retry logic for failed auth requests
+ 
+ Fixes #456
+ ```
+ 
+ ❌ **Bad Commit Message:**
+ ```
+ fix: resolve login timeout issue - Step 2 of authentication refactor
+ 
+ This is the second phase of our authentication improvements...
+ ```
+ 
+ ✅ **Good Branch Name:**
+ ```
+ feat/jwt-authentication
+ fix/login-timeout
+ ```
+ 
+ ❌ **Bad Branch Name:**
+ ```
+ feat/authentication-phase-1
+ fix/login-step-2
+ ```
+ 
+ ## Recognizing Repository References
+diff --git a/plugins/fx-dev/skills/pr-preparer/SKILL.md b/plugins/fx-dev/skills/pr-preparer/SKILL.md
+index 3b2ee33..143a87b 100644
+--- a/plugins/fx-dev/skills/pr-preparer/SKILL.md
++++ b/plugins/fx-dev/skills/pr-preparer/SKILL.md
+@@ -1,119 +1,127 @@
+ ---
+ name: pr-preparer
+ description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Prepares and opens a ready-for-review pull request from completed branch changes."
+ ---
+ 
+ You are an expert software engineer specializing in pull request preparation and code review standards. Your role is to ensure pull requests are pristine, well-documented, and fully compliant with both project-specific and global development guidelines.
+ 
+ **IMPORTANT**: Before proceeding with any analysis, you MUST first check if the working directory is clean. Execute `git status --porcelain` and if there are ANY uncommitted changes, immediately stop and inform the user that they need to commit their changes before preparing a PR. Do not proceed with any other analysis if there are uncommitted changes.
+ 
+ Then, your primary responsibilities:
+ 
+ 1. **Analyze Branch Changes**: Execute `git diff main` to examine all changes in the current branch compared to main. Review each file modification, addition, and deletion to understand the full scope of changes.
+ 
+ 2. **Review Commit History**: Examine `git log` to assess commit quality. Verify that:
+    - Each commit is atomic and represents a single logical change
+    - Commit messages follow Semantic Conventional Commit format (e.g., 'feat:', 'fix:', 'docs:')
+    - Messages are in present tense, imperative mood, concise, and precise
+    - No commits contain unrelated changes bundled together
+ 
+ 3. **Validate Branch Naming**: Ensure the branch name follows Semantic Conventional Branch naming conventions as specified in project guidelines.
+ 
+ 4. **Craft PR Description**: Create a **concise** PR description that includes ONLY:
+    - **Why** the change was made (motivation, problem being solved)
+    - Reference to related issues/tickets (e.g., "Closes #123")
+    - **Links to related spec/change documents** (if applicable):
+      - Spec: `docs/specs/<name>/` — link to the living spec this PR relates to
+      - Change: `docs/changes/NNNN-name.md` — link to the change document driving this work
+      - Use relative paths from repo root in markdown links
+    - Breaking changes or migration steps (if any)
+    - Non-obvious design decisions or trade-offs worth noting
+ 
+    **PR Title Rules:**
+    - **⛔ The title MUST be a conventional-commit subject — `type(scope): description`** (e.g., `feat(auth): add OAuth2 login`), matching the commit-message format the repo uses. This is BLOCKING and **takes precedence over any title handed to you** — by the `/dev` workflow brief, the caller, an issue title, or a branch name. If the suggested title lacks a valid `type:` / `type(scope):` prefix, you MUST reform it into conventional-commit style rather than passing it through verbatim; a plain descriptive title is NOT acceptable just because a caller supplied one. On squash-merge the PR title becomes the commit subject, so a non-conventional title pollutes a conventional-commit history. Verify the repo actually uses conventional commits (`git log --oneline -20`); when it does, conformance is mandatory. Pick `type` from the dominant change (`feat` new capability, `fix` bug fix, else `docs`/`refactor`/`chore`/`test`/…); when a PR bundles several, choose the highest-order type (`feat` > `fix` > others) and cover the rest in the body.
+    - **⛔ NEVER put `#<number>` in the title** (`#4`, `(#4)`, `#123`) unless N is a real, existing PR/issue in the **target repo** that this PR genuinely references. On squash-merge the title becomes the commit subject, where `#N` auto-links to PR/issue #N — so using it for an implementation **wave**, phase, step, or change-doc number wrongly cross-links the PR. This is BLOCKING. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule" for the full rule.
+    - **Do NOT pre-add a trailing `(#N)` suffix** — GitHub appends the real PR number to the squash-merge title automatically at merge time, so a hand-written trailing `(#N)` is both redundant and likely wrong. (A genuine in-text PR/issue reference per the rule above is still allowed; what's forbidden is tacking on a `(#N)` suffix yourself.)
+    - **NEVER mention implementation waves, phases, steps, iterations, or change-doc/spec references in the title** — not as a number (`0003`), not as a slug (`0003-add-oauth`), not as a path, and not as `#0003`/`(#3)`. No "Wave 4", "Phase 1" either. All of this goes in the PR **body** if anywhere, never the title.
+    - This applies even when the PR finalizes a change doc: describe the work itself (`docs: complete OAuth change tasks`), and reference the doc by path **in the body** (`docs/changes/0003-add-oauth.md`). There is no title exception.
+ 
+    - **Test plan** — a checklist of concrete verification steps someone (or the verify-web-change skill) can follow to confirm the PR works. Each item should be a checkbox:
+      ```markdown
+      ## Test plan
+      - [ ] Navigate to /settings and confirm the new "Notifications" tab appears
+      - [ ] Toggle notifications off, refresh, confirm the toggle persists
+      - [ ] No console errors on the /settings page
+      ```
+      Write test plan items that are **specific and observable** — not vague ("works correctly") but actionable ("click X, see Y"). Include the route/URL where each item can be verified when applicable.
+ 
+    **DO NOT include** (this information is already visible in GitHub's UI):
+    - List of files changed (visible in the Files tab)
+    - Number of files/lines added/removed (visible in the diff)
+    - Test counts or pass/fail stats (visible in CI checks)
+    - Commit counts or commit messages (visible in Commits tab)
+    - Obvious information derivable from the diff itself
+ 
+    Keep descriptions short. A few sentences is often enough.
+ 
+    **Never hard-wrap the description.** GitHub reflows markdown to the reader's viewport, so hard-wrapping prose at 80 columns (or any column) only renders ragged and re-wraps badly on narrow screens. Write each paragraph as ONE long line and let it soft-wrap. Commit messages are the opposite — those stay wrapped at ~72 columns, because git renders them as plain text. See the `fx-dev:github` skill's "Never hard-wrap anything GitHub renders as markdown".
+ 
++   **Verify it, do not merely intend it.** After creating or editing the PR, run the body check and read the result:
++
++   ```bash
++   gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
++   ```
++
++   Prose paragraphs are long single lines, so the top lengths should far exceed 100. Prose clustering at 70-90 characters means the body went out hard-wrapped — rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>`.
++
+ 5. **Check Compliance**: Verify adherence to:
+    - Project-specific guidelines from AGENTS.md files
+    - Global coding standards and architectural decisions
+    - Any custom requirements or patterns established in the codebase
+ 
+ 6. **Update Task Tracking**: Before creating the PR, check if relevant task tracking files exist. Search for:
+    - `docs/changes/` — Change documents with task lists
+    - `docs/tasks.md` — Catch-all task list
+ 
+    **MANDATORY: Load the project-management skill FIRST:**
+    ```
+    Skill tool: skill="fx-dev:project-management"
+    ```
+ 
+    The project-management skill provides the correct format and workflow for updating task tracking. After loading:
+    - Identify which task(s) in `docs/changes/*.md` or `docs/tasks.md` are addressed by this PR
+    - Mark the task(s) as complete with the PR reference: `- [x] Task name (PR #N)`
+    - If ALL tasks in a change document are complete, update its `**Status:**` to `complete`
+    - **Sync indexes**: Update `docs/index.yml` (the `status:` field) and `docs/index.md` (the table row) to match the change document's new status
+    - Include ALL of the above updates (task checkmarks, status, index sync) in the PR
+ 
+    **CRITICAL:** This step ensures completed work is tracked. Skipping this results in orphaned tasks that appear incomplete after merge.
+ 
+ 7. **Create the PR (ready for review)**: Use `gh pr create` to create the pull request on GitHub. **ALL PRs MUST be created READY FOR REVIEW — never as drafts.** Do NOT pass `--draft`. Do NOT include "draft" / "WIP" / "for review" language anywhere in the title or body. The downstream SDLC steps (CI monitoring, Copilot, CodeRabbit) ALL run from the moment the PR is opened — opening as draft has been used as an excuse to skip them.
+ 
+    > **Codex should already have converged before this step.** The SDLC runs a local Codex review (`fx-dev:codex-review`, which passes the Scope Brief as the review prompt — not `codex review --base main`, whose promptless form cannot carry it) during pre-PR self-review (`fx-dev:dev` Step 4.5) and only opens the PR once it has **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **Codex is the only local reviewer** — there is no local CodeRabbit pass; CodeRabbit applies at the PR level only, and only where its GitHub App is installed. Don't open the PR with a known-unresolved blocking local reviewer finding.
+ 
+    **⛔ FINAL TITLE SELF-CHECK (BLOCKING) — run before `gh pr create`:** the `--title` MUST be a conventional-commit subject matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (verify: `printf '%s' "<title>" | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+'`). If a caller or the `/dev` brief handed you a prose title (no `type:` prefix), REFORM it to `type(scope): description` — NEVER pass a prose title through. This is the same BLOCKING rule as the **PR Title Rules** above; the explicit self-check exists because prose titles have repeatedly slipped onto `main` via squash-merge.
+ 
+    ```bash
+    gh pr create --title "type(scope): description" --body "$(cat <<'EOF'
+    ## Summary
+    ...
+    EOF
+    )"
+    ```
+ 
+    If the work isn't actually ready for review, do NOT open the PR yet — finish it first. There is no "draft" middle state in this workflow.
+ 
+ 8. **Provide Actionable Feedback**: If issues are found:
+    - Clearly explain what needs to be fixed
+    - Suggest specific commands or changes to resolve issues
+    - Offer to help with commit cleanup (squashing, rewriting messages, etc.)
+ 
+ 9. **Present Final Version**: Once everything is compliant:
+    - Provide the final PR title (following commit message format)
+    - Present the complete PR description ready for submission
+    - Return the PR URL to the user
+ 
+ 10. **Monitor PR Checks**: When the PR has been pushed and created, launch a sub-agent with the pr-check-monitor skill to watch for CI failures.
+ 
+ When analyzing, pay special attention to:
+ - Unnecessary files that should be removed
+ - Commits that should be squashed or rewritten
+ - Missing documentation updates
+ - Incomplete implementations
+ - Style violations or inconsistencies
+ 
+ Always be thorough but constructive. Your goal is to help developers submit high-quality PRs that will sail through review. If you need additional context or find ambiguities, ask clarifying questions rather than making assumptions.
+ 
+ Remember: A well-prepared PR saves time for everyone involved in the review process.
+diff --git a/plugins/fx-dev/skills/team/SKILL.md b/plugins/fx-dev/skills/team/SKILL.md
+index 8f743ab..b92df5f 100644
+--- a/plugins/fx-dev/skills/team/SKILL.md
++++ b/plugins/fx-dev/skills/team/SKILL.md
+@@ -145,297 +145,303 @@ ln -s <REPO_ROOT>/node_modules <REPO_ROOT>/.claude/worktrees/<slug>/node_modules
+ ```
+ 
+ ### 2.5.2 Smoke-test isolation BEFORE spawning real coders
+ 
+ Spawn ONE cheap probe teammate (size **small** — see the size table in STEP 3) pinned to a worktree. Have it write a marker file in the worktree and confirm (a) the marker is **absent** in the main repo, (b) `pwd`/branch/toplevel are the worktree's, then clean up. Only proceed once it reports isolation OK. This catches a broken setup before any real code is written. (If the probe lands in the main repo, the workaround failed — stop and re-check paths.)
+ 
+ A confirmed gotcha: **the teammate's shell cwd RESETS to the main repo root after EVERY bash command** ("Shell cwd was reset to …"). That is exactly why the preamble below forces an absolute `cd` on every command — relative paths silently resolve against the MAIN repo, not the worktree.
+ 
+ ### 2.5.3 Pin each coder to its worktree (prompt preamble)
+ 
+ Every coder/verify/fix teammate that must operate in a worktree **MUST** have its spawn `prompt` START with this preamble (substitute the absolute path):
+ 
+ ```
+ CRITICAL — WORKTREE ISOLATION. Your working directory is <ABS_WORKTREE_PATH>.
+ The shell cwd resets to the main repo after every command, so:
+ - Prefix EVERY bash command with `cd <ABS_WORKTREE_PATH> && `.
+ - Use ABSOLUTE paths (under <ABS_WORKTREE_PATH>/) for ALL file reads, writes, and edits.
+ - Pass `path: <ABS_WORKTREE_PATH>` to EVERY Glob and Grep call.
+ - Relative paths resolve to the MAIN repo, NOT your worktree — never rely on them.
+ Your branch <branch> is already created and checked out in this worktree; do NOT
+ create a new branch or run `git checkout`. Commit and push from inside the worktree.
+ ```
+ 
+ ### 2.5.4 Track the worktrees for cleanup
+ 
+ Remember each `(worktree path, branch, node_modules symlink)` triple you created — STEP 4 must tear them all down.
+ 
+ ## STEP 3: Execute Tasks (Coordinator-Driven SDLC)
+ 
+ **Load the dev skill** (`Skill tool: skill='fx-dev:dev'`) and read its SDLC steps. The dev skill is the single source of truth for the development workflow — do not duplicate its instructions here.
+ 
+ For each task (or group of parallel tasks), walk through the dev skill's SDLC steps yourself. For each step, decide:
+ 
+ 1. **Can I handle this step directly?** (e.g., invoking a skill, running a `gh` command) → Do it yourself.
+ 2. **Does this step require writing/modifying code?** → Spawn a focused agent with a single-purpose prompt for just that step.
+ 
+ ### ⛔ ALL Agent spawns MUST pass `name` (BLOCKING)
+ 
+ **Every single `Agent` tool call you make as the team coordinator — coder, verify, fix, anything — MUST pass `name`.** `name` is what makes a teammate addressable via `SendMessage` and visible in the team config's `members[]` array; omitting it produces an effectively anonymous worker you can't message or steer by name, defeating the point of `/team`.
+ 
+ **Do NOT pass `team_name`.** As of v2.1.178 the `team_name` input on the `Agent` tool is **accepted but ignored** (and the `team_name` field in hook payloads is deprecated). There is one implicit, session-scoped team; every `Agent` spawn joins it automatically. Passing `team_name` does nothing — drop it.
+ 
+ ```
+ Agent tool:
+   name:      "<short-descriptive-handle>"    # ← REQUIRED, NO EXCEPTIONS
+   subagent_type: "general-purpose"
+   model:     "<per the size table below>"     # ← pick deliberately, do not default
+   isolation: "worktree"                      # NO-OP for teammates — see STEP 2.5; pre-create real worktrees instead
+   mode: "bypassPermissions"
+   prompt: "..."
+   run_in_background: true                    # usually
+ ```
+ 
+ The `name` should be specific and human-readable so it's useful in logs and `SendMessage` (e.g., `coder-0105A`, `verify-pr-371`, `fix-0106-types`). One-shot generic names like `agent1` are bad.
+ 
+ **Self-check before EVERY Agent call:** "Did I pass `name`? Did I pick a `model` size?" If either is missing, fix the call before sending it. This rule is non-negotiable.
+ 
+ ### Pick an agent SIZE for every spawn
+ 
+ Choose by the **shape of the task**, not by how important it feels. Sizes are named so this table survives model releases — map the size to whatever the `Agent` tool's `model` parameter currently offers.
+ 
+ | Size | `model` | Use for |
+ |---|---|---|
+ | **large** | `opus` | Coder agents doing implementation. Fix agents on an **undiagnosed** bug. Anything requiring design judgment. |
+ | **medium** | `sonnet` | PR preparer. Browser verification. Fix agents handed an **exact, specified** patch. Mechanical work with a clear spec. |
+ | **small** | `haiku` | The worktree isolation probe (STEP 2.5.2). Pure inspection or summarisation with no judgment call. |
+ 
+ **Coders stay `large`. Do not "optimise" them downward.** Implementation is judgment-heavy, and a weaker coder that needs more iterations costs *more* than a stronger one that needs fewer — turn count, not per-turn price, is what dominates. A downgrade that adds two review rounds is a large net loss that looks like a saving.
+ 
+ Two constraints worth knowing rather than rediscovering:
+ 
+ - **The `Agent` tool has no reasoning-effort parameter.** Effort is inherited from the session (`effortLevel` / `CLAUDE_EFFORT`) and cannot be set per spawn. Size selects the model; it does not select how much the agent thinks.
+ - **`small` carries a 200k context ceiling.** For read-heavy roles that is a feature — it bounds context growth for free.
+ 
+ ### Key orchestration principles
+ 
+ **Implementation steps** (planning, coding, testing) → Spawn focused agents. For any coder that will run **concurrently** with another, give it an isolated worktree via STEP 2.5 and start its prompt with the worktree preamble — do NOT rely on `isolation: "worktree"` (it's a no-op for teammates; see the prohibition above). Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC. Always pass `name` (see above).
+ 
+ When you spawn the coder for the FINAL piece of a change, your prompt MUST include: "This is the final implementing PR for <change>. In the same commit, flip `**Status:** draft` → `**Status:** complete` in `docs/changes/<NNNN>-*.md` AND flip `status: draft` → `status: complete` for that change's entry in `docs/index.yml`. Sync `docs/index.md` if present." For every NON-final coder on the same change, your prompt MUST include: "Leave the change-doc `**Status:**` field and `docs/index.yml` entry untouched — the final PR flips them." This split prevents rebase-conflict storms across multi-PR changes and ensures the final PR carries the Status flip atomically.
+ 
+-**PR creation** → Either do it yourself via `gh pr create` or spawn a focused PR preparer agent. Load `fx-dev:github` skill first. **⛔ If you create the PR yourself, the `--title` MUST be a conventional-commit subject — `type(scope): description` — matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (see the github skill's "Use Conventional Formats"). Do NOT write a prose title; running `gh pr create` directly does NOT exempt you from the conventional-commit rule. Verify the title against the regex before AND after creation.** (Prose titles the coordinator wrote directly — bypassing pr-preparer — are exactly how non-conventional titles have slipped onto `main`.)
++**⛔ Every spawn prompt that may open or edit a PR MUST carry the PR conventions block verbatim (BLOCKING).** Load `fx-dev:github` BEFORE you author your first spawn prompt, and paste its **"PR conventions block"** into the prompt of every agent that might run `gh pr create` or `gh pr edit` — coder, fix agent, PR preparer, anything. A convention that lives only in a skill nobody loads does not survive delegation: a spawned agent inherits your prompt, not your skills.
++
++This is not hypothetical. In an observed run, all three coders received the TITLE rule — because this skill restates it inline below and gates it at merge — and none received the BODY rule, which lives only in `fx-dev:github`. All three PRs shipped hard-wrapped bodies that render ragged on GitHub, while PRs prepared through `fx-dev:pr-preparer` in the same repo did not. Restating a rule here is what makes it propagate; anything you do not restate or gate, you will not get.
++
++**PR creation** → Either do it yourself via `gh pr create`, spawn a focused PR preparer agent, or let a coder open its own PR. Load `fx-dev:github` skill first, and pass its PR conventions block into the prompt whenever you delegate. **⛔ Whoever creates the PR — you or an agent you spawned — the `--title` MUST be a conventional-commit subject — `type(scope): description` — matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (see the github skill's "Use Conventional Formats"). Do NOT write a prose title; running `gh pr create` directly does NOT exempt you from the conventional-commit rule. Verify the title against the regex before AND after creation.** (Prose titles the coordinator wrote directly — bypassing pr-preparer — are exactly how non-conventional titles have slipped onto `main`.)
+ 
+ **Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. **Pass the STEP 0 Scope Brief into every reviewer invocation that accepts one, and apply it when triaging every reviewer that does not** (Copilot and the CodeRabbit GitHub App accept nothing). A finding covered by the brief's out-of-scope list is recorded as deferred with the covering exclusion — never silently fixed, never silently dropped, and never a reason to widen a teammate's PR. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback.
+ 
+ **⛔ NEVER `sleep`, poll, or block waiting for anything.** Every wait — Copilot, CodeRabbit, CI — runs as a **backgrounded** wait script that notifies you on exit. Never run `gh pr checks --watch`, never chain sleeps, and never sit in a foreground wait. See **Waiting and reconciliation** below; this is the single largest source of wasted coordinator turns and it is non-negotiable.
+ 
+ **Merge gates** → Always handle directly. See MANDATORY MERGE GATE CHECKLIST below.
+ 
+ **Browser verification** → Spawn a dedicated verify agent if the task has UI changes.
+ 
+ ### Parallelization
+ 
+ - Spawn multiple coder agents simultaneously for independent tasks — but ONLY after giving each its own **pre-created worktree** per STEP 2.5 (the `isolation: "worktree"` flag does NOT work for teammates). Each coder works in its own worktree on its own branch.
+ - For dependent tasks, wait until the blocking task's PR is merged before spawning the next coder
+ - After merging, repeat for newly-unblocked tasks
+ - If you skip STEP 2.5, you MUST run coders strictly one-at-a-time (never two alive at once) — concurrent coders without real worktrees share one working tree and clobber each other
+ 
+ ### Waiting and reconciliation (NON-NEGOTIABLE)
+ 
+ **⛔ You never `sleep`. You never poll. You never block.** Every wake costs a full read of your entire context, and your context is the largest in the team — a poll loop is the single most expensive thing you can do, and it gets more expensive with every turn you add.
+ 
+ **Everything you wait on is backgrounded and notifies you.** Reviewer waiters, CI waiters, and teammate agents all wake you on completion. That is your only scheduling mechanism.
+ 
+ #### The ledger
+ 
+ Keep `.claude/team/waits/ledger.json` — one row per tracked teammate and per tracked PR, recording its last known state and what you are waiting on for it. It exists so a wake is a cheap diff instead of a re-derivation of the whole run.
+ 
+ #### Reconcile on wake, never on a timer
+ 
+ When **any** notification arrives — a waiter finished, a teammate finished, anything — do **one batched pass**:
+ 
+ 1. Read the ledger.
+ 2. Read every log whose waiter has completed since the last pass.
+ 3. Update every row that changed, in one go.
+ 4. Dispatch whatever is now unblocked.
+ 5. Go idle again.
+ 
+ **Batch the inspection.** One pass over all open PRs, not one `gh` call per PR per wake. While anything is in flight you get free wakes, so stall detection costs you no dedicated turns at all.
+ 
+ #### The silence backstop
+ 
+ The only case reconcile-on-wake misses is *everything* going quiet at once. Guard it with a single long-interval `ScheduleWakeup` (~30 minutes) — **not** a `sleep`, which holds a turn open.
+ 
+ Every waiter has its own 900 s budget and always exits, so it will notify you well inside that window. The backstop should essentially never fire. **Do not shorten it**: a short interval is polling at full coordinator context wearing a different hat.
+ 
+ #### Re-launching a `PENDING` waiter
+ 
+ `STATUS=PENDING` means the reviewer or check is still running — not a verdict, not a failure. Relaunch it (backgrounded) if you still need that gate.
+ 
+ **Prefer to have other work in flight while it runs.** If you have other PRs to advance, do that and let the relaunched waiter notify you; that is strictly cheapest. Only when you have nothing else to do is it worth relaunching immediately and waiting on it alone.
+ 
+ ---
+ 
+ ## MANDATORY MERGE GATE CHECKLIST (BLOCKING)
+ 
+ **BEFORE running `gh pr merge` on ANY PR — no matter how small — you MUST verify ALL of the following. This is non-negotiable. A single unmet condition means DO NOT MERGE.**
+ 
+ <!--
+ duvet= docs/specs/fx-dev-authority/index.md#required-checks-gate-every-merge
+ duvet= type=implication
+ duvet# A pull request MUST NOT be merged while any required check on it is failing or has not completed.
+ -->
+ 
+ <!--
+ duvet= docs/specs/fx-dev-authority/index.md#unresolved-reviewer-threads-gate-every-merge
+ duvet= type=implication
+ duvet# A pull request MUST NOT be merged while any review thread on it from a configured automated reviewer remains unresolved.
+ -->
+ 
+ | # | Gate | How to verify | Blocking? |
+ |---|------|--------------|-----------|
+ | 1 | **Required CI checks green** | `gh pr checks <NUMBER>` — every required non-CodeRabbit check must pass | YES |
+ | 2 | **Copilot review RECEIVED and feedback RESOLVED** | Invoke `fx-dev:copilot-review` skill — confirm 0 unresolved Copilot threads | YES |
+ | 2b | **CodeRabbit reviewed or correctly degraded** | Invoke `fx-dev:coderabbit-review`: prefer a passing check with received feedback resolved; if CodeRabbit rate-limits, report once, resolve what it already delivered (blocking findings fixed, every posted thread settled), and record `skipped (rate-limited)` without blocking | NO when rate-limited |
+ | 3 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
+ | 4 | **Spec task marked complete** | Check via project-management skill | YES |
+ | 5 | **PR description is clear** | Read PR body | YES |
+ | 5b | **PR title is clean AND conventional** | Title (a) is a conventional-commit subject — run the canonical check from the `fx-dev:github` skill's "Use Conventional Formats" (a plain prose title with no `type:` prefix FAILS) — AND (b) has NO stray `#<number>` (only a real PR/issue ref) and NO wave/phase/step/change-doc number. Fix with `gh pr edit <N> --title "type(scope): …"` before merge — squash bakes the title into `main` | YES |
++| 5c | **PR body is NOT hard-wrapped** | `gh pr view <N> --json body -q .body \| awk '{print length}' \| sort -rn \| head -3` — prose paragraphs must be long single lines. Prose clustering at 70-90 characters means the body was hard-wrapped: rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>` before merging. Lists, tables and code blocks are exempt | YES |
+ | 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
+ 
+ ### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
+ 
+ > **Codex runs LOCALLY first — and it is the ONLY local reviewer.** Implementing sub-agents run local Codex via the `fx-dev:codex-review` skill during pre-PR self-review, passing the Scope Brief. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer it **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **There is no local CodeRabbit pass; the `cr` CLI is not used.** Gate 2b is the PR-level CodeRabbit review, which applies only when the GitHub App is configured — its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown.
+ 
+ **As coordinator, YOU handle reviewer waits directly — but you never *block* on them.** Launch every configured reviewer's waiter in ONE message, all backgrounded, each redirecting to its own log. They run concurrently; a completion notification wakes you per reviewer. No sub-agents are involved and there is no execution mode to pick.
+ 
+ Waiters exist for Copilot and CodeRabbit only, and those are the only two this workflow requests. Should some other automated reviewer the repo has configured post threads anyway, they still gate the merge and you settle them by hand (`fx-dev/skills/dev/references/scope-contract.md` § Injecting the brief into reviews) — a clean `fx-dev:resolve-pr-feedback` report does not cover them.
+ 
+ ```
+ # ALL in one message, every one run_in_background: true.
+ # Each command creates the log dir itself: if it does not exist the REDIRECT fails
+ # before the waiter ever starts, so you get no STATUS line at all — the one failure
+ # the whole protocol exists to prevent. `mkdir -p` is idempotent; never rely on an
+ # earlier step having created it.
+ Bash: mkdir -p .claude/team/waits && bash <skill>/copilot-review/scripts/wait-for-copilot-review.sh <PR_NUMBER> \
+         > .claude/team/waits/copilot-<PR_NUMBER>.log 2>&1
+ Bash: mkdir -p .claude/team/waits && bash <skill>/coderabbit-review/scripts/wait-for-coderabbit-review.sh <PR_NUMBER> \
+         > .claude/team/waits/rabbit-<PR_NUMBER>.log 2>&1
+ Bash: mkdir -p .claude/team/waits && bash <skill>/dev/scripts/wait-for-ci-checks.sh <PR_NUMBER> \
+         > .claude/team/waits/ci-<PR_NUMBER>.log 2>&1
+ 
+ # On each notification: read the log, branch on its STATUS= line, classify
+ # findings in the ledger, THEN invoke that reviewer's resolver skill.
+ ```
+ 
+ **Never run a waiter in the foreground.** The Bash tool caps a foreground `timeout` at 600 000 ms, below every waiter's 900 s budget — a foreground call is killed mid-poll with no STATUS and no exit code, and the caller then re-runs it blindly. **Never background one without the redirect**: the cycle is driven by what the script prints.
+ 
+ Apply `fx-dev:dev` Steps 2.5 and 6.1 as the canonical reviewer policy: maintain the coordinator-owned finding ledger, fix every **blocking** finding and only those (`fx-dev/skills/dev/references/scope-contract.md` § Blocking — the class name does not decide it; a reviewer-originated Material or Substantive entry blocks whatever its class), and rerun only reviewer state invalidated by the latest delta. Do not restart every reviewer after each push or seek zero suggestions. Settle all required threads within the bounded remediation rounds. **If CodeRabbit reports a rate/quota limit or cooldown at any point, stop its loop immediately, report once, record `skipped (rate-limited)`, and continue without waiting or escalating — after fixing the blocking findings it already delivered and settling every thread it already posted.** The degradation waives only the passes that never ran (`fx-dev:coderabbit-review`, rate-limit rule), never work already on the PR. Copilot must still satisfy its mandatory review gate.
+ 
+ If CodeRabbit is not configured (its waiter reports `STATUS=NOT_CONFIGURED`, exit 3), report once and proceed — that status is terminal, so never retry or wait it out. Do not silently skip ordinary failures; the optional exception is specifically for CodeRabbit throttling.
+ 
+ ### Browser Verification Gate (Gate 6)
+ 
+ For tasks with UI changes, spawn a dedicated verify agent:
+ 
+ ```
+ Agent tool:
+   name: "verify-<pr-number>"            # REQUIRED — addressable handle (do NOT pass team_name; it's ignored)
+   model: "sonnet"                       # size: medium — verification is mechanical
+   prompt: "Load the verify-web-change skill (Skill tool: skill='fx-dev:verify-web-change').
+            Verify PR #<NUMBER> on branch <branch-name>.
+            Check out the branch, start the dev server, and confirm the app loads without errors.
+            Report back whether verification passed or failed, with details of any errors."
+   description: "Verify PR #<NUMBER> in browser"
+   mode: "bypassPermissions"
+ ```
+ 
+ **Why this gate exists:** CI does NOT catch runtime-only errors like circular dependencies, SSR failures, or broken module initialization.
+ 
+ <!--
+ duvet= docs/specs/fx-dev-authority/index.md#merge-gates-apply-regardless-of-change-size
+ duvet= type=implication
+ duvet# The size, triviality, or follow-up status of a pull request MUST NOT be treated as grounds for waiving any merge gate.
+ -->
+ 
+ **If a "small" or "follow-up" PR:** Same rules. No exceptions. PR size is NEVER a reason to skip merge gates.
+ 
+ ## PRE-MERGE: Change-Doc Status Flip (BLOCKING)
+ 
+ **The FINAL PR for a change document MUST mark the change `complete` IN that PR — NOT in a follow-up.** A change doc still showing `**Status:** draft` after its last implementing PR merges is a bug; the docs lie about state and the index is out of sync with reality on `main`.
+ 
+ There are two places to flip:
+ 
+ 1. **Change doc body** — `docs/changes/<NNNN>-<slug>.md` — flip the front-matter line `**Status:** draft` → `**Status:** complete`.
+ 2. **Index** — `docs/index.yml` — flip `status: draft` → `status: complete` on that change's entry. Sync `docs/index.md` if the project keeps both.
+ 
+ ### Whose job is it?
+ 
+ **The implementing coder is responsible for the flip** when they are shipping the final piece of a change. That coder's PR description should already note "this completes 0094"; they MUST also include the Status flip in the same PR.
+ 
+ **The coordinator's job, BEFORE merging, is to verify the flip is in the PR's diff.** Add this to your PR-inspection step (Gate 3 — implementation matches spec). If the flip is missing:
+ 
+ 1. **Do NOT merge.**
+ 2. Push a tiny commit to the PR branch yourself (or via a focused fix agent) flipping both files. Commit message: `docs(changes): mark <NNNN> complete`.
+ 3. Wait for CI to re-pass on the new commit.
+ 4. Then merge.
+ 
+ This MUST NOT become a follow-up PR. Doing it post-merge means main spent some window in a wrong state, and the user sees a stale `draft` for every change you ship.
+ 
+ ### Multi-PR changes
+ 
+ When a change decomposes into multiple PRs (e.g., 0090 split into 0090A and 0090B): only the LAST implementing PR flips Status. Earlier sub-PRs MUST leave Status as `draft`. The coordinator decides which PR is "last" — typically the final task in the change doc's task list. Tell THAT coder explicitly in their spawn prompt to include the Status flip; tell every other coder to leave Status alone (multi-PR rebases against a flipped Status field create spurious conflicts).
+ 
+ If you mis-identified which PR was last and you've already merged a sub-PR with `Status: complete` flipped early, the doc is wrong on main until the remaining PRs land — open a tiny corrective PR flipping it back to `draft` until the real final PR lands.
+ 
+ ### Partial implementations
+ 
+ If a single PR is only a partial implementation of its change doc (more PRs to come), the PR MUST leave Status as `draft`. The Status flip rides only with the final piece.
+ 
+ ## STEP 4: Shutdown
+ 
+ When all tasks are complete and all PRs merged:
+ 
+ 1. Verify all spec tasks are marked done (load `fx-dev:project-management` to check)
+ 2. **Verify every implemented change is `status: complete`** on `main` — check both `docs/changes/<NNNN>-*.md` front-matter AND `docs/index.yml`. If any are still `draft`, you missed the pre-merge gate; open a corrective PR right now (the goal is the gate catches it pre-merge, but if it slipped, fix it before declaring done).
+ 3. Send shutdown requests to all active teammates (refer to each by `name`); each teammate approves and exits gracefully
+ 4. **Tear down every worktree created in STEP 2.5.** For each one, in order: remove the `node_modules` symlink first (so `git worktree remove` doesn't traverse into the shared deps), then `git worktree remove --force <path>`, then `git worktree prune`. Delete the branch with `git branch -D <branch>` only if it's unmerged/abandoned (a merged PR's branch is already gone from origin). Confirm `git worktree list` shows only the main repo and `git status` is clean before continuing.
+ 
+    ```bash
+    rm -f <REPO_ROOT>/.claude/worktrees/<slug>/node_modules
+    git worktree remove --force <REPO_ROOT>/.claude/worktrees/<slug>
+    git worktree prune
+    git branch -D <branch>   # only if unmerged/abandoned
+    ```
+ 5. **Do NOT call `TeamDelete`** — it was removed in v2.1.178. The team config directory is cleaned up automatically when the session ends; there is no manual teardown step. (The shared task list directory persists locally by design so resumed sessions keep their tasks — that's expected, not a leak.) Your only manual cleanup is the worktrees in step 4.
+ 6. Report final summary to user
+ 
+ ---
+ 
+ ## Coordinator Rules (NON-NEGOTIABLE)
+ 
+ - **ALWAYS pass `name` to EVERY `Agent` call** — coder, verify, fix, anything. `name` is what makes the teammate addressable via `SendMessage` and visible in `members[]`; omitting it produces an anonymous worker you can't steer by name. No exceptions.
+ - **NEVER pass `team_name` and NEVER call `TeamCreate`/`TeamDelete`** — all three were removed/deprecated in v2.1.178. The team is implicit and session-scoped: it forms on the first `Agent` spawn and is cleaned up automatically on session exit. `team_name` on the `Agent` tool is accepted-but-ignored.
+ - **NEVER rely on `isolation: "worktree"` for a teammate** — a teammate runs as a full session in the lead's working directory, so the flag is a no-op. For any coders that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run coders strictly one-at-a-time. Always tear the worktrees down in STEP 4.
+ - **NEVER write code yourself** — all implementation goes through coder agents
+ - **NEVER create branches or commits** — coder agents handle this
+ - **NEVER delegate the full SDLC to a single agent** — agents cannot spawn sub-agents, so they will inline everything and skip later steps
++- **ALWAYS paste the `fx-dev:github` PR conventions block into every spawn prompt whose agent may open or edit a PR** — load that skill before authoring your first prompt. A spawned agent inherits your prompt, not your skills; a rule you do not restate is a rule that does not reach it.
+ - **NEVER skip PR inspection** — every PR gets reviewed before marking ready
+ - **NEVER merge without completing the MERGE GATE CHECKLIST** — every gate must pass, every time, for every PR
+ - **NEVER merge without Copilot review** — always invoke `fx-dev:copilot-review` yourself. No exceptions.
+ - **ALWAYS attempt CodeRabbit when configured, but never block on its rate limits** — invoke `fx-dev:coderabbit-review`; resolve feedback already received, then record `skipped (rate-limited)` and continue immediately if throttled.
+ - **NEVER `sleep`, poll, or block on a wait.** Every reviewer and CI wait is a BACKGROUNDED script that notifies you on exit; reconcile on that notification. A foreground waiter is killed at the Bash tool's 600 s cap anyway. The only timer permitted in a run is one long `ScheduleWakeup` silence backstop.
+ - **NEVER mark a teammate's PR as ready** until you've inspected it
+ - **ALWAYS handle Copilot review and CI monitoring directly** — these are coordinator responsibilities, not sub-agent responsibilities. Launch their waiters backgrounded, all in one message.
+ - **ALWAYS pass a deliberate `model` size to every `Agent` call** — see the size table in STEP 3. Coders are `large`; never downgrade them.
+ - **ALWAYS use `fx-dev:project-management`** to verify task tracking
+ - **ALWAYS run the full merge gate checklist** even for "trivial" or "follow-up" PRs
+ - **NEVER merge without browser verification** — spawn a verify agent if needed. CI alone does NOT catch runtime errors.
+ - **NEVER merge the FINAL PR of a change doc with `Status: draft` still in the diff.** The flip to `complete` rides in that PR, in both `docs/changes/<NNNN>-*.md` and `docs/index.yml`. If the coder forgot, push a fix commit to their branch and wait for CI before merging. Do NOT defer to a follow-up PR. See PRE-MERGE: Change-Doc Status Flip above.
+ 
+ ## Handling Agent Issues
+ 
+ If a coder agent reports problems:
+ 
+ 1. Read the error details from their message
+ 2. Spawn a new focused agent to fix the specific issue
+ 3. If stuck after 2 retries, report to user and ask for guidance
+
+--- STATUS ---
+?? .claude/
+
+--- LOG ---
+15a4d7e docs(fx-dev): propagate PR conventions into delegated spawn prompts
+16f983e feat(fx-dev)!: reviewer roster is Codex, Copilot, CodeRabbit only
+
+exec
+/bin/bash -lc "git diff --unified=15 HEAD~1 HEAD -- plugins/fx-dev/skills/github/SKILL.md plugins/fx-dev/skills/team/SKILL.md plugins/fx-dev/skills/pr-preparer/SKILL.md plugins/fx-dev/skills/coder/SKILL.md; printf '\\n--- CHANGED LINE NUMBERS ---\\n'; nl -ba plugins/fx-dev/skills/github/SKILL.md | sed -n '160,250p'; nl -ba plugins/fx-dev/skills/team/SKILL.md | sed -n '260,350p'; nl -ba plugins/fx-dev/skills/pr-preparer/SKILL.md | sed -n '1,160p'; printf '\\n--- Coder references ---\\n'; grep -RInE 'coder.*[Ss]tep|[Ss]tep (4\\.5|5|6|7|8|9|10|11|12)|[Ss]top after step' plugins/fx-dev/skills --include='*.md' | head -250" in /shared/home/claude-2/.claude/plugins/marketplaces/fx-cc
+ succeeded in 0ms:
+diff --git a/plugins/fx-dev/skills/coder/SKILL.md b/plugins/fx-dev/skills/coder/SKILL.md
+index 85cb120..5a2d96e 100644
+--- a/plugins/fx-dev/skills/coder/SKILL.md
++++ b/plugins/fx-dev/skills/coder/SKILL.md
+@@ -26,36 +26,37 @@ Pay attention to the user's framing. "Just fix the login bug real quick" is a bu
+ - Work on GitHub issues
+ - Auto-select next issue if none provided
+ - Run tests and commit changes
+ 
+ ## PR Strategy (direct invocation only)
+ 1. **Feature branch**: `feature/<issue>-<name>` from main
+ 2. **Sub-branches**: `feature/<issue>-<name>-part-<n>` for logical separation
+ 3. **Keep PRs focused**: Logical, reviewable chunks
+ 
+ ## Workflow (direct invocation)
+ 1. Get/select issue
+ 2. Analyze requirements
+ 3. Plan logical PR structure if needed
+ 4. Implement with tests
+ 5. Run the local Codex review (`fx-dev:codex-review`) and converge it **before** opening the PR — it is the only local reviewer, and it is mandatory here exactly as in `fx-dev:dev` Step 4.5
+-6. Create PR
+-7. Settle the automated reviewers with `fx-dev:copilot-review` and, where its GitHub App is installed, `fx-dev:coderabbit-review`
+-8. Address feedback
+-9. Launch a sub-agent with the pr-check-monitor skill for failing checks
+-10. Continue until ready for user review
+-11. Update issue to Done
++6. Load `fx-dev:github` and follow its **PR conventions block** — conventional-commit title, no `#<number>` or wave/phase wording in the title, and a body that is **never hard-wrapped** (one long line per paragraph; only the commit message wraps, at ~72 columns). Verify both before and after creating.
++7. Create PR
++8. Settle the automated reviewers with `fx-dev:copilot-review` and, where its GitHub App is installed, `fx-dev:coderabbit-review`
++9. Address feedback
++10. Launch a sub-agent with the pr-check-monitor skill for failing checks
++11. Continue until ready for user review
++12. Update issue to Done
+ 
+ **When invoked from SDLC:** Stop after step 4 (implement with tests + commit). Do NOT create PRs or launch reviewers — the SDLC owns steps 5 onward.
+ 
+ ## Multi-PR Coordination
+ - Only ONE PR should be open at a time (sequential PRs per SDLC)
+ - Track PR status in TodoWrite
+ - Shepherd each PR to completion before opening next
+ 
+ ## Standards
+ - Follow AGENTS.md rules
+ - Test bug fixes first
+ - Match code style
+ - Security best practices
+ - **Commit subjects: no `#<number>`, no waves/phases.** A commit subject auto-links `#N` to PR/issue #N, and it propagates into the PR title (GitHub pre-fills the title from a single commit's subject) and the squash-merge commit subject — so the PR-title rule applies here too: never put `#<number>` (`#4`, `(#4)`, `#123`) in a commit subject unless N is a real PR/issue ref on this repo, and never use a wave/phase/step/change-doc number there. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule".
+ 
+diff --git a/plugins/fx-dev/skills/github/SKILL.md b/plugins/fx-dev/skills/github/SKILL.md
+index e0cc709..a830c79 100644
+--- a/plugins/fx-dev/skills/github/SKILL.md
++++ b/plugins/fx-dev/skills/github/SKILL.md
+@@ -180,30 +180,53 @@ Commit messages are the **opposite**: git renders them as plain text, so wrap co
+ | PR description / PR comment / issue body | **No — one line per paragraph** |
+ 
+ ```markdown
+ ❌ WRONG — hard-wrapped PR body, renders ragged on GitHub
+ ## Summary
+ Standardizes every skill on two canonical instruction files, with a
+ pointer for each tool that cannot read them natively.
+ 
+ ✅ RIGHT — one line per paragraph, GitHub reflows it
+ ## Summary
+ Standardizes every skill on two canonical instruction files, with a pointer for each tool that cannot read them natively.
+ ```
+ 
+ This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`. Tables, lists, and fenced code blocks keep their own line structure; the rule is about prose paragraphs.
+ 
++### PR conventions block (paste verbatim into any agent prompt that may open or edit a PR)
++
++A convention that lives only in this skill does not survive delegation: an agent spawned with an ad-hoc prompt never loads it. Whenever you delegate PR creation — a `/team` coder opening its own PR, a fix agent editing a body, any sub-agent running `gh pr create` — paste this block into that agent's prompt verbatim. Quote it by name ("the github skill's PR conventions block") when referring to it from another skill.
++
++```markdown
++### PR conventions (mandatory)
++- TITLE: a conventional-commit subject matching `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` — lowercase after the colon, imperative, no trailing period.
++- TITLE: no `#<number>` unless it references a real existing PR/issue, and no wave/phase/step/batch or change-doc number. Squash-merge bakes the title into the default branch, where `#N` auto-links permanently.
++- BODY: **never hard-wrapped.** GitHub reflows markdown to the reader's viewport, so write each paragraph as ONE long line and let it soft-wrap. Lists, tables and fenced code blocks keep their own line structure. This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`.
++- COMMIT MESSAGE: the opposite — wrap the body at ~72 columns, because git renders it as plain text. The rule follows the renderer, not the content.
++- Verify before AND after creating: the title against the regex, and the body against the longest-prose-line check.
++```
++
++Mechanical body check — run it after creating or editing any PR body:
++
++```bash
++gh pr view <N> --json body -q .body \
++  | awk '!/^(\s*([-*+]|[0-9]+\.)\s|\s*\||\s*```|#)/ && length > 200 {n++} END {exit 0} '
++# Prose paragraphs should be LONG single lines. If most prose lines cluster at 70-90
++# characters, the body is hard-wrapped — rewrite it and `gh pr edit <N> --body-file`.
++gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
++```
++
+ **Use Conventional Formats:**
+ - **Commit messages**: Follow conventional commit format (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)
+ - **PR titles**: MUST use conventional commit format — `type(scope): description` (e.g., `feat: add user authentication`, `fix(api): handle null token`). **BLOCKING**: on squash-merge the PR title becomes the commit subject, so a plain prose title (no `type:` prefix) permanently pollutes a conventional-commit history. **Canonical check** — every PR title, no matter who creates it (pr-preparer, the `/dev` workflow, or a `/team` coordinator running `gh pr create` directly), MUST match this regex; verify before creating AND before merging:
+   ```bash
+   gh pr view <N> --json title -q .title | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+' \
+     && echo "OK: conventional" || echo "⛔ NOT conventional — gh pr edit <N> --title \"type(scope): …\""
+   ```
+   A prose title like `Add anti-fabrication grounding rules` is FORBIDDEN — reform it (`feat(scope): add anti-fabrication grounding rules`). Creating the PR directly (not via pr-preparer) does NOT exempt you from this.
+ - **Branch names**: Use conventional naming (e.g., `feat/user-auth`, `fix/login-bug`)
+ - **Comments**: Use conventional comment markers where applicable
+ 
+ **Content Rules:**
+ - Describe the work being done and changes being made
+ - **Never mention** in the title: implementation phases, waves, steps of a process, project management terminology, workflow stages, or change-doc numbers
+ - **Never include** in the title: "Phase 1", "Step 2", "Part 3", "Wave 4", "First iteration", "Initial implementation", "0004-..."
+diff --git a/plugins/fx-dev/skills/pr-preparer/SKILL.md b/plugins/fx-dev/skills/pr-preparer/SKILL.md
+index 3b2ee33..143a87b 100644
+--- a/plugins/fx-dev/skills/pr-preparer/SKILL.md
++++ b/plugins/fx-dev/skills/pr-preparer/SKILL.md
+@@ -44,30 +44,38 @@ Then, your primary responsibilities:
+      - [ ] No console errors on the /settings page
+      ```
+      Write test plan items that are **specific and observable** — not vague ("works correctly") but actionable ("click X, see Y"). Include the route/URL where each item can be verified when applicable.
+ 
+    **DO NOT include** (this information is already visible in GitHub's UI):
+    - List of files changed (visible in the Files tab)
+    - Number of files/lines added/removed (visible in the diff)
+    - Test counts or pass/fail stats (visible in CI checks)
+    - Commit counts or commit messages (visible in Commits tab)
+    - Obvious information derivable from the diff itself
+ 
+    Keep descriptions short. A few sentences is often enough.
+ 
+    **Never hard-wrap the description.** GitHub reflows markdown to the reader's viewport, so hard-wrapping prose at 80 columns (or any column) only renders ragged and re-wraps badly on narrow screens. Write each paragraph as ONE long line and let it soft-wrap. Commit messages are the opposite — those stay wrapped at ~72 columns, because git renders them as plain text. See the `fx-dev:github` skill's "Never hard-wrap anything GitHub renders as markdown".
+ 
++   **Verify it, do not merely intend it.** After creating or editing the PR, run the body check and read the result:
++
++   ```bash
++   gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
++   ```
++
++   Prose paragraphs are long single lines, so the top lengths should far exceed 100. Prose clustering at 70-90 characters means the body went out hard-wrapped — rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>`.
++
+ 5. **Check Compliance**: Verify adherence to:
+    - Project-specific guidelines from AGENTS.md files
+    - Global coding standards and architectural decisions
+    - Any custom requirements or patterns established in the codebase
+ 
+ 6. **Update Task Tracking**: Before creating the PR, check if relevant task tracking files exist. Search for:
+    - `docs/changes/` — Change documents with task lists
+    - `docs/tasks.md` — Catch-all task list
+ 
+    **MANDATORY: Load the project-management skill FIRST:**
+    ```
+    Skill tool: skill="fx-dev:project-management"
+    ```
+ 
+    The project-management skill provides the correct format and workflow for updating task tracking. After loading:
+diff --git a/plugins/fx-dev/skills/team/SKILL.md b/plugins/fx-dev/skills/team/SKILL.md
+index 8f743ab..b92df5f 100644
+--- a/plugins/fx-dev/skills/team/SKILL.md
++++ b/plugins/fx-dev/skills/team/SKILL.md
+@@ -210,31 +210,35 @@ Choose by the **shape of the task**, not by how important it feels. Sizes are na
+ | **small** | `haiku` | The worktree isolation probe (STEP 2.5.2). Pure inspection or summarisation with no judgment call. |
+ 
+ **Coders stay `large`. Do not "optimise" them downward.** Implementation is judgment-heavy, and a weaker coder that needs more iterations costs *more* than a stronger one that needs fewer — turn count, not per-turn price, is what dominates. A downgrade that adds two review rounds is a large net loss that looks like a saving.
+ 
+ Two constraints worth knowing rather than rediscovering:
+ 
+ - **The `Agent` tool has no reasoning-effort parameter.** Effort is inherited from the session (`effortLevel` / `CLAUDE_EFFORT`) and cannot be set per spawn. Size selects the model; it does not select how much the agent thinks.
+ - **`small` carries a 200k context ceiling.** For read-heavy roles that is a feature — it bounds context growth for free.
+ 
+ ### Key orchestration principles
+ 
+ **Implementation steps** (planning, coding, testing) → Spawn focused agents. For any coder that will run **concurrently** with another, give it an isolated worktree via STEP 2.5 and start its prompt with the worktree preamble — do NOT rely on `isolation: "worktree"` (it's a no-op for teammates; see the prohibition above). Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC. Always pass `name` (see above).
+ 
+ When you spawn the coder for the FINAL piece of a change, your prompt MUST include: "This is the final implementing PR for <change>. In the same commit, flip `**Status:** draft` → `**Status:** complete` in `docs/changes/<NNNN>-*.md` AND flip `status: draft` → `status: complete` for that change's entry in `docs/index.yml`. Sync `docs/index.md` if present." For every NON-final coder on the same change, your prompt MUST include: "Leave the change-doc `**Status:**` field and `docs/index.yml` entry untouched — the final PR flips them." This split prevents rebase-conflict storms across multi-PR changes and ensures the final PR carries the Status flip atomically.
+ 
+-**PR creation** → Either do it yourself via `gh pr create` or spawn a focused PR preparer agent. Load `fx-dev:github` skill first. **⛔ If you create the PR yourself, the `--title` MUST be a conventional-commit subject — `type(scope): description` — matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (see the github skill's "Use Conventional Formats"). Do NOT write a prose title; running `gh pr create` directly does NOT exempt you from the conventional-commit rule. Verify the title against the regex before AND after creation.** (Prose titles the coordinator wrote directly — bypassing pr-preparer — are exactly how non-conventional titles have slipped onto `main`.)
++**⛔ Every spawn prompt that may open or edit a PR MUST carry the PR conventions block verbatim (BLOCKING).** Load `fx-dev:github` BEFORE you author your first spawn prompt, and paste its **"PR conventions block"** into the prompt of every agent that might run `gh pr create` or `gh pr edit` — coder, fix agent, PR preparer, anything. A convention that lives only in a skill nobody loads does not survive delegation: a spawned agent inherits your prompt, not your skills.
++
++This is not hypothetical. In an observed run, all three coders received the TITLE rule — because this skill restates it inline below and gates it at merge — and none received the BODY rule, which lives only in `fx-dev:github`. All three PRs shipped hard-wrapped bodies that render ragged on GitHub, while PRs prepared through `fx-dev:pr-preparer` in the same repo did not. Restating a rule here is what makes it propagate; anything you do not restate or gate, you will not get.
++
++**PR creation** → Either do it yourself via `gh pr create`, spawn a focused PR preparer agent, or let a coder open its own PR. Load `fx-dev:github` skill first, and pass its PR conventions block into the prompt whenever you delegate. **⛔ Whoever creates the PR — you or an agent you spawned — the `--title` MUST be a conventional-commit subject — `type(scope): description` — matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (see the github skill's "Use Conventional Formats"). Do NOT write a prose title; running `gh pr create` directly does NOT exempt you from the conventional-commit rule. Verify the title against the regex before AND after creation.** (Prose titles the coordinator wrote directly — bypassing pr-preparer — are exactly how non-conventional titles have slipped onto `main`.)
+ 
+ **Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. **Pass the STEP 0 Scope Brief into every reviewer invocation that accepts one, and apply it when triaging every reviewer that does not** (Copilot and the CodeRabbit GitHub App accept nothing). A finding covered by the brief's out-of-scope list is recorded as deferred with the covering exclusion — never silently fixed, never silently dropped, and never a reason to widen a teammate's PR. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback.
+ 
+ **⛔ NEVER `sleep`, poll, or block waiting for anything.** Every wait — Copilot, CodeRabbit, CI — runs as a **backgrounded** wait script that notifies you on exit. Never run `gh pr checks --watch`, never chain sleeps, and never sit in a foreground wait. See **Waiting and reconciliation** below; this is the single largest source of wasted coordinator turns and it is non-negotiable.
+ 
+ **Merge gates** → Always handle directly. See MANDATORY MERGE GATE CHECKLIST below.
+ 
+ **Browser verification** → Spawn a dedicated verify agent if the task has UI changes.
+ 
+ ### Parallelization
+ 
+ - Spawn multiple coder agents simultaneously for independent tasks — but ONLY after giving each its own **pre-created worktree** per STEP 2.5 (the `isolation: "worktree"` flag does NOT work for teammates). Each coder works in its own worktree on its own branch.
+ - For dependent tasks, wait until the blocking task's PR is merged before spawning the next coder
+ - After merging, repeat for newly-unblocked tasks
+ - If you skip STEP 2.5, you MUST run coders strictly one-at-a-time (never two alive at once) — concurrent coders without real worktrees share one working tree and clobber each other
+@@ -288,30 +292,31 @@ duvet# A pull request MUST NOT be merged while any required check on it is faili
+ <!--
+ duvet= docs/specs/fx-dev-authority/index.md#unresolved-reviewer-threads-gate-every-merge
+ duvet= type=implication
+ duvet# A pull request MUST NOT be merged while any review thread on it from a configured automated reviewer remains unresolved.
+ -->
+ 
+ | # | Gate | How to verify | Blocking? |
+ |---|------|--------------|-----------|
+ | 1 | **Required CI checks green** | `gh pr checks <NUMBER>` — every required non-CodeRabbit check must pass | YES |
+ | 2 | **Copilot review RECEIVED and feedback RESOLVED** | Invoke `fx-dev:copilot-review` skill — confirm 0 unresolved Copilot threads | YES |
+ | 2b | **CodeRabbit reviewed or correctly degraded** | Invoke `fx-dev:coderabbit-review`: prefer a passing check with received feedback resolved; if CodeRabbit rate-limits, report once, resolve what it already delivered (blocking findings fixed, every posted thread settled), and record `skipped (rate-limited)` without blocking | NO when rate-limited |
+ | 3 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
+ | 4 | **Spec task marked complete** | Check via project-management skill | YES |
+ | 5 | **PR description is clear** | Read PR body | YES |
+ | 5b | **PR title is clean AND conventional** | Title (a) is a conventional-commit subject — run the canonical check from the `fx-dev:github` skill's "Use Conventional Formats" (a plain prose title with no `type:` prefix FAILS) — AND (b) has NO stray `#<number>` (only a real PR/issue ref) and NO wave/phase/step/change-doc number. Fix with `gh pr edit <N> --title "type(scope): …"` before merge — squash bakes the title into `main` | YES |
++| 5c | **PR body is NOT hard-wrapped** | `gh pr view <N> --json body -q .body \| awk '{print length}' \| sort -rn \| head -3` — prose paragraphs must be long single lines. Prose clustering at 70-90 characters means the body was hard-wrapped: rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>` before merging. Lists, tables and code blocks are exempt | YES |
+ | 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
+ 
+ ### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
+ 
+ > **Codex runs LOCALLY first — and it is the ONLY local reviewer.** Implementing sub-agents run local Codex via the `fx-dev:codex-review` skill during pre-PR self-review, passing the Scope Brief. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer it **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **There is no local CodeRabbit pass; the `cr` CLI is not used.** Gate 2b is the PR-level CodeRabbit review, which applies only when the GitHub App is configured — its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown.
+ 
+ **As coordinator, YOU handle reviewer waits directly — but you never *block* on them.** Launch every configured reviewer's waiter in ONE message, all backgrounded, each redirecting to its own log. They run concurrently; a completion notification wakes you per reviewer. No sub-agents are involved and there is no execution mode to pick.
+ 
+ Waiters exist for Copilot and CodeRabbit only, and those are the only two this workflow requests. Should some other automated reviewer the repo has configured post threads anyway, they still gate the merge and you settle them by hand (`fx-dev/skills/dev/references/scope-contract.md` § Injecting the brief into reviews) — a clean `fx-dev:resolve-pr-feedback` report does not cover them.
+ 
+ ```
+ # ALL in one message, every one run_in_background: true.
+ # Each command creates the log dir itself: if it does not exist the REDIRECT fails
+ # before the waiter ever starts, so you get no STATUS line at all — the one failure
+ # the whole protocol exists to prevent. `mkdir -p` is idempotent; never rely on an
+@@ -407,30 +412,31 @@ When all tasks are complete and all PRs merged:
+    git branch -D <branch>   # only if unmerged/abandoned
+    ```
+ 5. **Do NOT call `TeamDelete`** — it was removed in v2.1.178. The team config directory is cleaned up automatically when the session ends; there is no manual teardown step. (The shared task list directory persists locally by design so resumed sessions keep their tasks — that's expected, not a leak.) Your only manual cleanup is the worktrees in step 4.
+ 6. Report final summary to user
+ 
+ ---
+ 
+ ## Coordinator Rules (NON-NEGOTIABLE)
+ 
+ - **ALWAYS pass `name` to EVERY `Agent` call** — coder, verify, fix, anything. `name` is what makes the teammate addressable via `SendMessage` and visible in `members[]`; omitting it produces an anonymous worker you can't steer by name. No exceptions.
+ - **NEVER pass `team_name` and NEVER call `TeamCreate`/`TeamDelete`** — all three were removed/deprecated in v2.1.178. The team is implicit and session-scoped: it forms on the first `Agent` spawn and is cleaned up automatically on session exit. `team_name` on the `Agent` tool is accepted-but-ignored.
+ - **NEVER rely on `isolation: "worktree"` for a teammate** — a teammate runs as a full session in the lead's working directory, so the flag is a no-op. For any coders that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run coders strictly one-at-a-time. Always tear the worktrees down in STEP 4.
+ - **NEVER write code yourself** — all implementation goes through coder agents
+ - **NEVER create branches or commits** — coder agents handle this
+ - **NEVER delegate the full SDLC to a single agent** — agents cannot spawn sub-agents, so they will inline everything and skip later steps
++- **ALWAYS paste the `fx-dev:github` PR conventions block into every spawn prompt whose agent may open or edit a PR** — load that skill before authoring your first prompt. A spawned agent inherits your prompt, not your skills; a rule you do not restate is a rule that does not reach it.
+ - **NEVER skip PR inspection** — every PR gets reviewed before marking ready
+ - **NEVER merge without completing the MERGE GATE CHECKLIST** — every gate must pass, every time, for every PR
+ - **NEVER merge without Copilot review** — always invoke `fx-dev:copilot-review` yourself. No exceptions.
+ - **ALWAYS attempt CodeRabbit when configured, but never block on its rate limits** — invoke `fx-dev:coderabbit-review`; resolve feedback already received, then record `skipped (rate-limited)` and continue immediately if throttled.
+ - **NEVER `sleep`, poll, or block on a wait.** Every reviewer and CI wait is a BACKGROUNDED script that notifies you on exit; reconcile on that notification. A foreground waiter is killed at the Bash tool's 600 s cap anyway. The only timer permitted in a run is one long `ScheduleWakeup` silence backstop.
+ - **NEVER mark a teammate's PR as ready** until you've inspected it
+ - **ALWAYS handle Copilot review and CI monitoring directly** — these are coordinator responsibilities, not sub-agent responsibilities. Launch their waiters backgrounded, all in one message.
+ - **ALWAYS pass a deliberate `model` size to every `Agent` call** — see the size table in STEP 3. Coders are `large`; never downgrade them.
+ - **ALWAYS use `fx-dev:project-management`** to verify task tracking
+ - **ALWAYS run the full merge gate checklist** even for "trivial" or "follow-up" PRs
+ - **NEVER merge without browser verification** — spawn a verify agent if needed. CI alone does NOT catch runtime errors.
+ - **NEVER merge the FINAL PR of a change doc with `Status: draft` still in the diff.** The flip to `complete` rides in that PR, in both `docs/changes/<NNNN>-*.md` and `docs/index.yml`. If the coder forgot, push a fix commit to their branch and wait for CI before merging. Do NOT defer to a follow-up PR. See PRE-MERGE: Change-Doc Status Flip above.
+ 
+ ## Handling Agent Issues
+ 
+
+--- CHANGED LINE NUMBERS ---
+   160	- PR description updates with heredocs
+   161	- Review thread resolution vs. PR comments
+   162	- Command substitution in heredoc strings
+   163	
+   164	### 4. Follow Messaging Conventions
+   165	
+   166	**Be Direct and Concise:**
+   167	- All PR descriptions, commit messages, and comments must be direct and to the point
+   168	- Eliminate unnecessary prose and filler content
+   169	- Focus on what changed and why, not how the work was organized
+   170	
+   171	**⛔ Never hard-wrap anything GitHub renders as markdown:**
+   172	
+   173	PR descriptions, PR/issue comments, and issue bodies MUST NOT be hard-wrapped at 80 columns — or any column. GitHub reflows markdown to the reader's viewport, so manual line breaks only produce ragged text that re-wraps badly on narrow screens. **Write each paragraph as ONE long line** and let it soft-wrap.
+   174	
+   175	Commit messages are the **opposite**: git renders them as plain text, so wrap commit bodies at ~72 columns as usual. The rule follows the renderer, not the content.
+   176	
+   177	| Target | Wrap? |
+   178	|---|---|
+   179	| Commit message body | Yes, ~72 columns |
+   180	| PR description / PR comment / issue body | **No — one line per paragraph** |
+   181	
+   182	```markdown
+   183	❌ WRONG — hard-wrapped PR body, renders ragged on GitHub
+   184	## Summary
+   185	Standardizes every skill on two canonical instruction files, with a
+   186	pointer for each tool that cannot read them natively.
+   187	
+   188	✅ RIGHT — one line per paragraph, GitHub reflows it
+   189	## Summary
+   190	Standardizes every skill on two canonical instruction files, with a pointer for each tool that cannot read them natively.
+   191	```
+   192	
+   193	This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`. Tables, lists, and fenced code blocks keep their own line structure; the rule is about prose paragraphs.
+   194	
+   195	### PR conventions block (paste verbatim into any agent prompt that may open or edit a PR)
+   196	
+   197	A convention that lives only in this skill does not survive delegation: an agent spawned with an ad-hoc prompt never loads it. Whenever you delegate PR creation — a `/team` coder opening its own PR, a fix agent editing a body, any sub-agent running `gh pr create` — paste this block into that agent's prompt verbatim. Quote it by name ("the github skill's PR conventions block") when referring to it from another skill.
+   198	
+   199	```markdown
+   200	### PR conventions (mandatory)
+   201	- TITLE: a conventional-commit subject matching `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` — lowercase after the colon, imperative, no trailing period.
+   202	- TITLE: no `#<number>` unless it references a real existing PR/issue, and no wave/phase/step/batch or change-doc number. Squash-merge bakes the title into the default branch, where `#N` auto-links permanently.
+   203	- BODY: **never hard-wrapped.** GitHub reflows markdown to the reader's viewport, so write each paragraph as ONE long line and let it soft-wrap. Lists, tables and fenced code blocks keep their own line structure. This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`.
+   204	- COMMIT MESSAGE: the opposite — wrap the body at ~72 columns, because git renders it as plain text. The rule follows the renderer, not the content.
+   205	- Verify before AND after creating: the title against the regex, and the body against the longest-prose-line check.
+   206	```
+   207	
+   208	Mechanical body check — run it after creating or editing any PR body:
+   209	
+   210	```bash
+   211	gh pr view <N> --json body -q .body \
+   212	  | awk '!/^(\s*([-*+]|[0-9]+\.)\s|\s*\||\s*```|#)/ && length > 200 {n++} END {exit 0} '
+   213	# Prose paragraphs should be LONG single lines. If most prose lines cluster at 70-90
+   214	# characters, the body is hard-wrapped — rewrite it and `gh pr edit <N> --body-file`.
+   215	gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
+   216	```
+   217	
+   218	**Use Conventional Formats:**
+   219	- **Commit messages**: Follow conventional commit format (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)
+   220	- **PR titles**: MUST use conventional commit format — `type(scope): description` (e.g., `feat: add user authentication`, `fix(api): handle null token`). **BLOCKING**: on squash-merge the PR title becomes the commit subject, so a plain prose title (no `type:` prefix) permanently pollutes a conventional-commit history. **Canonical check** — every PR title, no matter who creates it (pr-preparer, the `/dev` workflow, or a `/team` coordinator running `gh pr create` directly), MUST match this regex; verify before creating AND before merging:
+   221	  ```bash
+   222	  gh pr view <N> --json title -q .title | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+' \
+   223	    && echo "OK: conventional" || echo "⛔ NOT conventional — gh pr edit <N> --title \"type(scope): …\""
+   224	  ```
+   225	  A prose title like `Add anti-fabrication grounding rules` is FORBIDDEN — reform it (`feat(scope): add anti-fabrication grounding rules`). Creating the PR directly (not via pr-preparer) does NOT exempt you from this.
+   226	- **Branch names**: Use conventional naming (e.g., `feat/user-auth`, `fix/login-bug`)
+   227	- **Comments**: Use conventional comment markers where applicable
+   228	
+   229	**Content Rules:**
+   230	- Describe the work being done and changes being made
+   231	- **Never mention** in the title: implementation phases, waves, steps of a process, project management terminology, workflow stages, or change-doc numbers
+   232	- **Never include** in the title: "Phase 1", "Step 2", "Part 3", "Wave 4", "First iteration", "Initial implementation", "0004-..."
+   233	- These belong in the PR **body** (description) if anywhere — never the title
+   234	
+   235	### ⛔ The `#<number>` PR-Title Rule (CRITICAL — BLOCKING)
+   236	
+   237	**A `#` immediately followed by a number — `#4`, `(#4)`, `#123` — in a PR title is a latent reference to PR/issue #N in the target repo.** The title bar itself renders it as plain text, so it looks harmless — but on **squash merge with GitHub's default commit-message setting, the PR title becomes the merge commit's subject line**, and `#N` in a *commit message* DOES auto-link and create a hard cross-reference to PR/issue #N. So a title saying `(#4)` to mean "implementation wave 4" ends up permanently cross-linking your merged commit (and the PR) to whatever PR/issue #4 happens to be. This has repeatedly created messy, wrong cross-links on `main`.
+   238	
+   239	**Rules — no exceptions:**
+   240	
+   241	1. **NEVER put `#<number>` in a PR title to mean anything other than a real PR/issue reference.** Implementation waves, phases, steps, parts, iterations, change-doc numbers (`0004`), and task numbers are FORBIDDEN as `#N` in titles.
+   242	2. **A `#<number>` is allowed in a title ONLY if N is a genuine, existing PR or issue in the target repo that this PR is actually about** — and even then, prefer putting the reference in the body (`Closes #123`). If you're not certain the number maps to a real PR/issue on this exact repo, do NOT write it.
+   243	3. **Do NOT pre-add a `(#N)` suffix.** When squash-merging with the default commit-message setting, GitHub appends `(#<real-PR-number>)` to the commit subject for you — a hand-added `(#4)` either duplicates or contradicts it. Leave your title clean and let GitHub add the real number at merge time.
+   244	4. To reference a change document or wave in the body, write the **path** (`docs/changes/0004-add-oauth.md`) or plain words ("the second batch of tasks") — never `#0004`, `#4`, or `(#4)`.
+   245	
+   246	**Examples:**
+   247	
+   248	✅ **Good PR Title** (no `#N`, no wave/phase):
+   249	```
+   250	feat: add user authentication with JWT tokens
+   260	1. Read the ledger.
+   261	2. Read every log whose waiter has completed since the last pass.
+   262	3. Update every row that changed, in one go.
+   263	4. Dispatch whatever is now unblocked.
+   264	5. Go idle again.
+   265	
+   266	**Batch the inspection.** One pass over all open PRs, not one `gh` call per PR per wake. While anything is in flight you get free wakes, so stall detection costs you no dedicated turns at all.
+   267	
+   268	#### The silence backstop
+   269	
+   270	The only case reconcile-on-wake misses is *everything* going quiet at once. Guard it with a single long-interval `ScheduleWakeup` (~30 minutes) — **not** a `sleep`, which holds a turn open.
+   271	
+   272	Every waiter has its own 900 s budget and always exits, so it will notify you well inside that window. The backstop should essentially never fire. **Do not shorten it**: a short interval is polling at full coordinator context wearing a different hat.
+   273	
+   274	#### Re-launching a `PENDING` waiter
+   275	
+   276	`STATUS=PENDING` means the reviewer or check is still running — not a verdict, not a failure. Relaunch it (backgrounded) if you still need that gate.
+   277	
+   278	**Prefer to have other work in flight while it runs.** If you have other PRs to advance, do that and let the relaunched waiter notify you; that is strictly cheapest. Only when you have nothing else to do is it worth relaunching immediately and waiting on it alone.
+   279	
+   280	---
+   281	
+   282	## MANDATORY MERGE GATE CHECKLIST (BLOCKING)
+   283	
+   284	**BEFORE running `gh pr merge` on ANY PR — no matter how small — you MUST verify ALL of the following. This is non-negotiable. A single unmet condition means DO NOT MERGE.**
+   285	
+   286	<!--
+   287	duvet= docs/specs/fx-dev-authority/index.md#required-checks-gate-every-merge
+   288	duvet= type=implication
+   289	duvet# A pull request MUST NOT be merged while any required check on it is failing or has not completed.
+   290	-->
+   291	
+   292	<!--
+   293	duvet= docs/specs/fx-dev-authority/index.md#unresolved-reviewer-threads-gate-every-merge
+   294	duvet= type=implication
+   295	duvet# A pull request MUST NOT be merged while any review thread on it from a configured automated reviewer remains unresolved.
+   296	-->
+   297	
+   298	| # | Gate | How to verify | Blocking? |
+   299	|---|------|--------------|-----------|
+   300	| 1 | **Required CI checks green** | `gh pr checks <NUMBER>` — every required non-CodeRabbit check must pass | YES |
+   301	| 2 | **Copilot review RECEIVED and feedback RESOLVED** | Invoke `fx-dev:copilot-review` skill — confirm 0 unresolved Copilot threads | YES |
+   302	| 2b | **CodeRabbit reviewed or correctly degraded** | Invoke `fx-dev:coderabbit-review`: prefer a passing check with received feedback resolved; if CodeRabbit rate-limits, report once, resolve what it already delivered (blocking findings fixed, every posted thread settled), and record `skipped (rate-limited)` without blocking | NO when rate-limited |
+   303	| 3 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
+   304	| 4 | **Spec task marked complete** | Check via project-management skill | YES |
+   305	| 5 | **PR description is clear** | Read PR body | YES |
+   306	| 5b | **PR title is clean AND conventional** | Title (a) is a conventional-commit subject — run the canonical check from the `fx-dev:github` skill's "Use Conventional Formats" (a plain prose title with no `type:` prefix FAILS) — AND (b) has NO stray `#<number>` (only a real PR/issue ref) and NO wave/phase/step/change-doc number. Fix with `gh pr edit <N> --title "type(scope): …"` before merge — squash bakes the title into `main` | YES |
+   307	| 5c | **PR body is NOT hard-wrapped** | `gh pr view <N> --json body -q .body \| awk '{print length}' \| sort -rn \| head -3` — prose paragraphs must be long single lines. Prose clustering at 70-90 characters means the body was hard-wrapped: rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>` before merging. Lists, tables and code blocks are exempt | YES |
+   308	| 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
+   309	
+   310	### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
+   311	
+   312	> **Codex runs LOCALLY first — and it is the ONLY local reviewer.** Implementing sub-agents run local Codex via the `fx-dev:codex-review` skill during pre-PR self-review, passing the Scope Brief. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer it **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **There is no local CodeRabbit pass; the `cr` CLI is not used.** Gate 2b is the PR-level CodeRabbit review, which applies only when the GitHub App is configured — its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown.
+   313	
+   314	**As coordinator, YOU handle reviewer waits directly — but you never *block* on them.** Launch every configured reviewer's waiter in ONE message, all backgrounded, each redirecting to its own log. They run concurrently; a completion notification wakes you per reviewer. No sub-agents are involved and there is no execution mode to pick.
+   315	
+   316	Waiters exist for Copilot and CodeRabbit only, and those are the only two this workflow requests. Should some other automated reviewer the repo has configured post threads anyway, they still gate the merge and you settle them by hand (`fx-dev/skills/dev/references/scope-contract.md` § Injecting the brief into reviews) — a clean `fx-dev:resolve-pr-feedback` report does not cover them.
+   317	
+   318	```
+   319	# ALL in one message, every one run_in_background: true.
+   320	# Each command creates the log dir itself: if it does not exist the REDIRECT fails
+   321	# before the waiter ever starts, so you get no STATUS line at all — the one failure
+   322	# the whole protocol exists to prevent. `mkdir -p` is idempotent; never rely on an
+   323	# earlier step having created it.
+   324	Bash: mkdir -p .claude/team/waits && bash <skill>/copilot-review/scripts/wait-for-copilot-review.sh <PR_NUMBER> \
+   325	        > .claude/team/waits/copilot-<PR_NUMBER>.log 2>&1
+   326	Bash: mkdir -p .claude/team/waits && bash <skill>/coderabbit-review/scripts/wait-for-coderabbit-review.sh <PR_NUMBER> \
+   327	        > .claude/team/waits/rabbit-<PR_NUMBER>.log 2>&1
+   328	Bash: mkdir -p .claude/team/waits && bash <skill>/dev/scripts/wait-for-ci-checks.sh <PR_NUMBER> \
+   329	        > .claude/team/waits/ci-<PR_NUMBER>.log 2>&1
+   330	
+   331	# On each notification: read the log, branch on its STATUS= line, classify
+   332	# findings in the ledger, THEN invoke that reviewer's resolver skill.
+   333	```
+   334	
+   335	**Never run a waiter in the foreground.** The Bash tool caps a foreground `timeout` at 600 000 ms, below every waiter's 900 s budget — a foreground call is killed mid-poll with no STATUS and no exit code, and the caller then re-runs it blindly. **Never background one without the redirect**: the cycle is driven by what the script prints.
+   336	
+   337	Apply `fx-dev:dev` Steps 2.5 and 6.1 as the canonical reviewer policy: maintain the coordinator-owned finding ledger, fix every **blocking** finding and only those (`fx-dev/skills/dev/references/scope-contract.md` § Blocking — the class name does not decide it; a reviewer-originated Material or Substantive entry blocks whatever its class), and rerun only reviewer state invalidated by the latest delta. Do not restart every reviewer after each push or seek zero suggestions. Settle all required threads within the bounded remediation rounds. **If CodeRabbit reports a rate/quota limit or cooldown at any point, stop its loop immediately, report once, record `skipped (rate-limited)`, and continue without waiting or escalating — after fixing the blocking findings it already delivered and settling every thread it already posted.** The degradation waives only the passes that never ran (`fx-dev:coderabbit-review`, rate-limit rule), never work already on the PR. Copilot must still satisfy its mandatory review gate.
+   338	
+   339	If CodeRabbit is not configured (its waiter reports `STATUS=NOT_CONFIGURED`, exit 3), report once and proceed — that status is terminal, so never retry or wait it out. Do not silently skip ordinary failures; the optional exception is specifically for CodeRabbit throttling.
+   340	
+   341	### Browser Verification Gate (Gate 6)
+   342	
+   343	For tasks with UI changes, spawn a dedicated verify agent:
+   344	
+   345	```
+   346	Agent tool:
+   347	  name: "verify-<pr-number>"            # REQUIRED — addressable handle (do NOT pass team_name; it's ignored)
+   348	  model: "sonnet"                       # size: medium — verification is mechanical
+   349	  prompt: "Load the verify-web-change skill (Skill tool: skill='fx-dev:verify-web-change').
+   350	           Verify PR #<NUMBER> on branch <branch-name>.
+     1	---
+     2	name: pr-preparer
+     3	description: "Explicit-use only — invoke when the user explicitly names this skill, or when an active explicitly invoked workflow calls it. Prepares and opens a ready-for-review pull request from completed branch changes."
+     4	---
+     5	
+     6	You are an expert software engineer specializing in pull request preparation and code review standards. Your role is to ensure pull requests are pristine, well-documented, and fully compliant with both project-specific and global development guidelines.
+     7	
+     8	**IMPORTANT**: Before proceeding with any analysis, you MUST first check if the working directory is clean. Execute `git status --porcelain` and if there are ANY uncommitted changes, immediately stop and inform the user that they need to commit their changes before preparing a PR. Do not proceed with any other analysis if there are uncommitted changes.
+     9	
+    10	Then, your primary responsibilities:
+    11	
+    12	1. **Analyze Branch Changes**: Execute `git diff main` to examine all changes in the current branch compared to main. Review each file modification, addition, and deletion to understand the full scope of changes.
+    13	
+    14	2. **Review Commit History**: Examine `git log` to assess commit quality. Verify that:
+    15	   - Each commit is atomic and represents a single logical change
+    16	   - Commit messages follow Semantic Conventional Commit format (e.g., 'feat:', 'fix:', 'docs:')
+    17	   - Messages are in present tense, imperative mood, concise, and precise
+    18	   - No commits contain unrelated changes bundled together
+    19	
+    20	3. **Validate Branch Naming**: Ensure the branch name follows Semantic Conventional Branch naming conventions as specified in project guidelines.
+    21	
+    22	4. **Craft PR Description**: Create a **concise** PR description that includes ONLY:
+    23	   - **Why** the change was made (motivation, problem being solved)
+    24	   - Reference to related issues/tickets (e.g., "Closes #123")
+    25	   - **Links to related spec/change documents** (if applicable):
+    26	     - Spec: `docs/specs/<name>/` — link to the living spec this PR relates to
+    27	     - Change: `docs/changes/NNNN-name.md` — link to the change document driving this work
+    28	     - Use relative paths from repo root in markdown links
+    29	   - Breaking changes or migration steps (if any)
+    30	   - Non-obvious design decisions or trade-offs worth noting
+    31	
+    32	   **PR Title Rules:**
+    33	   - **⛔ The title MUST be a conventional-commit subject — `type(scope): description`** (e.g., `feat(auth): add OAuth2 login`), matching the commit-message format the repo uses. This is BLOCKING and **takes precedence over any title handed to you** — by the `/dev` workflow brief, the caller, an issue title, or a branch name. If the suggested title lacks a valid `type:` / `type(scope):` prefix, you MUST reform it into conventional-commit style rather than passing it through verbatim; a plain descriptive title is NOT acceptable just because a caller supplied one. On squash-merge the PR title becomes the commit subject, so a non-conventional title pollutes a conventional-commit history. Verify the repo actually uses conventional commits (`git log --oneline -20`); when it does, conformance is mandatory. Pick `type` from the dominant change (`feat` new capability, `fix` bug fix, else `docs`/`refactor`/`chore`/`test`/…); when a PR bundles several, choose the highest-order type (`feat` > `fix` > others) and cover the rest in the body.
+    34	   - **⛔ NEVER put `#<number>` in the title** (`#4`, `(#4)`, `#123`) unless N is a real, existing PR/issue in the **target repo** that this PR genuinely references. On squash-merge the title becomes the commit subject, where `#N` auto-links to PR/issue #N — so using it for an implementation **wave**, phase, step, or change-doc number wrongly cross-links the PR. This is BLOCKING. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule" for the full rule.
+    35	   - **Do NOT pre-add a trailing `(#N)` suffix** — GitHub appends the real PR number to the squash-merge title automatically at merge time, so a hand-written trailing `(#N)` is both redundant and likely wrong. (A genuine in-text PR/issue reference per the rule above is still allowed; what's forbidden is tacking on a `(#N)` suffix yourself.)
+    36	   - **NEVER mention implementation waves, phases, steps, iterations, or change-doc/spec references in the title** — not as a number (`0003`), not as a slug (`0003-add-oauth`), not as a path, and not as `#0003`/`(#3)`. No "Wave 4", "Phase 1" either. All of this goes in the PR **body** if anywhere, never the title.
+    37	   - This applies even when the PR finalizes a change doc: describe the work itself (`docs: complete OAuth change tasks`), and reference the doc by path **in the body** (`docs/changes/0003-add-oauth.md`). There is no title exception.
+    38	
+    39	   - **Test plan** — a checklist of concrete verification steps someone (or the verify-web-change skill) can follow to confirm the PR works. Each item should be a checkbox:
+    40	     ```markdown
+    41	     ## Test plan
+    42	     - [ ] Navigate to /settings and confirm the new "Notifications" tab appears
+    43	     - [ ] Toggle notifications off, refresh, confirm the toggle persists
+    44	     - [ ] No console errors on the /settings page
+    45	     ```
+    46	     Write test plan items that are **specific and observable** — not vague ("works correctly") but actionable ("click X, see Y"). Include the route/URL where each item can be verified when applicable.
+    47	
+    48	   **DO NOT include** (this information is already visible in GitHub's UI):
+    49	   - List of files changed (visible in the Files tab)
+    50	   - Number of files/lines added/removed (visible in the diff)
+    51	   - Test counts or pass/fail stats (visible in CI checks)
+    52	   - Commit counts or commit messages (visible in Commits tab)
+    53	   - Obvious information derivable from the diff itself
+    54	
+    55	   Keep descriptions short. A few sentences is often enough.
+    56	
+    57	   **Never hard-wrap the description.** GitHub reflows markdown to the reader's viewport, so hard-wrapping prose at 80 columns (or any column) only renders ragged and re-wraps badly on narrow screens. Write each paragraph as ONE long line and let it soft-wrap. Commit messages are the opposite — those stay wrapped at ~72 columns, because git renders them as plain text. See the `fx-dev:github` skill's "Never hard-wrap anything GitHub renders as markdown".
+    58	
+    59	   **Verify it, do not merely intend it.** After creating or editing the PR, run the body check and read the result:
+    60	
+    61	   ```bash
+    62	   gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
+    63	   ```
+    64	
+    65	   Prose paragraphs are long single lines, so the top lengths should far exceed 100. Prose clustering at 70-90 characters means the body went out hard-wrapped — rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>`.
+    66	
+    67	5. **Check Compliance**: Verify adherence to:
+    68	   - Project-specific guidelines from AGENTS.md files
+    69	   - Global coding standards and architectural decisions
+    70	   - Any custom requirements or patterns established in the codebase
+    71	
+    72	6. **Update Task Tracking**: Before creating the PR, check if relevant task tracking files exist. Search for:
+    73	   - `docs/changes/` — Change documents with task lists
+    74	   - `docs/tasks.md` — Catch-all task list
+    75	
+    76	   **MANDATORY: Load the project-management skill FIRST:**
+    77	   ```
+    78	   Skill tool: skill="fx-dev:project-management"
+    79	   ```
+    80	
+    81	   The project-management skill provides the correct format and workflow for updating task tracking. After loading:
+    82	   - Identify which task(s) in `docs/changes/*.md` or `docs/tasks.md` are addressed by this PR
+    83	   - Mark the task(s) as complete with the PR reference: `- [x] Task name (PR #N)`
+    84	   - If ALL tasks in a change document are complete, update its `**Status:**` to `complete`
+    85	   - **Sync indexes**: Update `docs/index.yml` (the `status:` field) and `docs/index.md` (the table row) to match the change document's new status
+    86	   - Include ALL of the above updates (task checkmarks, status, index sync) in the PR
+    87	
+    88	   **CRITICAL:** This step ensures completed work is tracked. Skipping this results in orphaned tasks that appear incomplete after merge.
+    89	
+    90	7. **Create the PR (ready for review)**: Use `gh pr create` to create the pull request on GitHub. **ALL PRs MUST be created READY FOR REVIEW — never as drafts.** Do NOT pass `--draft`. Do NOT include "draft" / "WIP" / "for review" language anywhere in the title or body. The downstream SDLC steps (CI monitoring, Copilot, CodeRabbit) ALL run from the moment the PR is opened — opening as draft has been used as an excuse to skip them.
+    91	
+    92	   > **Codex should already have converged before this step.** The SDLC runs a local Codex review (`fx-dev:codex-review`, which passes the Scope Brief as the review prompt — not `codex review --base main`, whose promptless form cannot carry it) during pre-PR self-review (`fx-dev:dev` Step 4.5) and only opens the PR once it has **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **Codex is the only local reviewer** — there is no local CodeRabbit pass; CodeRabbit applies at the PR level only, and only where its GitHub App is installed. Don't open the PR with a known-unresolved blocking local reviewer finding.
+    93	
+    94	   **⛔ FINAL TITLE SELF-CHECK (BLOCKING) — run before `gh pr create`:** the `--title` MUST be a conventional-commit subject matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (verify: `printf '%s' "<title>" | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+'`). If a caller or the `/dev` brief handed you a prose title (no `type:` prefix), REFORM it to `type(scope): description` — NEVER pass a prose title through. This is the same BLOCKING rule as the **PR Title Rules** above; the explicit self-check exists because prose titles have repeatedly slipped onto `main` via squash-merge.
+    95	
+    96	   ```bash
+    97	   gh pr create --title "type(scope): description" --body "$(cat <<'EOF'
+    98	   ## Summary
+    99	   ...
+   100	   EOF
+   101	   )"
+   102	   ```
+   103	
+   104	   If the work isn't actually ready for review, do NOT open the PR yet — finish it first. There is no "draft" middle state in this workflow.
+   105	
+   106	8. **Provide Actionable Feedback**: If issues are found:
+   107	   - Clearly explain what needs to be fixed
+   108	   - Suggest specific commands or changes to resolve issues
+   109	   - Offer to help with commit cleanup (squashing, rewriting messages, etc.)
+   110	
+   111	9. **Present Final Version**: Once everything is compliant:
+   112	   - Provide the final PR title (following commit message format)
+   113	   - Present the complete PR description ready for submission
+   114	   - Return the PR URL to the user
+   115	
+   116	10. **Monitor PR Checks**: When the PR has been pushed and created, launch a sub-agent with the pr-check-monitor skill to watch for CI failures.
+   117	
+   118	When analyzing, pay special attention to:
+   119	- Unnecessary files that should be removed
+   120	- Commits that should be squashed or rewritten
+   121	- Missing documentation updates
+   122	- Incomplete implementations
+   123	- Style violations or inconsistencies
+   124	
+   125	Always be thorough but constructive. Your goal is to help developers submit high-quality PRs that will sail through review. If you need additional context or find ambiguities, ask clarifying questions rather than making assumptions.
+   126	
+   127	Remember: A well-prepared PR saves time for everyone involved in the review process.
+
+--- Coder references ---
+plugins/fx-dev/skills/coder/SKILL.md:40:5. Run the local Codex review (`fx-dev:codex-review`) and converge it **before** opening the PR — it is the only local reviewer, and it is mandatory here exactly as in `fx-dev:dev` Step 4.5
+plugins/fx-dev/skills/coder/SKILL.md:49:**When invoked from SDLC:** Stop after step 4 (implement with tests + commit). Do NOT create PRs or launch reviewers — the SDLC owns steps 5 onward.
+plugins/fx-dev/skills/resolve-ci-failures/SKILL.md:14:- SDLC Step 7.4 invokes it after `wait-for-ci-checks.sh` exits with code 1
+plugins/fx-dev/skills/copilot-review/SKILL.md:134:(Step 5), so editing for an immaterial finding costs a full wait cycle *and*
+plugins/fx-dev/skills/copilot-review/SKILL.md:137:entry for a misread convention (`fx-dev:review` Step 6) — required work, and its
+plugins/fx-dev/skills/copilot-review/SKILL.md:146:- After creating a PR (SDLC Step 6.1)
+plugins/fx-dev/skills/copilot-review/SKILL.md:336:### Step 5: If Fixes Were Pushed, Start Over
+plugins/fx-dev/skills/copilot-review/SKILL.md:342:its escalation triggers are `fx-dev:review` Step 7; every iteration here costs a
+plugins/fx-dev/skills/codex-review/SKILL.md:16:(`fx-dev:dev` Step 4.5), run before `pr-preparer`.
+plugins/fx-dev/skills/codex-review/SKILL.md:39:`fx-dev:setup` or `fx-dev:upgrade` from here (`fx-dev:review` Step 6 explains
+plugins/fx-dev/skills/codex-review/SKILL.md:283:- **A fix is a commit, not a push.** Make atomic commits, and re-run Step 7's loop
+plugins/fx-dev/skills/codex-review/SKILL.md:290:to PR creation (`fx-dev:dev` Step 4.5 → Step 5). It is the only local gate; there is
+plugins/fx-dev/skills/coderabbit-review/SKILL.md:21:> `fx-dev:codex-review` and `fx-dev:dev` Step 4.5. Do not reintroduce a `cr` call,
+plugins/fx-dev/skills/coderabbit-review/SKILL.md:33:never saw the brief (`fx-dev:review` Step 8).
+plugins/fx-dev/skills/coderabbit-review/SKILL.md:154:pending again — go back to Step 1. Per `fx-dev:review` Step 7, repeat Steps
+plugins/fx-dev/skills/resolve-codecov-feedback/SKILL.md:15:- As part of the SDLC workflow (Step 7.5) after CI checks pass
+plugins/fx-dev/skills/rabbit-feedback-resolver/SKILL.md:20:- **Step 5** — what each disposition means, and that a coordinator's is
+plugins/fx-dev/skills/rabbit-feedback-resolver/SKILL.md:22:- **Step 6** — the `REVIEW.md` entry for an incorrect finding.
+plugins/fx-dev/skills/rabbit-feedback-resolver/SKILL.md:180:(`fx-dev:review` Step 5); use the table for threads it did not cover, and for a
+plugins/fx-dev/skills/rabbit-feedback-resolver/SKILL.md:207:whether anything changed (`fx-dev:review` Step 5). Three handlers have CodeRabbit
+plugins/fx-dev/skills/rabbit-feedback-resolver/SKILL.md:222:   `REVIEW.md` entry (`fx-dev:review` Step 6). Replying and resolving without that
+plugins/fx-dev/skills/copilot-feedback-resolver/SKILL.md:23:- **Step 5** — what each disposition means, and that a coordinator's disposition
+plugins/fx-dev/skills/copilot-feedback-resolver/SKILL.md:25:- **Step 6** — the `REVIEW.md` entry for an incorrect finding, its 4000-character
+plugins/fx-dev/skills/copilot-feedback-resolver/SKILL.md:108:comment text alone (`fx-dev:review` Step 5). Use the table only for threads it did
+plugins/fx-dev/skills/copilot-feedback-resolver/SKILL.md:162:and whether anything was changed (`fx-dev:review` Step 5). Phrasing that works:
+plugins/fx-dev/skills/copilot-feedback-resolver/SKILL.md:171:  `REVIEW.md` entry is required work (`fx-dev:review` Step 6), and Copilot reads
+plugins/fx-dev/skills/verify-web-change/SKILL.md:353:### Step 5: Verify Application Loads
+plugins/fx-dev/skills/verify-web-change/SKILL.md:387:### Step 6: Verify Specific Changes
+plugins/fx-dev/skills/verify-web-change/SKILL.md:439:### Step 7: Report Results
+plugins/fx-dev/skills/verify-web-change/SKILL.md:475:### Step 8: Cleanup
+plugins/fx-dev/skills/verify-web-change/SKILL.md:563:- Override manually: navigate to the correct URL in Step 5.1
+plugins/fx-dev/skills/pr-preparer/SKILL.md:92:   > **Codex should already have converged before this step.** The SDLC runs a local Codex review (`fx-dev:codex-review`, which passes the Scope Brief as the review prompt — not `codex review --base main`, whose promptless form cannot carry it) during pre-PR self-review (`fx-dev:dev` Step 4.5) and only opens the PR once it has **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **Codex is the only local reviewer** — there is no local CodeRabbit pass; CodeRabbit applies at the PR level only, and only where its GitHub App is installed. Don't open the PR with a known-unresolved blocking local reviewer finding.
+plugins/fx-dev/skills/dev/SKILL.md:14:- Its authority covers the lifecycle request through the Step 8 handoff. Once that handoff is complete, later user messages are standalone requests unless the user explicitly invokes `/dev` again.
+plugins/fx-dev/skills/dev/SKILL.md:215:The coordinator owns one in-memory finding ledger for the run; reviewer sub-agents return findings to the coordinator and MUST NOT mutate the ledger concurrently. Give every finding a stable fingerprint (`category + file + line/range + normalized claim`) and record its source, first-seen revision, classification, materiality tier, disposition, and verification evidence. Classification and materiality are independent fields — see Step 4.5 for how the tier is assigned. The tier is `n/a` for a contract blocker: filter 2 stops before the bar, so a rule violation is never ranked, and inventing a tier for one is the mistake that lets it be argued down. Classify each finding exactly once as:
+plugins/fx-dev/skills/dev/SKILL.md:317:**Codex is the ONLY local reviewer.** The reviewer roster for this SDLC is exactly Codex locally, then Copilot and — where its GitHub App is installed — CodeRabbit at the PR level (Step 6.1). There is no local CodeRabbit pass (the `cr` CLI is not used anywhere in this SDLC), and no Claude-side review pass: do not run `/code-review`, `/simplify`, or a general-purpose reviewing sub-agent as an SDLC gate. The user may still invoke those directly; they are not part of this lifecycle.
+plugins/fx-dev/skills/dev/SKILL.md:338:Proceed to Step 5 when all of the following are true:
+plugins/fx-dev/skills/dev/SKILL.md:347:`follow-up/out-of-scope` entries with tier `n/a` — the class and the tier together, which is what identifies a filter-1 exclusion — and immaterial observations, do not block PR creation. Tier `n/a` alone does not qualify: a `required-by-contract` entry carries it too, and blocks. Nothing else is waivable here: a reviewer-originated Material or Substantive finding blocks even though no written requirement names it, exactly as item 1 above and `references/scope-contract.md` § Blocking say. Each review channel caps at the single bound defined in `references/scope-contract.md` § The iteration bound, which counts the initial pass as iteration 1 and which no skill restates or overrides — count reviewer invocations in total, not remediation rounds on top of the first pass. **Convergence is the goal, and the bound is a runaway backstop, not a target.** Reaching it means the loop failed to converge; report it that way. Reaching the bound is a failure to converge and does not authorize Step 5. STOP, report the per-pass trend and everything still open, and let the user decide whether to create the PR — including when every remaining entry is `follow-up/out-of-scope` with tier `n/a`. A blocking entry at the bound is always an escalation; the bound never waives one. A contract amendment may change product scope, but it cannot waive mandatory correctness, security, privacy, testing, or merge rules.
+plugins/fx-dev/skills/dev/SKILL.md:430:| **Browser-verifiable** | Can be tested via Playwright MCP (UI routes, visual changes, interactions) | Run verify-web-change (Step 5.5.2) |
+plugins/fx-dev/skills/dev/SKILL.md:431:| **Programmatically verifiable** | Can be tested via CLI, API calls, log inspection, or automated scripts | Run verification commands directly (Step 5.5.3) |
+plugins/fx-dev/skills/dev/SKILL.md:432:| **Manual-only** | Requires external systems, user accounts, or physical interaction (e.g., "send a Discord message", "check email") | Annotate for user and prompt them to verify (Step 5.5.4) |
+plugins/fx-dev/skills/dev/SKILL.md:526:**⛔ DO NOT PROCEED to Step 6 until every test plan item has been addressed** — either verified (pass/fail), confirmed by user, or explicitly annotated as requiring manual testing.
+plugins/fx-dev/skills/dev/SKILL.md:542:3. **Maximum 2 fix iterations.** If still failing after 2 attempts, proceed to Step 6 and note the unverified items in the PR description.
+plugins/fx-dev/skills/dev/SKILL.md:552:**There is no Claude-side self-review sub-step.** PR-level review is Copilot and CodeRabbit, exactly as Step 4.5 named the roster: do not spawn a reviewing sub-agent to read the PR first, and do not invoke a general-purpose reviewer skill here. Blocking findings from the two reviewers are fixed by their resolvers inside 6.1, not by a separate coder pass.
+plugins/fx-dev/skills/dev/SKILL.md:556:**MANDATORY: Wait for and resolve EVERY automated reviewer configured on the repo.** **Copilot and CodeRabbit are the only two this step *requests*** — that roster is closed (`references/scope-contract.md` § Injecting the brief into reviews), so do not add a pass for another reviewer, and in particular never reintroduce a Claude-side one. But *requesting* and *settling* are different obligations: if the repo has some other automated reviewer configured and it posts threads anyway, those threads are triaged and settled like any others, because no thread from a configured automated reviewer may be left open under a merge (Step 8.1's checklist, and the spec behind it). **There is no waiter or resolver for such a reviewer, so settle it by hand** — triage against the brief, reply with the disposition, resolve via `resolveReviewThread` (`fx-dev:github`) — and do not read a clean `fx-dev:resolve-pr-feedback` report as covering it; that skill categorises by author login and knows only Copilot and CodeRabbit (`references/scope-contract.md` § Injecting the brief into reviews). Reviewers are **independent feedback channels** with different latencies (Copilot 85 s to 12 m 42 s observed — do not budget for it being quick; CodeRabbit 2–10+ min and re-runs after every push).
+plugins/fx-dev/skills/dev/SKILL.md:558:> **CodeRabbit is PR-level only.** There is no local CodeRabbit pass — Step 4.5 runs Codex alone. CodeRabbit applies here when the repo's GitHub App auto-reviews PRs, and its waiter reports `STATUS=NOT_CONFIGURED` when it does not, which is the common case and is terminal. Prefer a passing check and resolve received feedback; if CodeRabbit rate-limits, resolve what it already delivered — blocking findings fixed, every posted thread settled — then record `skipped (rate-limited)` and continue without blocking.
+plugins/fx-dev/skills/dev/SKILL.md:616:Because Step 5 opens the PR ready for review (NOT draft), CI workflows that
+plugins/fx-dev/skills/dev/SKILL.md:640:| `TERMINAL_PASS` | 0 | Every check completed, none failed → **proceed to Step 8** |
+plugins/fx-dev/skills/dev/SKILL.md:641:| `TERMINAL_FAIL` | 1 | Every check completed, at least one failed → **proceed to Step 7.2** |
+plugins/fx-dev/skills/dev/SKILL.md:648:**If Step 7.1 reports `STATUS=TERMINAL_FAIL` (failures detected):**
+plugins/fx-dev/skills/dev/SKILL.md:659:**After the skill completes and fixes are pushed, GO BACK TO Step 7.1** — re-run the wait script to monitor the new check run. This creates a loop:
+plugins/fx-dev/skills/dev/SKILL.md:662:Step 7.1 (wait) → fail → Step 7.2 (fix) → Step 7.1 (wait) → ...
+plugins/fx-dev/skills/dev/SKILL.md:681:# 2. Automated reviewers — MUST be settled and resolved (if not already done in Step 6.1)
+plugins/fx-dev/skills/dev/SKILL.md:682:# Reuse Step 6.1 evidence when it covers the current head SHA. Invoke a dedicated
+plugins/fx-dev/skills/dev/SKILL.md:734:The PR was opened ready-for-review in Step 5, so there is no draft → ready
+plugins/fx-dev/skills/dev/SKILL.md:801:**⚠️ NEVER MERGE WITHOUT ALL MERGE GATES PASSING (Step 8.1)**
+plugins/fx-dev/skills/resolve-pr-feedback/SKILL.md:21:- **Step 6** — when resolvers run in parallel, the `REVIEW.md` writes must be
+plugins/fx-dev/skills/resolve-pr-feedback/SKILL.md:41:`fx-dev:review` Step 6 states the rule; this is the coordinator's half of it.
+plugins/fx-dev/skills/resolve-pr-feedback/SKILL.md:228:**If multiple exist:** Prefer running Copilot and CodeRabbit resolvers **in parallel** by spawning each as a sub-agent in the same message (see `fx-dev:dev` Step 6.1 for the exact pattern). Codecov is sequential after them since coverage fixes typically require code from the other resolvers to be in place first.
+plugins/fx-dev/skills/resolve-pr-feedback/SKILL.md:236:1. **If the current head SHA has no Copilot review yet — because a fix was pushed, or because none has covered this head at all — nudge Copilot for it** via `fx-dev:copilot-review` (its Step 1). **Copilot does NOT re-review pushed commits on its own.** Where the last cycle only replied and resolved, the head has not moved and a review of it already exists: skip straight to step 3. Nudging and waiting there buys a full cycle to re-read code nobody changed, which is the same churn as editing for an immaterial finding. Skipping this makes the rest of the loop meaningless: you will poll, see nothing, and "converge" on code no reviewer has read. Issue the nudge and discard its response — it is fire-and-forget, never evidence, and having issued it is never a substitute for step 6's received-review check.
+plugins/fx-dev/skills/resolve-pr-feedback/SKILL.md:240:5. **If fixes were pushed**, restart at step 1 — the push created unreviewed commits. If this cycle produced no push, do not restart: go to step 6 and judge convergence on the review already delivered for this head.
+plugins/fx-dev/skills/resolve-pr-feedback/SKILL.md:241:6. Stop when the loop has **converged** per `fx-dev:review` Step 7 — no blocking
+plugins/fx-dev/skills/resolve-pr-feedback/SKILL.md:254:   escalation triggers are `fx-dev:review` Step 7 and are not restated here.
+plugins/fx-dev/skills/setup/references/duvet-adoption.md:55:workflows (step 6). Each is a decision adoption is not entitled to make for the
+plugins/fx-dev/skills/setup/references/duvet-adoption.md:271:1. **The CI workflow** in step 6 deliberately calls a bare `duvet`: the
+plugins/fx-dev/skills/setup/references/duvet-adoption.md:637:- **The no-CI branch of step 6 reaches this state without any step failing.**
+plugins/fx-dev/skills/setup/references/duvet-adoption.md:649:line that matches the branch taken in step 6. Do not print a line for a file that
+plugins/fx-dev/skills/setup/SKILL.md:44:**If all docs/ files exist**, skip to Step 5.5 (instruction files). Do not overwrite existing docs/ files.
+plugins/fx-dev/skills/setup/SKILL.md:107:### Step 5: Create `docs/index.md`
+plugins/fx-dev/skills/setup/SKILL.md:127:### Step 5.5: Legacy-Layout Detection (DETECT ONLY — never migrate)
+plugins/fx-dev/skills/setup/SKILL.md:137:legacy_agents=0   # blocks Step 6 AND Step 8.3 (both write AGENTS.md)
+plugins/fx-dev/skills/setup/SKILL.md:138:legacy_review=0   # blocks Step 8
+plugins/fx-dev/skills/setup/SKILL.md:139:legacy_rabbit=0   # blocks Step 9
+plugins/fx-dev/skills/setup/SKILL.md:158:# skip Step 9 on a config whose code_guidelines are perfectly fine.
+plugins/fx-dev/skills/setup/SKILL.md:183:| `legacy_agents` | **Step 6 and Step 8.3** | Both write `AGENTS.md`. 8.3 appends the Codex pointer — on its own that would create a stub `AGENTS.md` holding only review rules while the real conventions sit in `CLAUDE.md`, which is worse than not creating it at all |
+plugins/fx-dev/skills/setup/SKILL.md:184:| `legacy_review` | **Step 8** | `REVIEW.md` must absorb the obsolete file's rules first, and that is a merge |
+plugins/fx-dev/skills/setup/SKILL.md:185:| `legacy_rabbit` | **Step 9** | Writing through a symlink edits its target, possibly outside the repo; and an explicit `enabled: false` is not setup's to reverse |
+plugins/fx-dev/skills/setup/SKILL.md:201:The dangerous case is `AGENTS.md` missing while `CLAUDE.md` holds real conventions. **Do not seed an `AGENTS.md`** — that splits the project's conventions across two files and the user is left with neither complete. Skip Step 6 entirely and report.
+plugins/fx-dev/skills/setup/SKILL.md:205:### Step 6: Ensure `AGENTS.md` Defers to /project-management
+plugins/fx-dev/skills/setup/SKILL.md:221:- **If `/project-management` is found** → the current marker is present. Before skipping to Step 7, check for obsolete rules surviving *alongside* it:
+plugins/fx-dev/skills/setup/SKILL.md:227:  Any hit means the file carries both the current rule and a conflicting older one. **Do not remove it** — report it as a legacy finding recommending `/fx-dev:upgrade` (M1.6), then continue to Step 7.
+plugins/fx-dev/skills/setup/SKILL.md:249:- Review rules — those belong in `REVIEW.md` (Step 8)
+plugins/fx-dev/skills/setup/SKILL.md:256:### Step 7: Ensure the `CLAUDE.md` Pointer Exists
+plugins/fx-dev/skills/setup/SKILL.md:265:- **If `CLAUDE.md` already contains `@AGENTS.md`** → current, skip to Step 8.
+plugins/fx-dev/skills/setup/SKILL.md:266:- **If `CLAUDE.md` exists with other content** → Step 5.5 already flagged this as legacy. **Do not modify it** — run `/fx-dev:upgrade`.
+plugins/fx-dev/skills/setup/SKILL.md:278:### Step 8: Ensure `REVIEW.md`
+plugins/fx-dev/skills/setup/SKILL.md:280:`REVIEW.md` at the repo root is the canonical **review-conventions** file. **Copilot code review reads it natively**; Codex reaches it via the pointer in 8.3; CodeRabbit reaches it via Step 9. Those three are the whole reviewer roster.
+plugins/fx-dev/skills/setup/SKILL.md:284:**If `legacy_review=1`, skip 8.1 and 8.2** — `REVIEW.md` needs a merge, which is `/fx-dev:upgrade`'s job. Step 8.3 is gated separately on `legacy_agents`.
+plugins/fx-dev/skills/setup/SKILL.md:288:If Step 5.5 found one, do not touch it and do not create `REVIEW.md` from it — report and defer to `/fx-dev:upgrade`, which folds its rules into `REVIEW.md`.
+plugins/fx-dev/skills/setup/SKILL.md:325:**Skip this step if `legacy_agents=1` OR `REVIEW.md` does not exist** (which includes `legacy_review=1`, since that blocks Step 8 from creating it). The pointer's whole content is "read `REVIEW.md`" — writing it while that file is absent hands Codex a dangling instruction, and unattended setup would leave it there until someone runs upgrade.
+plugins/fx-dev/skills/setup/SKILL.md:344:### Step 9: Ensure CodeRabbit Reads `REVIEW.md`
+plugins/fx-dev/skills/setup/SKILL.md:366:### Step 9.5: Offer Duvet Adoption (only if not already adopted)
+plugins/fx-dev/skills/setup/SKILL.md:388:### Step 10: Report
+plugins/fx-dev/skills/setup/SKILL.md:408:**If Step 9.5 adopted duvet, the report MUST include it**, using the report block from `references/duvet-adoption.md`:
+plugins/fx-dev/skills/setup/SKILL.md:415:If everything in `docs/` and the instruction files was already current **and Step 9.5 wrote nothing**, report briefly: "Docs structure and instruction files verified — no changes needed."
+plugins/fx-dev/skills/setup/SKILL.md:417:**That short-circuit is forbidden whenever Step 9.5 adopted duvet.** An already-current repo is the common case — setup runs on every `/spec-writer` and `/project-management` call, so `docs/` will usually need no changes — which is exactly when "no changes needed" would print verbatim over an adoption that just created `.duvet/config.toml`, `.duvet/snapshot.txt`, a `.gitignore` edit, a mise edit, and a CI workflow. Five new files reported as zero changes is the worst possible report: the user has no idea there is anything to review. Check what Step 9.5 did before choosing which report to emit.
+plugins/fx-dev/skills/setup/SKILL.md:419:If Step 5.5 found a legacy layout, always end the report with the specific findings and `Run /fx-dev:upgrade to migrate.` Never report success over a skipped file.
+plugins/fx-dev/skills/setup/SKILL.md:427:- **Duvet is offered, never assumed** — if `.duvet/` is absent, ask once per session (Step 9.5); if it exists, stay silent. Once adopted the offer never returns; a decline is not persisted, so it returns next session. The procedure lives only in `references/duvet-adoption.md`
+plugins/fx-dev/skills/team/SKILL.md:18:**Sub-agents CANNOT spawn their own sub-agents.** If you tell a teammate to "run the full SDLC," it will try to do implementation inline (instead of delegating to a coder sub-agent), bloat its context window, and skip later steps like Copilot review. This has been observed in production.
+plugins/fx-dev/skills/team/SKILL.md:116:**Skip this step only if you will run coders strictly one-at-a-time** (fully sequential, never two coders alive at once). In that single-writer case the shared tree is safe. The moment you want parallelism, this step is required.
+plugins/fx-dev/skills/review/SKILL.md:156:## Step 5: Act on the disposition
+plugins/fx-dev/skills/review/SKILL.md:168:deliberate convention was misread, record it (Step 6). A coordinator hands it over
+plugins/fx-dev/skills/review/SKILL.md:182:## Step 6: Record incorrect findings in `REVIEW.md`
+plugins/fx-dev/skills/review/SKILL.md:214:## Step 7: Re-run until it converges
+plugins/fx-dev/skills/review/SKILL.md:267:## Step 8: Report
+plugins/fx-dev/skills/review/SKILL.md:305:reaches them only at triage — see `fx-dev:review` Step 8.)
+plugins/fx-dev/skills/github/SKILL.md:92:> **CodeRabbit is PR-level only** — see `fx-dev:coderabbit-review`. There is no local CodeRabbit pass; the `cr` CLI is not used, and Codex is the only local pre-PR reviewer (`fx-dev:dev` Step 4.5). The PR-level review applies only when the GitHub App auto-reviews PRs; its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. **CodeRabbit is optional when it reports a rate/quota limit or cooldown:** report once, resolve findings already received **and settle every thread it already posted**, record `skipped (rate-limited)`, and continue without waiting or retrying. The degradation waives the passes that never ran, never work already on the PR. Other merge gates remain mandatory.
+plugins/fx-dev/skills/upgrade/SKILL.md:38:- User says "adopt duvet" or asks for requirements traceability — Step 6 offers it, and it runs even when there is nothing to migrate, so this skill is a valid entry point for adoption alone
+plugins/fx-dev/skills/upgrade/SKILL.md:46:The duvet offer (Step 6) is **not** a migration and is not in this registry: it
+plugins/fx-dev/skills/upgrade/SKILL.md:123:**If no migration applies**, note "Already current — nothing to migrate" and skip straight to **Step 6** — the duvet offer runs whether or not a migration applied — then still run **Step 7**, so the report and its `git status` cover anything adoption wrote. Do not proceed to Step 2.
+plugins/fx-dev/skills/upgrade/SKILL.md:188:### Step 5: Seed missing instruction files — instruction files only
+plugins/fx-dev/skills/upgrade/SKILL.md:200:The operative word is *silently*. Step 6 adds something larger — a CI job and a
+plugins/fx-dev/skills/upgrade/SKILL.md:206:Step 7 report and let the user run `/fx-dev:setup` themselves.
+plugins/fx-dev/skills/upgrade/SKILL.md:208:### Step 6: Offer duvet adoption (only if not already adopted)
+plugins/fx-dev/skills/upgrade/SKILL.md:210:**This runs BEFORE the Step 7 report, and that ordering is load-bearing.**
+plugins/fx-dev/skills/upgrade/SKILL.md:214:and *then* create files that appear in no report at all — and the Step 7
+plugins/fx-dev/skills/upgrade/SKILL.md:220:run Step 7 so `git status` covers whatever adoption wrote.
+plugins/fx-dev/skills/upgrade/SKILL.md:244:**Why adding a CI job here is legitimate when scaffolding `docs/` in Step 5 is
+plugins/fx-dev/skills/upgrade/SKILL.md:247:The distinction is **consent**. Step 5 refuses `docs/` because nothing in the
+plugins/fx-dev/skills/upgrade/SKILL.md:253:this skill draws. If adoption ever became automatic, Step 5's rule would forbid it
+plugins/fx-dev/skills/upgrade/SKILL.md:260:### Step 7: Verify and report
+plugins/fx-dev/skills/upgrade/SKILL.md:262:Runs last, after Step 6, so `git status` sees everything — migrations and adoption
+plugins/fx-dev/skills/upgrade/SKILL.md:281:<if Step 6 adopted duvet, include the reference's report block here — it is
+plugins/fx-dev/skills/upgrade/SKILL.md:288:**The report must cover Step 6.** If duvet was adopted, its files are in this same
+plugins/fx-dev/skills/upgrade/SKILL.md:315:If `AGENTS.md` or `REVIEW.md` is simply absent — no legacy file to migrate from — there is nothing to move, but the repo is still not current. Do not report "already current": let the migration apply so **Step 5 seeds the missing file** from the seed blocks. Step 5 does this directly and must not invoke `fx-dev:setup`, which would also scaffold `docs/`.
+plugins/fx-dev/skills/upgrade/SKILL.md:412:If a section is mixed, edit the lines and leave the heading. If you cannot tell whether a rule is task-tracking, **keep it** and mention it in the Step 7 report — a stale rule is recoverable, a deleted one is not.
+plugins/fx-dev/skills/upgrade/SKILL.md:414:Then let Step 5 insert the current `/project-management` block.
+plugins/fx-dev/skills/upgrade/SKILL.md:425:- **Duvet is offered, never assumed** — if `.duvet/` is absent, ask (Step 6); if it exists, stay silent. The procedure lives only in `fx-dev:setup` → `references/duvet-adoption.md`
+plugins/fx-dev/skills/upgrade/SKILL.md:426:- **Migrations are idempotent** — a second run on a migrated repo finds no migration to apply and changes nothing under M1. **This does not extend to Step 6:** the duvet offer runs on every invocation, so a rerun on a repo that has no `.duvet/` will offer adoption again and, if accepted, write files. That is not a broken invariant, it is a different one — M1 is idempotent, the duvet *offer* is unconditional, and acceptance is a new decision each time. Once `.duvet/` exists the offer goes silent and the whole run is a no-op again. Never describe a rerun as "changes nothing" without checking whether Step 6 wrote anything
+
+exec
+/bin/bash -lc "printf '%s\\n' '--- selected numbered current files ---'; nl -ba plugins/fx-dev/skills/github/SKILL.md | sed -n '185,222p'; nl -ba plugins/fx-dev/skills/pr-preparer/SKILL.md | sed -n '52,82p'; nl -ba plugins/fx-dev/skills/team/SKILL.md | sed -n '225,242p;300,315p;410,432p'; nl -ba plugins/fx-dev/skills/coder/SKILL.md | sed -n '38,61p'; printf '%s\\n' '--- all explicit references to coder workflow step nos ---'; grep -RInE 'coder["'^`'"\\n]*(step|Step)|[Ss]top after step' --include='*.md' . | head -100; printf '%s\\n' '--- private candidate introduced strings ---'; git diff --word-diff=plain HEAD~1 HEAD -- plugins/fx-dev/skills | grep -E '"'^'"\\+' | grep -Eio '(https?://["'^ )`]+|[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)'"' | sort -u" in /shared/home/claude-2/.claude/plugins/marketplaces/fx-cc
+ succeeded in 0ms:
+--- selected numbered current files ---
+   185	Standardizes every skill on two canonical instruction files, with a
+   186	pointer for each tool that cannot read them natively.
+   187	
+   188	✅ RIGHT — one line per paragraph, GitHub reflows it
+   189	## Summary
+   190	Standardizes every skill on two canonical instruction files, with a pointer for each tool that cannot read them natively.
+   191	```
+   192	
+   193	This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`. Tables, lists, and fenced code blocks keep their own line structure; the rule is about prose paragraphs.
+   194	
+   195	### PR conventions block (paste verbatim into any agent prompt that may open or edit a PR)
+   196	
+   197	A convention that lives only in this skill does not survive delegation: an agent spawned with an ad-hoc prompt never loads it. Whenever you delegate PR creation — a `/team` coder opening its own PR, a fix agent editing a body, any sub-agent running `gh pr create` — paste this block into that agent's prompt verbatim. Quote it by name ("the github skill's PR conventions block") when referring to it from another skill.
+   198	
+   199	```markdown
+   200	### PR conventions (mandatory)
+   201	- TITLE: a conventional-commit subject matching `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` — lowercase after the colon, imperative, no trailing period.
+   202	- TITLE: no `#<number>` unless it references a real existing PR/issue, and no wave/phase/step/batch or change-doc number. Squash-merge bakes the title into the default branch, where `#N` auto-links permanently.
+   203	- BODY: **never hard-wrapped.** GitHub reflows markdown to the reader's viewport, so write each paragraph as ONE long line and let it soft-wrap. Lists, tables and fenced code blocks keep their own line structure. This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`.
+   204	- COMMIT MESSAGE: the opposite — wrap the body at ~72 columns, because git renders it as plain text. The rule follows the renderer, not the content.
+   205	- Verify before AND after creating: the title against the regex, and the body against the longest-prose-line check.
+   206	```
+   207	
+   208	Mechanical body check — run it after creating or editing any PR body:
+   209	
+   210	```bash
+   211	gh pr view <N> --json body -q .body \
+   212	  | awk '!/^(\s*([-*+]|[0-9]+\.)\s|\s*\||\s*```|#)/ && length > 200 {n++} END {exit 0} '
+   213	# Prose paragraphs should be LONG single lines. If most prose lines cluster at 70-90
+   214	# characters, the body is hard-wrapped — rewrite it and `gh pr edit <N> --body-file`.
+   215	gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
+   216	```
+   217	
+   218	**Use Conventional Formats:**
+   219	- **Commit messages**: Follow conventional commit format (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)
+   220	- **PR titles**: MUST use conventional commit format — `type(scope): description` (e.g., `feat: add user authentication`, `fix(api): handle null token`). **BLOCKING**: on squash-merge the PR title becomes the commit subject, so a plain prose title (no `type:` prefix) permanently pollutes a conventional-commit history. **Canonical check** — every PR title, no matter who creates it (pr-preparer, the `/dev` workflow, or a `/team` coordinator running `gh pr create` directly), MUST match this regex; verify before creating AND before merging:
+   221	  ```bash
+   222	  gh pr view <N> --json title -q .title | grep -Eq '^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+' \
+    52	   - Commit counts or commit messages (visible in Commits tab)
+    53	   - Obvious information derivable from the diff itself
+    54	
+    55	   Keep descriptions short. A few sentences is often enough.
+    56	
+    57	   **Never hard-wrap the description.** GitHub reflows markdown to the reader's viewport, so hard-wrapping prose at 80 columns (or any column) only renders ragged and re-wraps badly on narrow screens. Write each paragraph as ONE long line and let it soft-wrap. Commit messages are the opposite — those stay wrapped at ~72 columns, because git renders them as plain text. See the `fx-dev:github` skill's "Never hard-wrap anything GitHub renders as markdown".
+    58	
+    59	   **Verify it, do not merely intend it.** After creating or editing the PR, run the body check and read the result:
+    60	
+    61	   ```bash
+    62	   gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
+    63	   ```
+    64	
+    65	   Prose paragraphs are long single lines, so the top lengths should far exceed 100. Prose clustering at 70-90 characters means the body went out hard-wrapped — rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>`.
+    66	
+    67	5. **Check Compliance**: Verify adherence to:
+    68	   - Project-specific guidelines from AGENTS.md files
+    69	   - Global coding standards and architectural decisions
+    70	   - Any custom requirements or patterns established in the codebase
+    71	
+    72	6. **Update Task Tracking**: Before creating the PR, check if relevant task tracking files exist. Search for:
+    73	   - `docs/changes/` — Change documents with task lists
+    74	   - `docs/tasks.md` — Catch-all task list
+    75	
+    76	   **MANDATORY: Load the project-management skill FIRST:**
+    77	   ```
+    78	   Skill tool: skill="fx-dev:project-management"
+    79	   ```
+    80	
+    81	   The project-management skill provides the correct format and workflow for updating task tracking. After loading:
+    82	   - Identify which task(s) in `docs/changes/*.md` or `docs/tasks.md` are addressed by this PR
+   225	**⛔ Every spawn prompt that may open or edit a PR MUST carry the PR conventions block verbatim (BLOCKING).** Load `fx-dev:github` BEFORE you author your first spawn prompt, and paste its **"PR conventions block"** into the prompt of every agent that might run `gh pr create` or `gh pr edit` — coder, fix agent, PR preparer, anything. A convention that lives only in a skill nobody loads does not survive delegation: a spawned agent inherits your prompt, not your skills.
+   226	
+   227	This is not hypothetical. In an observed run, all three coders received the TITLE rule — because this skill restates it inline below and gates it at merge — and none received the BODY rule, which lives only in `fx-dev:github`. All three PRs shipped hard-wrapped bodies that render ragged on GitHub, while PRs prepared through `fx-dev:pr-preparer` in the same repo did not. Restating a rule here is what makes it propagate; anything you do not restate or gate, you will not get.
+   228	
+   229	**PR creation** → Either do it yourself via `gh pr create`, spawn a focused PR preparer agent, or let a coder open its own PR. Load `fx-dev:github` skill first, and pass its PR conventions block into the prompt whenever you delegate. **⛔ Whoever creates the PR — you or an agent you spawned — the `--title` MUST be a conventional-commit subject — `type(scope): description` — matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (see the github skill's "Use Conventional Formats"). Do NOT write a prose title; running `gh pr create` directly does NOT exempt you from the conventional-commit rule. Verify the title against the regex before AND after creation.** (Prose titles the coordinator wrote directly — bypassing pr-preparer — are exactly how non-conventional titles have slipped onto `main`.)
+   230	
+   231	**Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. **Pass the STEP 0 Scope Brief into every reviewer invocation that accepts one, and apply it when triaging every reviewer that does not** (Copilot and the CodeRabbit GitHub App accept nothing). A finding covered by the brief's out-of-scope list is recorded as deferred with the covering exclusion — never silently fixed, never silently dropped, and never a reason to widen a teammate's PR. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback.
+   232	
+   233	**⛔ NEVER `sleep`, poll, or block waiting for anything.** Every wait — Copilot, CodeRabbit, CI — runs as a **backgrounded** wait script that notifies you on exit. Never run `gh pr checks --watch`, never chain sleeps, and never sit in a foreground wait. See **Waiting and reconciliation** below; this is the single largest source of wasted coordinator turns and it is non-negotiable.
+   234	
+   235	**Merge gates** → Always handle directly. See MANDATORY MERGE GATE CHECKLIST below.
+   236	
+   237	**Browser verification** → Spawn a dedicated verify agent if the task has UI changes.
+   238	
+   239	### Parallelization
+   240	
+   241	- Spawn multiple coder agents simultaneously for independent tasks — but ONLY after giving each its own **pre-created worktree** per STEP 2.5 (the `isolation: "worktree"` flag does NOT work for teammates). Each coder works in its own worktree on its own branch.
+   242	- For dependent tasks, wait until the blocking task's PR is merged before spawning the next coder
+   300	| 1 | **Required CI checks green** | `gh pr checks <NUMBER>` — every required non-CodeRabbit check must pass | YES |
+   301	| 2 | **Copilot review RECEIVED and feedback RESOLVED** | Invoke `fx-dev:copilot-review` skill — confirm 0 unresolved Copilot threads | YES |
+   302	| 2b | **CodeRabbit reviewed or correctly degraded** | Invoke `fx-dev:coderabbit-review`: prefer a passing check with received feedback resolved; if CodeRabbit rate-limits, report once, resolve what it already delivered (blocking findings fixed, every posted thread settled), and record `skipped (rate-limited)` without blocking | NO when rate-limited |
+   303	| 3 | **Implementation matches spec/task** | Read the diff and verify against requirements | YES |
+   304	| 4 | **Spec task marked complete** | Check via project-management skill | YES |
+   305	| 5 | **PR description is clear** | Read PR body | YES |
+   306	| 5b | **PR title is clean AND conventional** | Title (a) is a conventional-commit subject — run the canonical check from the `fx-dev:github` skill's "Use Conventional Formats" (a plain prose title with no `type:` prefix FAILS) — AND (b) has NO stray `#<number>` (only a real PR/issue ref) and NO wave/phase/step/change-doc number. Fix with `gh pr edit <N> --title "type(scope): …"` before merge — squash bakes the title into `main` | YES |
+   307	| 5c | **PR body is NOT hard-wrapped** | `gh pr view <N> --json body -q .body \| awk '{print length}' \| sort -rn \| head -3` — prose paragraphs must be long single lines. Prose clustering at 70-90 characters means the body was hard-wrapped: rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>` before merging. Lists, tables and code blocks are exempt | YES |
+   308	| 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
+   309	
+   310	### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
+   311	
+   312	> **Codex runs LOCALLY first — and it is the ONLY local reviewer.** Implementing sub-agents run local Codex via the `fx-dev:codex-review` skill during pre-PR self-review, passing the Scope Brief. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer it **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **There is no local CodeRabbit pass; the `cr` CLI is not used.** Gate 2b is the PR-level CodeRabbit review, which applies only when the GitHub App is configured — its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown.
+   313	
+   314	**As coordinator, YOU handle reviewer waits directly — but you never *block* on them.** Launch every configured reviewer's waiter in ONE message, all backgrounded, each redirecting to its own log. They run concurrently; a completion notification wakes you per reviewer. No sub-agents are involved and there is no execution mode to pick.
+   315	
+   410	   git worktree remove --force <REPO_ROOT>/.claude/worktrees/<slug>
+   411	   git worktree prune
+   412	   git branch -D <branch>   # only if unmerged/abandoned
+   413	   ```
+   414	5. **Do NOT call `TeamDelete`** — it was removed in v2.1.178. The team config directory is cleaned up automatically when the session ends; there is no manual teardown step. (The shared task list directory persists locally by design so resumed sessions keep their tasks — that's expected, not a leak.) Your only manual cleanup is the worktrees in step 4.
+   415	6. Report final summary to user
+   416	
+   417	---
+   418	
+   419	## Coordinator Rules (NON-NEGOTIABLE)
+   420	
+   421	- **ALWAYS pass `name` to EVERY `Agent` call** — coder, verify, fix, anything. `name` is what makes the teammate addressable via `SendMessage` and visible in `members[]`; omitting it produces an anonymous worker you can't steer by name. No exceptions.
+   422	- **NEVER pass `team_name` and NEVER call `TeamCreate`/`TeamDelete`** — all three were removed/deprecated in v2.1.178. The team is implicit and session-scoped: it forms on the first `Agent` spawn and is cleaned up automatically on session exit. `team_name` on the `Agent` tool is accepted-but-ignored.
+   423	- **NEVER rely on `isolation: "worktree"` for a teammate** — a teammate runs as a full session in the lead's working directory, so the flag is a no-op. For any coders that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run coders strictly one-at-a-time. Always tear the worktrees down in STEP 4.
+   424	- **NEVER write code yourself** — all implementation goes through coder agents
+   425	- **NEVER create branches or commits** — coder agents handle this
+   426	- **NEVER delegate the full SDLC to a single agent** — agents cannot spawn sub-agents, so they will inline everything and skip later steps
+   427	- **ALWAYS paste the `fx-dev:github` PR conventions block into every spawn prompt whose agent may open or edit a PR** — load that skill before authoring your first prompt. A spawned agent inherits your prompt, not your skills; a rule you do not restate is a rule that does not reach it.
+   428	- **NEVER skip PR inspection** — every PR gets reviewed before marking ready
+   429	- **NEVER merge without completing the MERGE GATE CHECKLIST** — every gate must pass, every time, for every PR
+   430	- **NEVER merge without Copilot review** — always invoke `fx-dev:copilot-review` yourself. No exceptions.
+   431	- **ALWAYS attempt CodeRabbit when configured, but never block on its rate limits** — invoke `fx-dev:coderabbit-review`; resolve feedback already received, then record `skipped (rate-limited)` and continue immediately if throttled.
+   432	- **NEVER `sleep`, poll, or block on a wait.** Every reviewer and CI wait is a BACKGROUNDED script that notifies you on exit; reconcile on that notification. A foreground waiter is killed at the Bash tool's 600 s cap anyway. The only timer permitted in a run is one long `ScheduleWakeup` silence backstop.
+    38	3. Plan logical PR structure if needed
+    39	4. Implement with tests
+    40	5. Run the local Codex review (`fx-dev:codex-review`) and converge it **before** opening the PR — it is the only local reviewer, and it is mandatory here exactly as in `fx-dev:dev` Step 4.5
+    41	6. Load `fx-dev:github` and follow its **PR conventions block** — conventional-commit title, no `#<number>` or wave/phase wording in the title, and a body that is **never hard-wrapped** (one long line per paragraph; only the commit message wraps, at ~72 columns). Verify both before and after creating.
+    42	7. Create PR
+    43	8. Settle the automated reviewers with `fx-dev:copilot-review` and, where its GitHub App is installed, `fx-dev:coderabbit-review`
+    44	9. Address feedback
+    45	10. Launch a sub-agent with the pr-check-monitor skill for failing checks
+    46	11. Continue until ready for user review
+    47	12. Update issue to Done
+    48	
+    49	**When invoked from SDLC:** Stop after step 4 (implement with tests + commit). Do NOT create PRs or launch reviewers — the SDLC owns steps 5 onward.
+    50	
+    51	## Multi-PR Coordination
+    52	- Only ONE PR should be open at a time (sequential PRs per SDLC)
+    53	- Track PR status in TodoWrite
+    54	- Shepherd each PR to completion before opening next
+    55	
+    56	## Standards
+    57	- Follow AGENTS.md rules
+    58	- Test bug fixes first
+    59	- Match code style
+    60	- Security best practices
+    61	- **Commit subjects: no `#<number>`, no waves/phases.** A commit subject auto-links `#N` to PR/issue #N, and it propagates into the PR title (GitHub pre-fills the title from a single commit's subject) and the squash-merge commit subject — so the PR-title rule applies here too: never put `#<number>` (`#4`, `(#4)`, `#123`) in a commit subject unless N is a real PR/issue ref on this repo, and never use a wave/phase/step/change-doc number there. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule".
+--- all explicit references to coder workflow step nos ---
+./plugins/fx-dev/skills/coder/SKILL.md:49:**When invoked from SDLC:** Stop after step 4 (implement with tests + commit). Do NOT create PRs or launch reviewers — the SDLC owns steps 5 onward.
+--- private candidate introduced strings ---
+b/plugins
+coder/SKILL.md
+fx-dev/skills
+github/SKILL.md
+pr-preparer/SKILL.md
+team/SKILL.md
+
+codex
+The newly required PR-body gate does not reliably inspect prose, and the advertised PR-title validation does not enforce its stated rules.
+
+Full review comments:
+
+- [P1] Make the body check actually inspect prose lines — /shared/home/claude-2/.claude/plugins/marketplaces/fx-cc/plugins/fx-dev/skills/github/SKILL.md:211-215
+  The first `awk` command only increments an unused variable and always exits 0, while the displayed length command includes exempt lists, tables, and fenced code. Thus a hard-wrapped prose body with any long code/list/table line can appear to pass, and “most prose lines cluster at 70-90” cannot be inferred from the top three lengths. The same ineffective check is used in `plugins/fx-dev/skills/pr-preparer/SKILL.md:62` and merge Gate 5c in `plugins/fx-dev/skills/team/SKILL.md:307`, so the new mandatory gate can silently approve the defect it is meant to prevent.
+
+- [P1] Align the title regex with its stated constraints — /shared/home/claude-2/.claude/plugins/marketplaces/fx-cc/plugins/fx-dev/skills/github/SKILL.md:201-201
+  The regex accepts titles such as `feat: Add documentation.` even though this block says a matching title has lowercase text after the colon and no trailing period; it also cannot establish that the subject is imperative. Since agents are told to verify the title against this regex, they can accept titles that violate the stated mandatory convention. Tighten the mechanically enforceable portions and require a separate manual imperative check, or narrow the prose to what the regex actually verifies.
+The newly required PR-body gate does not reliably inspect prose, and the advertised PR-title validation does not enforce its stated rules.
+
+Full review comments:
+
+- [P1] Make the body check actually inspect prose lines — /shared/home/claude-2/.claude/plugins/marketplaces/fx-cc/plugins/fx-dev/skills/github/SKILL.md:211-215
+  The first `awk` command only increments an unused variable and always exits 0, while the displayed length command includes exempt lists, tables, and fenced code. Thus a hard-wrapped prose body with any long code/list/table line can appear to pass, and “most prose lines cluster at 70-90” cannot be inferred from the top three lengths. The same ineffective check is used in `plugins/fx-dev/skills/pr-preparer/SKILL.md:62` and merge Gate 5c in `plugins/fx-dev/skills/team/SKILL.md:307`, so the new mandatory gate can silently approve the defect it is meant to prevent.
+
+- [P1] Align the title regex with its stated constraints — /shared/home/claude-2/.claude/plugins/marketplaces/fx-cc/plugins/fx-dev/skills/github/SKILL.md:201-201
+  The regex accepts titles such as `feat: Add documentation.` even though this block says a matching title has lowercase text after the colon and no trailing period; it also cannot establish that the subject is imperative. Since agents are told to verify the title against this regex, they can accept titles that violate the stated mandatory convention. Tighten the mechanically enforceable portions and require a separate manual imperative check, or narrow the prose to what the regex actually verifies.
