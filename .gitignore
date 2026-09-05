@@ -24,3 +24,8 @@ node_modules/
 # `duvet report --ci` verifies against.
 .duvet/reports/
 .duvet/requirements/
+
+# Transient agent scratch: reviewer wait logs and per-run worktrees. Both are
+# produced by a single fx-dev run and are meaningless outside it.
+.claude/team/waits/
+.claude/worktrees/
