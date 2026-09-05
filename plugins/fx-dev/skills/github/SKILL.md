@@ -203,17 +203,23 @@ A convention that lives only in this skill does not survive delegation: an agent
 - TITLE: no `#<number>` unless it references a real existing PR/issue, and no wave/phase/step/batch or change-doc number. Squash-merge bakes the title into the default branch, where `#N` auto-links permanently.
 - BODY: **never hard-wrapped.** GitHub reflows markdown to the reader's viewport, so write each paragraph as ONE long line and let it soft-wrap. Lists, tables and fenced code blocks keep their own line structure. This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`.
 - COMMIT MESSAGE: the opposite — wrap the body at ~72 columns, because git renders it as plain text. The rule follows the renderer, not the content.
-- Verify before AND after creating: the title against every rule above, and the body with the command below. It judges only prose — fenced code, headings, blockquotes, tables and list items are skipped — and **exits 1 printing `HARD-WRAPPED`** when prose clusters in the 60-100 column band. Read its output; do not assume it passed. Fix with `gh pr edit <N> --body-file <file>` and re-run.
+- Verify before AND after creating: the title against every rule above, and the body with the command below. It judges only prose — fenced code (``` and ~~~), headings, blockquotes, tables, list items and their indented continuation lines are all skipped — and **exits 1 printing `HARD-WRAPPED`** when prose clusters in the 60-100 column band. Read its output; do not assume it passed. Fix with `gh pr edit <N> --body-file <file>` and re-run.
 
 ```bash
 gh pr view <N> --json body -q .body | awk '
-  /^[[:space:]]*```/            { fence = !fence; next }   # fenced code: toggle and skip
-  fence                         { next }
-  /^[[:space:]]*$/              { next }                   # blank
-  /^[[:space:]]*#/              { next }                   # heading
-  /^[[:space:]]*>/              { next }                   # blockquote
-  /^[[:space:]]*\|/             { next }                   # table row
-  /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]/ { next }    # list item
+  # fenced code: ``` and ~~~ both open a fence, and only the same marker closes it
+  !fence && /^[[:space:]]*```/      { fence = 1; next }
+  !fence && /^[[:space:]]*~~~/      { fence = 2; next }
+  fence == 1 && /^[[:space:]]*```/  { fence = 0; next }
+  fence == 2 && /^[[:space:]]*~~~/  { fence = 0; next }
+  fence                             { next }
+  /^[[:space:]]*$/                  { next }   # blank
+  /^[[:space:]]*#/                  { next }   # heading
+  /^[[:space:]]*>/                  { next }   # blockquote
+  /^[[:space:]]*\|/                 { next }   # table row
+  /^  /                             { next }   # indented: list continuation or indented code
+  /^\t/                             { next }   # same, tab-indented
+  /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]/ { next }   # list marker line
   { n++; if (length($0) >= 60 && length($0) <= 100) w++ }
   END {
     if (n == 0) { print "no prose lines to check"; exit 0 }

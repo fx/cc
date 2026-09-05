@@ -60,13 +60,19 @@ Then, your primary responsibilities:
 
    ```bash
    gh pr view <N> --json body -q .body | awk '
-     /^[[:space:]]*```/            { fence = !fence; next }   # fenced code: toggle and skip
-     fence                         { next }
-     /^[[:space:]]*$/              { next }                   # blank
-     /^[[:space:]]*#/              { next }                   # heading
-     /^[[:space:]]*>/              { next }                   # blockquote
-     /^[[:space:]]*\|/             { next }                   # table row
-     /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]/ { next }    # list item
+     # fenced code: ``` and ~~~ both open a fence, and only the same marker closes it
+     !fence && /^[[:space:]]*```/      { fence = 1; next }
+     !fence && /^[[:space:]]*~~~/      { fence = 2; next }
+     fence == 1 && /^[[:space:]]*```/  { fence = 0; next }
+     fence == 2 && /^[[:space:]]*~~~/  { fence = 0; next }
+     fence                             { next }
+     /^[[:space:]]*$/                  { next }   # blank
+     /^[[:space:]]*#/                  { next }   # heading
+     /^[[:space:]]*>/                  { next }   # blockquote
+     /^[[:space:]]*\|/                 { next }   # table row
+     /^  /                             { next }   # indented: list continuation or indented code
+     /^\t/                             { next }   # same, tab-indented
+     /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]/ { next }   # list marker line
      { n++; if (length($0) >= 60 && length($0) <= 100) w++ }
      END {
        if (n == 0) { print "no prose lines to check"; exit 0 }
@@ -76,7 +82,7 @@ Then, your primary responsibilities:
      }'
    ```
 
-   It exempts fenced code, headings, blockquotes, tables and lists, and judges only prose. It **exits 1 and prints `HARD-WRAPPED`** when prose clusters in the 60-100 column band. If it does, rewrite each paragraph as one long line and `gh pr edit <N> --body-file <file>`, then run it again.
+   It exempts fenced code (``` and ~~~), headings, blockquotes, tables, and list items including their indented continuation lines, and judges only prose. It **exits 1 and prints `HARD-WRAPPED`** when prose clusters in the 60-100 column band. If it does, rewrite each paragraph as one long line and `gh pr edit <N> --body-file <file>`, then run it again.
 
 5. **Check Compliance**: Verify adherence to:
    - Project-specific guidelines from AGENTS.md files
