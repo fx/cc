@@ -564,7 +564,7 @@ If any Test Plan items failed verification:
 | GitHub Copilot | `fx-dev:copilot-review` | Auto-reviews; we explicitly request via API as a defensive belt. Does NOT re-review on push by default. |
 | CodeRabbit | `fx-dev:coderabbit-review` | PR-level only — there is no local pass. Applies when the GitHub App auto-reviews PRs: re-reviews after pushes and exposes state via the `CodeRabbit` check. Classify new feedback in the shared ledger and settle its threads within the bounds below. `STATUS=NOT_CONFIGURED` means the App is absent — report once and skip. |
 
-##### Run every waiter in the background — there is no mode selection
+##### Run every waiter in the background
 
 **⛔ Launch each configured reviewer's wait script in the SAME message**, backgrounded per `references/background-waits.md`, each redirecting to its own log file. They then run concurrently and wake you per reviewer.
 

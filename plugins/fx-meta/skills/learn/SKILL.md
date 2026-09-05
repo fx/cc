@@ -21,7 +21,7 @@ Skills reach a session from several independent trees, and they drift:
 | `~/.claude/skills/<name>/` | Usually **symlinks** into another checkout — follow them |
 | `~/.agents/skills/<name>/` | Installed from a separate skills repo; upstream is in `~/.agents/.skill-lock.json` |
 | `<marketplace>/plugins/<plugin>/skills/<name>/` | The fx-cc marketplace source |
-| `~/.claude/plugins/cache/fx-cc/<plugin>/<version>/skills/<name>/` | The cache Claude loads plugin skills from |
+| `~/.claude/plugins/cache/fx-cc/<plugin>/<version>/skills/<name>/` | The cache Claude loads plugin skills from — **never edit; resolve it back to its marketplace checkout** |
 
 **The invocation's own base directory is the strongest evidence.** A skill's prompt
 states the directory it was loaded from; that path, resolved through any symlink, is
@@ -34,7 +34,8 @@ jq -r '.skills["<skill-name>"].sourceUrl' ~/.agents/.skill-lock.json 2>/dev/null
 ```
 
 Write down the resolved path. **`[TREE]` below is a literal placeholder for it —
-substitute the absolute path into every command.** It is not a shell variable: the
+substitute the absolute path into every command, keeping the quotes shown so a path
+containing whitespace survives.** It is not a shell variable: the
 shell does not persist between tool calls, so an assignment in one command is gone
 by the next, and every later `cd` would land somewhere unintended.
 
@@ -45,6 +46,16 @@ by the next, and every later `cd` would land somewhere unintended.
 - **If several trees carry the same defect**, fix the authoritative one first, then
   apply the same fix to the others — a stale divergent copy will be loaded by some
   session eventually.
+
+**⛔ If the copy that ran is under `~/.claude/plugins/cache/`, do NOT edit it.**
+The cache is a build artifact — a versioned snapshot Claude Code copies out of a
+marketplace checkout — so an edit there is overwritten on the next sync and never
+reaches the repo. Map it back to its source before going further: a cache path
+`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/skills/<skill>/` comes
+from `<marketplace checkout>/plugins/<plugin>/skills/<skill>/`. Find that checkout
+(`~/.claude/plugins/marketplaces/<marketplace>` is the usual location, but confirm
+it — this repo is also cloned elsewhere), and use it as `[TREE]`. Step 4 then syncs
+your change back into the cache.
 
 **Record which layout `[TREE]` has — the rest of this skill branches on it:**
 
@@ -67,7 +78,7 @@ Skip this whole section when Step 0 resolved to a flat catalog; use that repo's 
 setup instructions instead. Otherwise, verify the marketplace is accessible:
 
 ```bash
-cd [TREE] && git remote -v && git status
+cd "[TREE]" && git remote -v && git status
 ```
 
 Verify the remote is accessible and the working directory is clean. If not accessible, inform the user and abort.
@@ -81,7 +92,7 @@ Verify the remote is accessible and the working directory is clean. If not acces
 Before any modification, ensure the version-bump pre-commit hook is active in this clone of the marketplace. Git does not let a repo configure its own hooks path, so each clone must opt in once:
 
 ```bash
-cd [TREE]
+cd "[TREE]"
 
 # Check whether hooks are wired up; if not, wire them.
 if [ "$(git config --get core.hooksPath || true)" != ".githooks" ]; then
@@ -120,13 +131,13 @@ Search the tree Step 0 resolved:
 
 ```bash
 # Marketplace layout
-find [TREE]/plugins -name "SKILL.md" -type f
+find "[TREE]"/plugins -name "SKILL.md" -type f
 
 # Flat catalog layout
-find [TREE]/skills -name "SKILL.md" -type f
+find "[TREE]"/skills -name "SKILL.md" -type f
 
 # Either: search for specific content
-grep -rn "keyword" [TREE]
+grep -rn "keyword" "[TREE]"
 ```
 
 Key locations:
@@ -168,11 +179,11 @@ To sync a modified plugin:
 ```bash
 # Get the plugin version from its manifest
 PLUGIN=fx-dev  # or fx-meta, fx-research, etc.
-VERSION=$(cat [TREE]/plugins/$PLUGIN/.claude-plugin/plugin.json | grep '"version"' | sed 's/.*: *"\([^"]*\)".*/\1/')
+VERSION=$(cat "[TREE]"/plugins/$PLUGIN/.claude-plugin/plugin.json | grep '"version"' | sed 's/.*: *"\([^"]*\)".*/\1/')
 
 # Sync marketplace source to cache
 rsync -av --delete \
-  [TREE]/plugins/$PLUGIN/ \
+  "[TREE]"/plugins/$PLUGIN/ \
   ~/.claude/plugins/cache/fx-cc/$PLUGIN/$VERSION/
 ```
 
@@ -183,7 +194,7 @@ Sync every plugin that was modified. This ensures Claude loads the updated defin
 After editing and syncing, show the diff to the user:
 
 ```bash
-cd [TREE] && git diff
+cd "[TREE]" && git diff
 ```
 
 ### Step 6: Leave for Manual Review
