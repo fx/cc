@@ -203,24 +203,31 @@ A convention that lives only in this skill does not survive delegation: an agent
 - TITLE: no `#<number>` unless it references a real existing PR/issue, and no wave/phase/step/batch or change-doc number. Squash-merge bakes the title into the default branch, where `#N` auto-links permanently.
 - BODY: **never hard-wrapped.** GitHub reflows markdown to the reader's viewport, so write each paragraph as ONE long line and let it soft-wrap. Lists, tables and fenced code blocks keep their own line structure. This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`.
 - COMMIT MESSAGE: the opposite — wrap the body at ~72 columns, because git renders it as plain text. The rule follows the renderer, not the content.
-- Verify before AND after creating: the title against every rule above, and the body with the command below. It judges only prose — fenced code (``` and ~~~), headings, blockquotes, tables, list items and their indented continuation lines are all skipped — and **exits 1 printing `HARD-WRAPPED`** when prose clusters in the 60-100 column band. Read its output; do not assume it passed. Fix with `gh pr edit <N> --body-file <file>` and re-run.
+- Verify before AND after creating: the title against every rule above, and the body with the command below. It judges only prose — fenced code, headings, blockquotes, tables, list items and their continuation lines are all skipped — and **exits 1 printing `HARD-WRAPPED`** when prose clusters in the 60-100 column band. Read its output; do not assume it passed. Fix with `gh pr edit <N> --body-file <file>` and re-run.
 
 ```bash
 gh pr view <N> --json body -q .body | awk '
-  # fenced code: ``` and ~~~ both open a fence, and only the same marker closes it
-  !fence && /^[[:space:]]*```/      { fence = 1; next }
-  !fence && /^[[:space:]]*~~~/      { fence = 2; next }
-  fence == 1 && /^[[:space:]]*```/  { fence = 0; next }
-  fence == 2 && /^[[:space:]]*~~~/  { fence = 0; next }
-  fence                             { next }
-  /^[[:space:]]*$/                  { next }   # blank
-  /^[[:space:]]*#/                  { next }   # heading
-  /^[[:space:]]*>/                  { next }   # blockquote
-  /^[[:space:]]*\|/                 { next }   # table row
-  /^  /                             { next }   # indented: list continuation or indented code
-  /^\t/                             { next }   # same, tab-indented
-  /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]/ { next }   # list marker line
-  { n++; if (length($0) >= 60 && length($0) <= 100) w++ }
+  # Fenced code, CommonMark rules: a fence opens on ``` or ~~~ and closes only
+  # on the SAME character, at least as long as the fence that opened it — so a
+  # ```` block may legally contain a ``` line without closing.
+  {
+    t = $0; sub(/^[[:space:]]+/, "", t)
+    if (t ~ /^```/ || t ~ /^~~~/) {
+      ch = substr(t, 1, 1); len = 0
+      while (substr(t, len + 1, 1) == ch) len++
+      if (!fence)                          { fence = ch; flen = len; next }
+      else if (ch == fence && len >= flen) { fence = "";  flen = 0;  next }
+    }
+  }
+  fence                { next }
+  /^[[:space:]]*$/     { next }                   # blank: does not end a list
+  /^(    |\t)/         { next }                   # indented code block
+  /^[[:space:]]*#/     { list = 0; next }         # heading
+  /^[[:space:]]*>/     { list = 0; next }         # blockquote
+  /^[[:space:]]*\|/    { list = 0; next }         # table row
+  /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]/ { list = 1; next }   # list marker line
+  /^[[:space:]]/       { if (list) next }         # continuation, ONLY inside a list
+  { list = 0; n++; if (length($0) >= 60 && length($0) <= 100) w++ }
   END {
     if (n == 0) { print "no prose lines to check"; exit 0 }
     printf "prose lines: %d; in the 60-100 col hard-wrap band: %d\n", n, w
@@ -231,6 +238,8 @@ gh pr view <N> --json body -q .body | awk '
 ~~~
 
 **That command is the canonical "Mechanical body check"**, and `fx-dev:team` merge gate 5c refers to it by that name. Run it yourself after creating or editing any PR body, not only when delegating.
+
+**It is a heuristic, not a Markdown parser, and that is deliberate.** It follows CommonMark on the two things that actually bite — a fence closes only on the same character at a length at least its opening, and an indented line is a continuation only inside a list — and it guesses at the rest. Treat a `HARD-WRAPPED` verdict as a prompt to *read* the body, not as proof. If you have read it and the prose genuinely is one line per paragraph, say so in your report and move on: **do not rewrite correct prose to satisfy the checker**, and do not extend the awk to chase a further Markdown construct. The supply of constructs does not run out, and the rule the gate enforces is the one in prose above it.
 
 Do not substitute `awk '{print length}' | sort -rn | head -3`. The three longest lines in a body are usually a table row or a code line, both exempt, so it reports a healthy number for a body whose prose is entirely hard-wrapped.
 
