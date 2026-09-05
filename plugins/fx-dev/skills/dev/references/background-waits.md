@@ -64,15 +64,18 @@ spins long after the real process exited and wrote its output. Nothing errors an
 nothing is logged; the wait simply never ends.
 
 The trap is general: **any** `pgrep -f`, `ps | grep`, or `pkill -f` whose pattern
-appears in its own invocation self-matches. If a process check is unavoidable:
+appears in its own invocation self-matches.
 
-```bash
-pgrep -x codex                        # ✅ matches the executable name only
-pgrep -f 'codex review' | grep -v $$  # ✅ excludes the current shell
-```
+**Do not reach for a "safer" process check — there isn't one.** `pgrep -x <name>`
+drops the self-match but cannot tell your run from any other process of the same
+name. `pgrep -f <pattern> | grep -v $$` is worse: it filters PID *text* by
+substring (so `$$` of `123` also drops `1234`), and it removes only the current
+shell, leaving any parent or wrapper whose command line contains the pattern to
+keep the check true. Either one can recreate the very wait this section exists to
+prevent.
 
-Prefer not to check at all. **The output file is the signal** — a finished run is a
-log that has stopped growing, with a `STATUS`/summary at its tail.
+**The output file is the signal** — a finished run is a log that has stopped
+growing, with a `STATUS`/summary at its tail. Read it on the completion wake.
 
 ## When a wait seems hung
 

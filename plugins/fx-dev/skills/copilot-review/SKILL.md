@@ -152,11 +152,9 @@ class halfway spends a full Copilot wait to be told about the other half.
 
 This skill can run **in parallel** with `fx-dev:coderabbit-review`, the only other PR-level reviewer fx-dev requests.
 
-**There is no mode selection.** Every waiter is backgrounded, so reviewers run
-concurrently in every context — root session, `fx-dev:team` coordinator, or
-sub-agent alike. Launch each reviewer's waiter in the same message and handle
-whichever completion notification arrives first. No sub-agents are involved, so the
-old "can I spawn?" branch no longer applies.
+Launch each reviewer's waiter in the same message and handle whichever completion
+notification arrives first — `fx-dev/skills/dev/references/background-waits.md`
+covers why that needs no sub-agents and no mode selection.
 
 Do not budget for Copilot being quick. Observed delivery ranges from **85 s to
 12 m 42 s** (D3), which is why the wait budget is a single 900 s run; CodeRabbit is
@@ -204,7 +202,8 @@ bash [SKILL_BASE_DIR]/skills/copilot-review/scripts/wait-for-copilot-review.sh <
 
 The 900 s budget covers the worst observed delivery time (12 m 42 s) in **one
 run** — but only backgrounded; a foreground call is killed at the tool's cap long
-before that (background-waits.md § Why not the foreground).
+before that (`fx-dev/skills/dev/references/background-waits.md` § Why not the
+foreground).
 
 ### Read the `STATUS=` line
 

@@ -177,10 +177,9 @@ query {
 
 ## Concurrency with other reviewers
 
-This skill runs **in parallel** with `fx-dev:copilot-review`. Because every waiter
-is backgrounded, that parallelism needs no sub-agents and no mode selection: launch
-each reviewer's waiter in the same message, then handle whichever notification
-arrives first.
+This skill runs **in parallel** with `fx-dev:copilot-review`: launch each
+reviewer's waiter in the same message, then handle whichever notification arrives
+first (`fx-dev/skills/dev/references/background-waits.md`).
 
 The SDLC step gating merge on automated review should wait for every configured
 reviewer to settle — terminal, zero unresolved threads, **and no blocking finding

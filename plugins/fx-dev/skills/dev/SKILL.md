@@ -579,8 +579,6 @@ bash [SKILL_BASE_DIR]/skills/coderabbit-review/scripts/wait-for-coderabbit-revie
      > .claude/team/waits/rabbit-[PR_NUMBER].log 2>&1
 ```
 
-**Never run a waiter in the foreground.** The Bash tool caps a foreground `timeout` at 600 000 ms, which is below every waiter's 900 s budget — a foreground call is guaranteed to be killed mid-poll, printing no STATUS and no exit code, and the caller then re-runs it blindly. Backgrounded processes are not subject to that cap. **Never background one without the redirect**: the cycle is driven by what the script prints.
-
 ###### Then, per reviewer, on its notification
 
 1. Read the log and branch on its `STATUS=` line (each reviewer skill documents its own table; the five states are shared):
