@@ -7,6 +7,8 @@ You are an expert software engineer specializing in pull request preparation and
 
 **IMPORTANT**: Before proceeding with any analysis, you MUST first check if the working directory is clean. Execute `git status --porcelain` and if there are ANY uncommitted changes, immediately stop and inform the user that they need to commit their changes before preparing a PR. Do not proceed with any other analysis if there are uncommitted changes.
 
+**Step 0 — load `fx-dev:github` first.** You need its **PR conventions block** to do step 4: it is the canonical source for the body rules and for the **Mechanical body check** this skill runs but does not reproduce. (The title rules below are deliberately restated here — they are this skill's blocking gate, and the github skill's block is the same text carried into delegated prompts.)
+
 Then, your primary responsibilities:
 
 1. **Analyze Branch Changes**: Execute `git diff main` to examine all changes in the current branch compared to main. Review each file modification, addition, and deletion to understand the full scope of changes.
@@ -54,42 +56,7 @@ Then, your primary responsibilities:
 
    Keep descriptions short. A few sentences is often enough.
 
-   **Never hard-wrap the description.** GitHub reflows markdown to the reader's viewport, so hard-wrapping prose at 80 columns (or any column) only renders ragged and re-wraps badly on narrow screens. Write each paragraph as ONE long line and let it soft-wrap. Commit messages are the opposite — those stay wrapped at ~72 columns, because git renders them as plain text. See the `fx-dev:github` skill's "Never hard-wrap anything GitHub renders as markdown".
-
-   **Verify it, do not merely intend it.** After creating or editing the PR, run the canonical body check from the `fx-dev:github` skill's "Mechanical body check" — restated here in full so it reaches you even when that skill is not loaded — and read its output:
-
-   ```bash
-   gh pr view <N> --json body -q .body | awk '
-     # Fenced code, CommonMark rules: a fence opens on ``` or ~~~ and closes only
-     # on the SAME character, at least as long as the fence that opened it — so a
-     # ```` block may legally contain a ``` line without closing.
-     {
-       t = $0; sub(/^[[:space:]]+/, "", t)
-       if (t ~ /^```/ || t ~ /^~~~/) {
-         ch = substr(t, 1, 1); len = 0
-         while (substr(t, len + 1, 1) == ch) len++
-         if (!fence)                          { fence = ch; flen = len; next }
-         else if (ch == fence && len >= flen) { fence = "";  flen = 0;  next }
-       }
-     }
-     fence                { next }
-     /^[[:space:]]*$/     { next }                   # blank: does not end a list
-     /^(    |\t)/         { next }                   # indented code block
-     /^[[:space:]]*#/     { list = 0; next }         # heading
-     /^[[:space:]]*>/     { list = 0; next }         # blockquote
-     /^[[:space:]]*\|/    { list = 0; next }         # table row
-     /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]/ { list = 1; next }   # list marker line
-     /^[[:space:]]/       { if (list) next }         # continuation, ONLY inside a list
-     { list = 0; n++; if (length($0) >= 60 && length($0) <= 100) w++ }
-     END {
-       if (n == 0) { print "no prose lines to check"; exit 0 }
-       printf "prose lines: %d; in the 60-100 col hard-wrap band: %d\n", n, w
-       if (w * 2 > n) { print "HARD-WRAPPED - rewrite each paragraph as ONE long line"; exit 1 }
-       print "OK - prose is not hard-wrapped"
-     }'
-   ```
-
-   It exempts fenced code, headings, blockquotes, tables, and list items with their continuation lines, and judges only prose. It **exits 1 and prints `HARD-WRAPPED`** when prose clusters in the 60-100 column band. If it does, rewrite each paragraph as one long line and `gh pr edit <N> --body-file <file>`, then run it again. It is a heuristic, not a Markdown parser: if you have read the body and its prose genuinely is one line per paragraph, say so and move on rather than rewriting correct prose to satisfy the checker.
+   **Never hard-wrap the description**, and verify it rather than merely intending it. Both the rule and the canonical **"Mechanical body check"** — the `awk` command, what it exempts, and how to read a `HARD-WRAPPED` verdict — are in the `fx-dev:github` skill's **PR conventions block**, which you loaded in step 0. Run it after creating or editing the PR and read its output; fix with `gh pr edit <N> --body-file <file>` and re-run.
 
 5. **Check Compliance**: Verify adherence to:
    - Project-specific guidelines from AGENTS.md files

@@ -7,26 +7,92 @@ description: "Explicit-use only — invoke when the user explicitly names this s
 
 This skill updates fx-cc marketplace plugins based on learnings from the current conversation. It modifies skill definitions to prevent future mistakes or improve behavior.
 
-## Prerequisites
+## Step 0: Find the tree that ACTUALLY provides the skill (MANDATORY)
 
-Before making any changes, verify the fx-cc marketplace is accessible:
+**⛔ Do not assume the fx-cc marketplace owns the skill you are correcting.** It
+often does not, and editing the wrong copy produces a change that is committed,
+reviewed, and completely inert — the skill keeps misbehaving because the file that
+runs was never touched.
+
+Skills reach a session from several independent trees, and they drift:
+
+| Tree | Typical origin |
+|---|---|
+| `~/.claude/skills/<name>/` | Usually **symlinks** into another checkout — follow them |
+| `~/.agents/skills/<name>/` | Installed from a separate skills repo; upstream is in `~/.agents/.skill-lock.json` |
+| `<marketplace>/plugins/<plugin>/skills/<name>/` | The fx-cc marketplace source |
+| `~/.claude/plugins/cache/fx-cc/<plugin>/<version>/skills/<name>/` | The cache Claude loads plugin skills from — **never edit; resolve it back to its marketplace checkout** |
+
+**The invocation's own base directory is the strongest evidence.** A skill's prompt
+states the directory it was loaded from; that path, resolved through any symlink, is
+the copy that ran. Prefer it over every inference. Otherwise:
 
 ```bash
-cd ~/.claude/plugins/marketplaces/fx-cc && git remote -v && git status
+find ~/.claude ~/.agents -name SKILL.md -path "*<skill-name>*" 2>/dev/null \
+  | while read -r f; do echo "$(md5sum "$f" | cut -c1-8)  $f -> $(readlink -f "$f")"; done
+jq -r '.skills["<skill-name>"].sourceUrl' ~/.agents/.skill-lock.json 2>/dev/null
+```
+
+Write down the resolved path. **`[TREE]` below is a literal placeholder for it —
+substitute the absolute path into every command, keeping the quotes shown so a path
+containing whitespace survives.** It is not a shell variable: the
+shell does not persist between tool calls, so an assignment in one command is gone
+by the next, and every later `cd` would land somewhere unintended.
+
+- **If the authoritative tree is a different repository**, that repo is where the fix
+  belongs. Clone it (SSH — HTTPS may have no credential helper), edit there, and
+  leave the change uncommitted for review exactly as Step 6 requires. Do **not**
+  silently redirect the fix into fx-cc because fx-cc is the repo this skill knows.
+- **If several trees carry the same defect**, fix the authoritative one first, then
+  apply the same fix to the others — a stale divergent copy will be loaded by some
+  session eventually.
+
+**⛔ If the copy that ran is under `~/.claude/plugins/cache/`, do NOT edit it.**
+The cache is a build artifact — a versioned snapshot Claude Code copies out of a
+marketplace checkout — so an edit there is overwritten on the next sync and never
+reaches the repo. Map it back to its source before going further: a cache path
+`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/skills/<skill>/` comes
+from `<marketplace checkout>/plugins/<plugin>/skills/<skill>/`. Find that checkout
+(`~/.claude/plugins/marketplaces/<marketplace>` is the usual location, but confirm
+it — this repo is also cloned elsewhere), and use it as `[TREE]`. Step 4 then syncs
+your change back into the cache.
+
+**Record which layout `[TREE]` has — the rest of this skill branches on it:**
+
+| Layout | Shape | Which steps apply |
+|---|---|---|
+| **Marketplace** (fx-cc) | `plugins/<plugin>/skills/<skill>/SKILL.md`, with `.claude-plugin/` manifests and `.githooks` | Everything below, as written |
+| **Flat catalog** (e.g. a `fx/skills`-style repo) | `skills/<skill>/SKILL.md`, no plugin manifests | Prerequisites' hook/manifest steps, Step 4 (plugin-cache sync) and the version bumps do **not** apply — that repo has no plugin versions to bump and no fx-cc cache to sync. Follow that repo's own `AGENTS.md`/`CONTRIBUTING`, then go straight to Step 5 |
+
+Substitute `plugins/<plugin>/skills/<skill>/` for `skills/<skill>/` throughout when
+the tree is a flat catalog. **Never apply the marketplace paths to a tree that does
+not have that layout** — the search finds nothing and the workflow stalls before it
+reaches the file it came to fix.
+
+**Always tell the user which tree you edited and why.** A learning applied to the
+wrong copy is worse than none: it reports success and changes nothing.
+
+## Prerequisites (marketplace layout only)
+
+Skip this whole section when Step 0 resolved to a flat catalog; use that repo's own
+setup instructions instead. Otherwise, verify the marketplace is accessible:
+
+```bash
+cd "[TREE]" && git remote -v && git status
 ```
 
 Verify the remote is accessible and the working directory is clean. If not accessible, inform the user and abort.
 
 ### Read AGENTS.md and respect it
 
-**CRITICAL:** Read `AGENTS.md` at the root of the marketplace repo (`~/.claude/plugins/marketplaces/fx-cc/AGENTS.md`) and follow every instruction it contains, especially the **Required First-Time Setup** section. AGENTS.md is authoritative — its rules apply to every operation this skill performs in the repo. (`CLAUDE.md` is just a `@AGENTS.md` import; `REVIEW.md` holds the review conventions.)
+**CRITICAL:** Read `AGENTS.md` at the root of the marketplace repo (`[TREE]/AGENTS.md`) and follow every instruction it contains, especially the **Required First-Time Setup** section. AGENTS.md is authoritative — its rules apply to every operation this skill performs in the repo. (`CLAUDE.md` is just a `@AGENTS.md` import; `REVIEW.md` holds the review conventions.)
 
 ### Wire up the pre-commit hook (idempotent)
 
 Before any modification, ensure the version-bump pre-commit hook is active in this clone of the marketplace. Git does not let a repo configure its own hooks path, so each clone must opt in once:
 
 ```bash
-cd ~/.claude/plugins/marketplaces/fx-cc
+cd "[TREE]"
 
 # Check whether hooks are wired up; if not, wire them.
 if [ "$(git config --get core.hooksPath || true)" != ".githooks" ]; then
@@ -61,18 +127,22 @@ Common scenarios:
 
 ### Step 2: Locate Relevant Files
 
-Search the fx-cc marketplace for relevant files:
+Search the tree Step 0 resolved:
 
 ```bash
-# Find all plugin definitions
-find ~/.claude/plugins/marketplaces/fx-cc/plugins -name "*.md" -type f
+# Marketplace layout
+find "[TREE]"/plugins -name "SKILL.md" -type f
 
-# Search for specific content
-grep -r "keyword" ~/.claude/plugins/marketplaces/fx-cc/plugins/
+# Flat catalog layout
+find "[TREE]"/skills -name "SKILL.md" -type f
+
+# Either: search for specific content
+grep -rn "keyword" "[TREE]"
 ```
 
 Key locations:
-- **Skills**: `plugins/<plugin>/skills/<skill>/SKILL.md`
+- **Skills**: `plugins/<plugin>/skills/<skill>/SKILL.md` (marketplace) or
+  `skills/<skill>/SKILL.md` (flat catalog)
 
 ### Step 3: Make Targeted Modifications
 
@@ -93,12 +163,15 @@ For required actions:
 **IMPORTANT:** Always do X before Y.
 ```
 
-### Step 4: Sync to Plugin Cache
+### Step 4: Sync to Plugin Cache (marketplace layout only)
+
+**Skip this step entirely for a flat catalog** — it has no plugin versions and no
+fx-cc cache entry, so there is nothing to sync.
 
 **CRITICAL:** Claude Code caches plugins separately from the marketplace source. After modifying files in the marketplace, sync changes to the cache so they take effect immediately.
 
 Cache mapping:
-- **Source**: `~/.claude/plugins/marketplaces/fx-cc/plugins/<plugin>/`
+- **Source**: `[TREE]/plugins/<plugin>/`
 - **Cache**: `~/.claude/plugins/cache/fx-cc/<plugin>/<version>/`
 
 To sync a modified plugin:
@@ -106,11 +179,11 @@ To sync a modified plugin:
 ```bash
 # Get the plugin version from its manifest
 PLUGIN=fx-dev  # or fx-meta, fx-research, etc.
-VERSION=$(cat ~/.claude/plugins/marketplaces/fx-cc/plugins/$PLUGIN/.claude-plugin/plugin.json | grep '"version"' | sed 's/.*: *"\([^"]*\)".*/\1/')
+VERSION=$(cat "[TREE]"/plugins/$PLUGIN/.claude-plugin/plugin.json | grep '"version"' | sed 's/.*: *"\([^"]*\)".*/\1/')
 
 # Sync marketplace source to cache
 rsync -av --delete \
-  ~/.claude/plugins/marketplaces/fx-cc/plugins/$PLUGIN/ \
+  "[TREE]"/plugins/$PLUGIN/ \
   ~/.claude/plugins/cache/fx-cc/$PLUGIN/$VERSION/
 ```
 
@@ -121,7 +194,7 @@ Sync every plugin that was modified. This ensures Claude loads the updated defin
 After editing and syncing, show the diff to the user:
 
 ```bash
-cd ~/.claude/plugins/marketplaces/fx-cc && git diff
+cd "[TREE]" && git diff
 ```
 
 ### Step 6: Leave for Manual Review
@@ -132,7 +205,7 @@ cd ~/.claude/plugins/marketplaces/fx-cc && git diff
 > - `path/to/file1.md`
 > - `path/to/file2.md`
 >
-> Review the changes with `git diff` in `~/.claude/plugins/marketplaces/fx-cc`.
+> Review the changes with `git diff` in `[TREE]`.
 > Commit manually when satisfied.
 
 ## Examples

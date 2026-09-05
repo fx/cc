@@ -230,7 +230,7 @@ This is not hypothetical. In an observed run, all three coders received the TITL
 
 **Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. **Pass the STEP 0 Scope Brief into every reviewer invocation that accepts one, and apply it when triaging every reviewer that does not** (Copilot and the CodeRabbit GitHub App accept nothing). A finding covered by the brief's out-of-scope list is recorded as deferred with the covering exclusion — never silently fixed, never silently dropped, and never a reason to widen a teammate's PR. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback.
 
-**⛔ NEVER `sleep`, poll, or block waiting for anything.** Every wait — Copilot, CodeRabbit, CI — runs as a **backgrounded** wait script that notifies you on exit. Never run `gh pr checks --watch`, never chain sleeps, and never sit in a foreground wait. See **Waiting and reconciliation** below; this is the single largest source of wasted coordinator turns and it is non-negotiable.
+**⛔ Never block on a reviewer or CI wait** — see **Waiting and reconciliation** below, which holds this coordinator's wait policy. In particular, never run `gh pr checks --watch`.
 
 **Merge gates** → Always handle directly. See MANDATORY MERGE GATE CHECKLIST below.
 
@@ -245,9 +245,21 @@ This is not hypothetical. In an observed run, all three coders received the TITL
 
 ### Waiting and reconciliation (NON-NEGOTIABLE)
 
-**⛔ You never `sleep`. You never poll. You never block.** Every wake costs a full read of your entire context, and your context is the largest in the team — a poll loop is the single most expensive thing you can do, and it gets more expensive with every turn you add.
+**⛔ You never `sleep`. You never poll. You never block.** The rule, its rationale, and the ways a hand-rolled wait fails are in `fx-dev/skills/dev/references/background-waits.md` — read it once and apply it to every wait below.
 
 **Everything you wait on is backgrounded and notifies you.** Reviewer waiters, CI waiters, and teammate agents all wake you on completion. That is your only scheduling mechanism.
+
+#### ⛔ `idle` is not `completed` — silence is never progress
+
+**A teammate reporting `idle` has STOPPED. It will not wake you.** Only a *completed* teammate sends a completion notification. An idle one has ended its turn — parked awaiting input, or reporting progress mid-task — and sits indefinitely until `SendMessage` nudges it.
+
+Reading an `idle_notification` as "still working, it will wake me when it lands" produces a **mutual stall**: you go quiet waiting for a completion that will never fire, while the teammate waits for a message you will never send. Neither side is blocked, nothing errors, nothing is logged, and the run just stops. Observed: a 49-minute stall in which the delegated work had finished within the first minute.
+
+- **Never file an `idle_notification` and go idle yourself.** Read it, then nudge or accept completion.
+- **On unexplained silence, call `ListAgents` before waiting any longer.** Any teammate showing `idle` that you believe is still working needs a message, not more patience.
+- **Suspect a stall whenever a teammate reports progress rather than a result** — check the artifact it says it is waiting on (log mtime, process, PR) yourself.
+
+**The no-polling rule binds every teammate you spawn, not just you** (`fx-dev/skills/dev/references/background-waits.md` § The rule binds delegates too). Carry it into every coder prompt that could wait on a long-running tool.
 
 #### The ledger
 
@@ -311,7 +323,7 @@ duvet# A pull request MUST NOT be merged while any review thread on it from a co
 
 > **Codex runs LOCALLY first — and it is the ONLY local reviewer.** Implementing sub-agents run local Codex via the `fx-dev:codex-review` skill during pre-PR self-review, passing the Scope Brief. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer it **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **There is no local CodeRabbit pass; the `cr` CLI is not used.** Gate 2b is the PR-level CodeRabbit review, which applies only when the GitHub App is configured — its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown.
 
-**As coordinator, YOU handle reviewer waits directly — but you never *block* on them.** Launch every configured reviewer's waiter in ONE message, all backgrounded, each redirecting to its own log. They run concurrently; a completion notification wakes you per reviewer. No sub-agents are involved and there is no execution mode to pick.
+**As coordinator, YOU handle reviewer waits directly — but you never *block* on them.** Launch every configured reviewer's waiter in ONE message, each redirecting to its own log, per `fx-dev/skills/dev/references/background-waits.md`. They run concurrently; a completion notification wakes you per reviewer.
 
 Waiters exist for Copilot and CodeRabbit only, and those are the only two this workflow requests. Should some other automated reviewer the repo has configured post threads anyway, they still gate the merge and you settle them by hand (`fx-dev/skills/dev/references/scope-contract.md` § Injecting the brief into reviews) — a clean `fx-dev:resolve-pr-feedback` report does not cover them.
 
@@ -331,8 +343,6 @@ Bash: mkdir -p .claude/team/waits && bash <skill>/dev/scripts/wait-for-ci-checks
 # On each notification: read the log, branch on its STATUS= line, classify
 # findings in the ledger, THEN invoke that reviewer's resolver skill.
 ```
-
-**Never run a waiter in the foreground.** The Bash tool caps a foreground `timeout` at 600 000 ms, below every waiter's 900 s budget — a foreground call is killed mid-poll with no STATUS and no exit code, and the caller then re-runs it blindly. **Never background one without the redirect**: the cycle is driven by what the script prints.
 
 Apply `fx-dev:dev` Steps 2.5 and 6.1 as the canonical reviewer policy: maintain the coordinator-owned finding ledger, fix every **blocking** finding and only those (`fx-dev/skills/dev/references/scope-contract.md` § Blocking — the class name does not decide it; a reviewer-originated Material or Substantive entry blocks whatever its class), and rerun only reviewer state invalidated by the latest delta. Do not restart every reviewer after each push or seek zero suggestions. Settle all required threads within the bounded remediation rounds. **If CodeRabbit reports a rate/quota limit or cooldown at any point, stop its loop immediately, report once, record `skipped (rate-limited)`, and continue without waiting or escalating — after fixing the blocking findings it already delivered and settling every thread it already posted.** The degradation waives only the passes that never ran (`fx-dev:coderabbit-review`, rate-limit rule), never work already on the PR. Copilot must still satisfy its mandatory review gate.
 
@@ -429,7 +439,7 @@ When all tasks are complete and all PRs merged:
 - **NEVER merge without completing the MERGE GATE CHECKLIST** — every gate must pass, every time, for every PR
 - **NEVER merge without Copilot review** — always invoke `fx-dev:copilot-review` yourself. No exceptions.
 - **ALWAYS attempt CodeRabbit when configured, but never block on its rate limits** — invoke `fx-dev:coderabbit-review`; resolve feedback already received, then record `skipped (rate-limited)` and continue immediately if throttled.
-- **NEVER `sleep`, poll, or block on a wait.** Every reviewer and CI wait is a BACKGROUNDED script that notifies you on exit; reconcile on that notification. A foreground waiter is killed at the Bash tool's 600 s cap anyway. The only timer permitted in a run is one long `ScheduleWakeup` silence backstop.
+- **NEVER `sleep`, poll, or block on a wait** (`fx-dev/skills/dev/references/background-waits.md`). Reconcile on the completion notification. The only timer permitted in a run is one long `ScheduleWakeup` silence backstop.
 - **NEVER mark a teammate's PR as ready** until you've inspected it
 - **ALWAYS handle Copilot review and CI monitoring directly** — these are coordinator responsibilities, not sub-agent responsibilities. Launch their waiters backgrounded, all in one message.
 - **ALWAYS pass a deliberate `model` size to every `Agent` call** — see the size table in STEP 3. Coders are `large`; never downgrade them.
