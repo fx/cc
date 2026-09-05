@@ -56,6 +56,14 @@ Then, your primary responsibilities:
 
    **Never hard-wrap the description.** GitHub reflows markdown to the reader's viewport, so hard-wrapping prose at 80 columns (or any column) only renders ragged and re-wraps badly on narrow screens. Write each paragraph as ONE long line and let it soft-wrap. Commit messages are the opposite — those stay wrapped at ~72 columns, because git renders them as plain text. See the `fx-dev:github` skill's "Never hard-wrap anything GitHub renders as markdown".
 
+   **Verify it, do not merely intend it.** After creating or editing the PR, run the body check and read the result:
+
+   ```bash
+   gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
+   ```
+
+   Prose paragraphs are long single lines, so the top lengths should far exceed 100. Prose clustering at 70-90 characters means the body went out hard-wrapped — rewrite it as one line per paragraph and `gh pr edit <N> --body-file <file>`.
+
 5. **Check Compliance**: Verify adherence to:
    - Project-specific guidelines from AGENTS.md files
    - Global coding standards and architectural decisions

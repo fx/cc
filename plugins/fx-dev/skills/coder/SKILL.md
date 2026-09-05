@@ -38,12 +38,13 @@ Pay attention to the user's framing. "Just fix the login bug real quick" is a bu
 3. Plan logical PR structure if needed
 4. Implement with tests
 5. Run the local Codex review (`fx-dev:codex-review`) and converge it **before** opening the PR — it is the only local reviewer, and it is mandatory here exactly as in `fx-dev:dev` Step 4.5
-6. Create PR
-7. Settle the automated reviewers with `fx-dev:copilot-review` and, where its GitHub App is installed, `fx-dev:coderabbit-review`
-8. Address feedback
-9. Launch a sub-agent with the pr-check-monitor skill for failing checks
-10. Continue until ready for user review
-11. Update issue to Done
+6. Load `fx-dev:github` and follow its **PR conventions block** — conventional-commit title, no `#<number>` or wave/phase wording in the title, and a body that is **never hard-wrapped** (one long line per paragraph; only the commit message wraps, at ~72 columns). Verify both before and after creating.
+7. Create PR
+8. Settle the automated reviewers with `fx-dev:copilot-review` and, where its GitHub App is installed, `fx-dev:coderabbit-review`
+9. Address feedback
+10. Launch a sub-agent with the pr-check-monitor skill for failing checks
+11. Continue until ready for user review
+12. Update issue to Done
 
 **When invoked from SDLC:** Stop after step 4 (implement with tests + commit). Do NOT create PRs or launch reviewers — the SDLC owns steps 5 onward.
 

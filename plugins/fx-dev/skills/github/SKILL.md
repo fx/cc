@@ -192,6 +192,29 @@ Standardizes every skill on two canonical instruction files, with a pointer for 
 
 This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`. Tables, lists, and fenced code blocks keep their own line structure; the rule is about prose paragraphs.
 
+### PR conventions block (paste verbatim into any agent prompt that may open or edit a PR)
+
+A convention that lives only in this skill does not survive delegation: an agent spawned with an ad-hoc prompt never loads it. Whenever you delegate PR creation — a `/team` coder opening its own PR, a fix agent editing a body, any sub-agent running `gh pr create` — paste this block into that agent's prompt verbatim. Quote it by name ("the github skill's PR conventions block") when referring to it from another skill.
+
+```markdown
+### PR conventions (mandatory)
+- TITLE: a conventional-commit subject matching `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` — lowercase after the colon, imperative, no trailing period.
+- TITLE: no `#<number>` unless it references a real existing PR/issue, and no wave/phase/step/batch or change-doc number. Squash-merge bakes the title into the default branch, where `#N` auto-links permanently.
+- BODY: **never hard-wrapped.** GitHub reflows markdown to the reader's viewport, so write each paragraph as ONE long line and let it soft-wrap. Lists, tables and fenced code blocks keep their own line structure. This applies however the body is authored — heredoc, `--body-file`, or `gh api -F body=@file`.
+- COMMIT MESSAGE: the opposite — wrap the body at ~72 columns, because git renders it as plain text. The rule follows the renderer, not the content.
+- Verify before AND after creating: the title against the regex, and the body against the longest-prose-line check.
+```
+
+Mechanical body check — run it after creating or editing any PR body:
+
+```bash
+gh pr view <N> --json body -q .body \
+  | awk '!/^(\s*([-*+]|[0-9]+\.)\s|\s*\||\s*```|#)/ && length > 200 {n++} END {exit 0} '
+# Prose paragraphs should be LONG single lines. If most prose lines cluster at 70-90
+# characters, the body is hard-wrapped — rewrite it and `gh pr edit <N> --body-file`.
+gh pr view <N> --json body -q .body | awk '{print length}' | sort -rn | head -3
+```
+
 **Use Conventional Formats:**
 - **Commit messages**: Follow conventional commit format (`feat:`, `fix:`, `refactor:`, `docs:`, etc.)
 - **PR titles**: MUST use conventional commit format — `type(scope): description` (e.g., `feat: add user authentication`, `fix(api): handle null token`). **BLOCKING**: on squash-merge the PR title becomes the commit subject, so a plain prose title (no `type:` prefix) permanently pollutes a conventional-commit history. **Canonical check** — every PR title, no matter who creates it (pr-preparer, the `/dev` workflow, or a `/team` coordinator running `gh pr create` directly), MUST match this regex; verify before creating AND before merging:
