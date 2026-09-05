@@ -1,17 +1,32 @@
 # Background waits
 
-**The canonical rules for waiting on anything slow** — a reviewer, a CI run, a
-teammate, any long-running tool. Every skill in this catalog that waits names this
-file rather than restating it (`fx-dev/skills/review/SKILL.md` § The two canonical
-sources applies the same define-once rule to review definitions).
+**The canonical rules for waiting on an EXTERNAL completion** — a reviewer, a CI
+run, a teammate agent, or any long-running one-shot tool that finishes on its own
+schedule and tells you so. Every skill in this catalog that waits on one of those
+names this file rather than restating it (`fx-dev/skills/review/SKILL.md` § The two
+canonical sources applies the same define-once rule to review definitions).
 
-A skill that waits still documents its **own** invocation — which script, which
+Such a skill still documents its **own** invocation — which script, which
 arguments, which log path, and how to branch on the result. What it must not
 restate is anything below.
 
+### What this does NOT govern
+
+**A bounded readiness or teardown wait inside a single command is not one of these,
+and this file does not forbid it.** A loop that polls a service it just started —
+`for i in $(seq 1 30); do curl -sf "$URL" && break; sleep 2; done` — is part of one
+command whose next step depends on it, is bounded by its own iteration count, and
+has no completion notification to wait for. Backgrounding it would break the
+sequence it exists to order. `fx-dev:verify-web-change` uses exactly these for
+Docker, Compose health, and dev-server readiness, and they are correct.
+
+The line is **who signals completion**: if something outside your command will tell
+you it finished, background it and wait for that signal. If nothing will, and you
+are gating the next line of your own script, a bounded in-command poll is right.
+
 ## The rule
 
-**⛔ Never `sleep`, poll, or block waiting for anything.** Every wait runs
+**⛔ Never `sleep`, poll, or block waiting on one of these.** Every such wait runs
 **backgrounded** (`run_in_background: true`), redirecting stdout and stderr to a
 log file, and the completion notification wakes you. That notification is the only
 scheduling mechanism there is.
