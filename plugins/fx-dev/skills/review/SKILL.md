@@ -195,10 +195,11 @@ the only thing that stops the false positive recurring, and its commit is expect
   from a review** — they scaffold `docs/`, `AGENTS.md` and `.coderabbit.yaml`, and
   burying one review rule in a large unrelated diff is not an acceptable change.
   Mention that `/fx-dev:setup` completes the layout later.
-- **Keep the top section under 4000 characters.** Copilot reads roughly the first
-  4000 when reviewing, and every reviewer takes the file verbatim, where length
-  dilutes the rules that matter. Put the most important rules in a
-  `## PR Review Checklist (CRITICAL)` section at the top.
+- **Keep it focused, and put the highest-value rules first.** Every reviewer takes
+  the file verbatim, and length dilutes the rules that matter. Put the most
+  important rules in a `## PR Review Checklist (CRITICAL)` section at the top.
+  There is no character budget to optimise against: never shave accurate wording,
+  or drop a rule that earns its place, to reach a count.
 - `REVIEW.md` is pasted verbatim: `@` imports are not expanded and referenced
   files are not read. Write the rule out in full; never write `See docs/…`.
 

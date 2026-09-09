@@ -59,9 +59,10 @@ Every reviewer that consumes `REVIEW.md` takes it as-is: `@` imports are **not**
 expanded and referenced files are **not** read. Write the rules directly in the
 file — never `See docs/conventions.md`.
 
-Keep it focused. A long `REVIEW.md` dilutes the rules that matter. Put the
-highest-value rules first: Copilot weights roughly the first 4000 characters
-most heavily.
+Keep it focused. A long `REVIEW.md` dilutes the rules that matter, so put the
+highest-value rules first. That is an editorial judgement, not a size budget:
+never shave accurate wording, or drop a rule that earns its place, to reach a
+character count.
 
 ## Where feedback resolvers write
 

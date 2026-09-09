@@ -22,9 +22,9 @@ From `fx-dev:review`, and not restated here:
   spends one of those per sibling.
 - **Step 5** — what each disposition means, and that a coordinator's disposition
   is authoritative.
-- **Step 6** — the `REVIEW.md` entry for an incorrect finding, its 4000-character
-  constraint, and the rule against writing `.github/copilot-instructions.md` or
-  running `fx-dev:setup` from here.
+- **Step 6** — the `REVIEW.md` entry for an incorrect finding, and the rule
+  against writing `.github/copilot-instructions.md` or running `fx-dev:setup`
+  from here.
 
 ## ⛔ PR Comments Prohibition (CRITICAL)
 
