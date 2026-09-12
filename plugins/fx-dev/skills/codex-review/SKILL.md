@@ -151,11 +151,16 @@ and a review has no business rewriting them.
 No output for several minutes means stalled, not slow, and it will never recover.
 Do not wait it out:
 
-```bash
-# 1. Confirm: near-0% CPU with no output is the signature.
-ps -o pid,etime,stat,pcpu,wchan:20 -p "$(pgrep -f 'codex review' | head -1)"
+**Confirm it from the log, per
+`fx-dev/skills/dev/references/background-waits.md` § When a wait seems hung.** That
+section owns this check and is the only place it is written down — the two answer
+the same question and must not diverge again. A process check belongs nowhere in
+this diagnosis: one stood here, self-matched, and spun for 13 minutes after the
+reviewed process had already finished (`background-waits.md` § Never invent your
+own wait).
 
-# 2. Find its last action — the newest rollout records every step.
+```bash
+# Find its last action — the newest rollout records every step.
 ls -t ~/.codex/sessions/*/*/*/rollout-*.jsonl | head -1
 ```
 
