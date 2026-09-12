@@ -151,11 +151,16 @@ and a review has no business rewriting them.
 No output for several minutes means stalled, not slow, and it will never recover.
 Do not wait it out:
 
-```bash
-# 1. Confirm: near-0% CPU with no output is the signature.
-ps -o pid,etime,stat,pcpu,wchan:20 -p "$(pgrep -f 'codex review' | head -1)"
+**Confirm it from the log, per
+`fx-dev/skills/dev/references/background-waits.md` § When a wait seems hung.** That
+section owns this check and is the only place it is written down — the two answer
+the same question and must not diverge again. A process check belongs nowhere in
+this diagnosis: one stood here, self-matched, and spun for 13 minutes after the
+reviewed process had already finished (`background-waits.md` § Never invent your
+own wait).
 
-# 2. Find its last action — the newest rollout records every step.
+```bash
+# Find its last action — the newest rollout records every step.
 ls -t ~/.codex/sessions/*/*/*/rollout-*.jsonl | head -1
 ```
 
@@ -191,6 +196,23 @@ review (highest-risk first) to stdout. It never modifies your working tree.
 including the self-matching `pgrep -f` loop that has deadlocked a run for 49
 minutes. Codex is a worse case than most: a review of a real branch takes many
 minutes and `codex` buffers, so the log stays empty until it finishes.
+
+### Read the `STATUS=` line
+
+The script's last stdout line is always `STATUS=<state>`. Branch on that line, not
+on prose, not on how much output the log holds, and never on how fast the launch
+returned — **a log with no `STATUS=` tail is a running or dead run, never a finished
+one.**
+
+| STATUS | Exit | What to do |
+|---|---|---|
+| `COMPLETED` | codex's own, whatever it is — the script passes it through unchanged and asserts nothing about any particular value, so 126, 127 and 137 are as reachable as 0/1/2 — **or 128+N if a signal killed the runner after the outcome was recorded** (see the ERROR row for the narrow gap just before that recording, which still reports ERROR) | The review ran to completion. **Read the findings on stdout** and triage them per `fx-dev:review`. A `CODEX_EXIT=<n>` line accompanies it; report that number rather than `$?`, and do not read a verdict into it — a non-zero `codex` exit does not tell you whether the reviewer failed or merely had opinions, only the findings do. |
+| `DRY_RUN` | 0 | `CODEX_REVIEW_DRY_RUN=1` was set, so no review ran. Confirm the resolved MCP flag set, then launch the real pass. Never record it as a completed review. |
+| `ERROR` | 3 (documented setup failures), 4 (the runner aborted internally), or 128+N (a signal killed it **before the outcome is recorded** — SIGTERM gives 143; recording is a separate statement immediately after the pipeline returns, so a signal in that single-assignment gap reports ERROR for a review that had, in fact, already finished — known, and not closable in bash, since trap dispatch happens between commands) | The review never started, or it died mid-flight. Fix what the log names and re-run. **Not a clean pass** — there is no review to converge. |
+
+The ERROR exit code is deliberately not a fixed set — branch on `STATUS=`, which is emitted on every one of those paths, and treat the number as diagnosis only. A signalled runner still prints a sentinel but keeps the signal's own 128+N status, because an `exit` inside an EXIT trap cannot override one; the script's header says why that is left alone. It also terminates `codex` and confirms it is gone before writing that line — `codex` outlives a signalled runner and still holds the log's file descriptor, so without that step it appends review prose *after* the sentinel and a run that finished reads as one that never did. `SIGKILL` is the exception that proves the contract — no trap runs, so there is no `STATUS=` tail, which is the "running or dead" case above.
+
+**The exit code and the `STATUS=` line answer different questions**: the exit code says how the *runner* died, `STATUS=` says whether the *review* finished. A signal that arrives after the review completed — while the runner is still writing the `tee` warning, the `CODEX_EXIT=` line and the sentinel itself — gives `STATUS=COMPLETED` at exit 143, because the findings are already in the log. Read them; do not re-run. `143` plus `STATUS=COMPLETED` is a well-formed outcome, not a contradiction, and it is the one case where the exit code is not codex's own — which is why you report `CODEX_EXIT=`. The one exception is the recording statement itself: a signal landing there still reports `STATUS=ERROR` for a review that had, in fact, finished — see the `ERROR` row above.
 
 The script has **no timeout**: Codex is one-shot and its runtime is its own. It
 exits 3 on a usage error (missing or empty scope prompt, `codex` not on PATH) —
