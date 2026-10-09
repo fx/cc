@@ -5,7 +5,7 @@ description: "Explicit-use only — invoke when the user explicitly names this s
 
 # Resolve Codecov Feedback
 
-Process Codecov coverage reports on pull requests, identify uncovered lines introduced by the PR, and delegate test creation via the coder skill to close coverage gaps.
+Process Codecov coverage reports on pull requests, identify uncovered lines introduced by the PR, and delegate test creation to Implementer sub-agents (`fx-dev:dev`, Implementer role) to close coverage gaps.
 
 ## WHEN TO USE THIS SKILL
 
@@ -119,13 +119,13 @@ Build a list of files and line ranges that need test coverage:
 - Use `WebFetch` on the `target_url` from the commit status to get detailed coverage data
 - Extract file-level and line-level coverage information
 
-### 5. Delegate Test Creation via Coder Skill
+### 5. Delegate Test Creation to an Implementer
 
-For each file with uncovered lines, launch a sub-agent with the coder skill:
+For each file with uncovered lines, launch an Implementer sub-agent (`fx-dev:dev`, Implementer role):
 
 ```
 Agent tool:
-  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+  prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role, then:
 
            Add tests to improve coverage for PR #[PR_NUMBER].
 
@@ -153,7 +153,7 @@ Agent tool:
 
 ### 6. Verify Coverage Improvement
 
-After the coder sub-agent pushes new tests:
+After the implementer sub-agent pushes new tests:
 
 1. Wait for CI to re-run (tests must pass)
 2. Wait for Codecov to post an updated report
@@ -198,7 +198,7 @@ If the codecov[bot] PR comment shows **0 missing lines** and patch coverage is 1
 
 ### Untestable Code
 
-Some code is intentionally hard to test (error handlers, edge cases, platform-specific code). If the coder sub-agent cannot reasonably test certain lines:
+Some code is intentionally hard to test (error handlers, edge cases, platform-specific code). If the implementer sub-agent cannot reasonably test certain lines:
 - Document which lines are intentionally uncovered and why
 - Report to user for manual decision
 - Do NOT add meaningless tests just to hit a number
@@ -207,6 +207,6 @@ Some code is intentionally hard to test (error handlers, edge cases, platform-sp
 
 1. All Codecov report data collected and analyzed
 2. Uncovered lines identified from PR changes
-3. Tests delegated via coder skill and pushed
+3. Tests delegated to an Implementer sub-agent and pushed
 4. Coverage improvement verified (or gaps reported)
 5. Summary output provided

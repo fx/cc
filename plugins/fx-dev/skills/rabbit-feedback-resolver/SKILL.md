@@ -183,9 +183,9 @@ standalone run.
 | Category | Indicator | Action |
 |----------|-----------|--------|
 | **Nitpick/Trivial** | Carries `_🧹 Nitpick_` or `_🔵 Trivial_` **and reaches filter 3 and fails it** — in scope, violating no rule, and immaterial. An out-of-scope one exits at filter 1 and is **Deferred**, not this row | Reply with the materiality reasoning and resolve, no edit |
-| **Actionable with AI Prompt** | Has `🤖 Prompt for AI Agents` **and is blocking** per `fx-dev/skills/dev/references/scope-contract.md` § Blocking | Verify the premise, then extract the prompt and delegate to coder |
+| **Actionable with AI Prompt** | Has `🤖 Prompt for AI Agents` **and is blocking** per `fx-dev/skills/dev/references/scope-contract.md` § Blocking | Verify the premise, then extract the prompt and delegate to an Implementer sub-agent (`fx-dev:dev`, Implementer role) |
 | **Actionable with Committable** | Has `📝 Committable suggestion` **and is blocking** per the same section | Verify the suggestion against the code, then apply. Never apply on sight |
-| **General Feedback** | No special sections | Triage first; delegate to coder only if **blocking**, otherwise reply and resolve with no edit |
+| **General Feedback** | No special sections | Triage first; delegate to an Implementer sub-agent only if **blocking**, otherwise reply and resolve with no edit |
 | **Deferred** | Valid but out of scope for this PR | Reply citing the exclusion, resolve. **No edit and no commit** — return the follow-up to the coordinator |
 | **Outdated** | Refers to code that no longer exists | Reply with the explanation, resolve. No edit |
 | **Incorrect** | Misreads a deliberate project convention | Reply with the explanation, resolve, record the convention in `REVIEW.md` |
@@ -221,7 +221,7 @@ mechanics worth spelling out.
    which is a reply *plus*, where a deliberate convention was misread, the
    `REVIEW.md` entry (`fx-dev:review` Step 6). Replying and resolving without that
    entry loses the only thing that stops the finding coming back
-3. Pass the extracted instructions to the coder sub-agent **verbatim**
+3. Pass the extracted instructions to the Implementer sub-agent (`fx-dev:dev`, Implementer role) **verbatim**
 4. Resolve the thread once the fix is implemented
 
 Example extraction:

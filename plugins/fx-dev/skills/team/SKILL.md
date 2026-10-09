@@ -13,13 +13,67 @@ duvet# The `fx-dev:team` coordinator MUST NOT implement a task's code itself and
 
 Spawn a coordinated sub-agent team to implement a spec or multi-task feature. The main session (you) acts strictly as coordinator — no code, no commits, only delegation and quality control.
 
+**`team` is a wrapper around `fx-dev:dev`, and it is mostly additive.** `dev` stops at the first PR boundary and never merges on its own; `team` does whatever needs doing, fully by itself, all the way through merge. It does not restate dev's lifecycle — it runs dev's steps for every change in scope.
+
+## ⛔ FIRST ACTION: Load `dev` (BLOCKING)
+
+**Before you write the Scope Brief or spawn anyone, load `fx-dev:dev`** (Skill tool: `skill='fx-dev:dev'`) in its Lifecycle role. It is the single source of truth for the development workflow; everything below assumes you have it.
+
+**Do not spawn any agent until `dev` is loaded in this session. If you cannot say what dev's Step 4.5 requires, you have not loaded it** — load it now.
+
+## What team adds to dev
+
+- **It runs every dev step automatically**, without pausing for confirmation, for every change in the approved scope — multiple changes, waves, and parallel implementers in their own worktrees (STEP 2.5).
+- **It merges each PR itself** once dev's Step 8.1 merge gates and this skill's MANDATORY MERGE GATE CHECKLIST pass. That merge replaces dev's Step 8.4 hand-off: team never stops at a PR boundary while approved work remains.
+- **It keeps going until everything in scope is merged**, then shuts down (STEP 4).
+
+Everything else — the Scope Brief, the Codex pre-PR review, reviewer and CI waits, the merge gates, the test-plan rules — is dev's and applies unchanged. What follows in this skill is only what is team-specific: worktrees, waves, parallelism, the wait ledger, autonomous merge, change-doc Status flips across multi-PR changes, and shutdown.
+
+## ⛔ Two dev rules restated here, because they did not survive by reference
+
+Observed: a team lead skipped loading `dev`, so it never saw dev's implementer spawn template or its pre-PR Codex step. It hand-wrote implementer prompts with no skill load and opened PRs that no Codex review had seen. A rule that lives only in a skill you did not load does not reach your teammates, so these two are restated here and gated at merge:
+
+1. **Every implementer spawn loads dev in its Implementer role.** Use this template — the prompt begins with the skill load, and carries a handle, a size, and the Scope Brief:
+
+   ```
+   Agent tool:
+     name:  "impl-<change-or-task>"           # REQUIRED — see STEP 3
+     model: "opus"                            # size: large — never downgrade an implementer
+     subagent_type: "general-purpose"
+     mode: "bypassPermissions"
+     prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role, then:
+
+              [WORKTREE PREAMBLE FROM STEP 2.5.3 — when it runs alongside another implementer]
+
+              [PASTE THE STEP 0 SCOPE BRIEF VERBATIM HERE]
+
+              Your one job: implement [TASK] per [CHANGE DOC / SPEC PATH].
+              [PLAN / ACCEPTANCE CRITERIA]
+
+              - Stay inside the Scope Brief; if the job cannot be done within it,
+                deliver what is in scope, then stop and report
+              - Atomic conventional commits; no '#<number>' and no wave/phase
+                wording in any commit subject; never skip a test
+              - Report your commits and test results when done. Do NOT push,
+                run any reviewer (Codex included), open a PR, wait on CI, or
+                merge — the lead runs Codex on your branch, then pushes
+              - [THE CHANGE-DOC STATUS LINE FROM STEP 3 — final or non-final]
+              - Never sleep-poll a long-running tool or match its process by
+                pattern (dev references/background-waits.md)"
+     description: "Implement <task>"
+   ```
+
+2. **Every PR passes dev Step 4.5 before it is pushed or opened** — the local Codex review, converged, with the Scope Brief. **You, the lead, run it** — never an implementer, because review is never delegated (dev CRITICAL RULES). When an implementer reports done, run `fx-dev:codex-review` with the Scope Brief on its branch (from inside its worktree when it has one), record the findings in your ledger, hand blocking ones to an implementer as a fix list, and rerun per dev Step 4.5 until it converges. Only then push the branch and open the PR. A branch with no converged Codex pass does not get a PR.
+
+Both are merge gates (rows 7 and 8 of the MANDATORY MERGE GATE CHECKLIST).
+
 ## ⛔ Critical Architecture Rule: Coordinator Owns the SDLC
 
-**Sub-agents CANNOT spawn their own sub-agents.** If you tell a teammate to "run the full SDLC," it will try to do implementation inline (instead of delegating to a coder sub-agent), bloat its context window, and skip later steps like Copilot review. This has been observed in production.
+**Sub-agents CANNOT spawn their own sub-agents.** If you tell a teammate to "run the full SDLC," it will try to do implementation inline (instead of delegating to an implementer sub-agent), bloat its context window, and skip later steps like Copilot review. This has been observed in production.
 
 **Therefore: YOU (the coordinator) orchestrate each SDLC step per task.** You spawn focused, single-purpose agents for each step and handle cross-cutting concerns (Copilot review, CI, merge gates) directly.
 
-**Never tell an agent to "load the dev skill and follow all steps." Instead, give each agent ONE focused job.**
+**Never hand a teammate dev's Lifecycle role — the whole SDLC.** Implementers load `dev` in its **Implementer** role, through the template above, and get ONE focused job.
 
 ---
 
@@ -32,7 +86,7 @@ Spawn a coordinated sub-agent team to implement a spec or multi-task feature. Th
 Identify:
 - Total tasks and their dependencies
 - Which tasks can run in parallel vs. which must be sequential
-- A sensible task grouping (1 coder agent can own 1-3 related tasks)
+- A sensible task grouping (1 implementer agent can own 1-3 related tasks)
 
 ### Do NOT pause to confirm scope on clearly-scoped requests (BLOCKING)
 
@@ -40,7 +94,7 @@ When the user's invocation is unambiguous — e.g. `implement all pending change
 
 **You can still split execution into waves internally.** Wave-based execution (Wave 1: independent tasks in parallel; Wave 2: their dependents once unblocked; etc.) is the correct way to run a multi-PR team, and you should plan it that way. The rule is about **not stopping to ask the user** whether to do waves or which wave to start with — just plan the waves and execute them.
 
-> **⛔ Waves are an INTERNAL execution concept — they MUST NEVER leak into a PR title (BLOCKING).** A wave/phase/step number is not a PR or issue. A `#<number>` in a PR title (`#4`, `(#4)`, `#123`) looks like plain text in the title bar, but on squash-merge the title becomes the commit subject, where `#N` auto-links to PR/issue #N in the repo. Writing `(#4)` to mean "wave 4" wrongly cross-links the merged commit (and PR) to whatever PR/issue #4 is — this has happened repeatedly and is exactly what we are stamping out. When you spawn coders and when you author/verify titles before merge:
+> **⛔ Waves are an INTERNAL execution concept — they MUST NEVER leak into a PR title (BLOCKING).** A wave/phase/step number is not a PR or issue. A `#<number>` in a PR title (`#4`, `(#4)`, `#123`) looks like plain text in the title bar, but on squash-merge the title becomes the commit subject, where `#N` auto-links to PR/issue #N in the repo. Writing `(#4)` to mean "wave 4" wrongly cross-links the merged commit (and PR) to whatever PR/issue #4 is — this has happened repeatedly and is exactly what we are stamping out. When you spawn implementers and when you author/verify titles before merge:
 > - **No `#<number>` in any PR title** unless N is a real, existing PR/issue on the target repo that the PR actually references. Never pre-add a `(#N)` suffix — GitHub appends the real PR number at squash-merge time.
 > - **No "Wave N", "Phase N", "Step N", batch/iteration labels, or change-doc numbers in titles.** They belong in the PR body only.
 > - **Gate-check this before merge:** if a PR title contains a stray `#N` or wave/phase wording, rename it with `gh pr edit <N> --title "..."` before merging. A squash merge bakes the title into `main`'s history — a wrong cross-link there is permanent. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule".
@@ -66,7 +120,7 @@ Before spawning anything, write down the **Scope Brief**. It is what every teamm
 - **Known-and-accepted:** <deliberate states a reviewer would otherwise flag>
 ```
 
-**Every coder prompt, every verify prompt, and every reviewer invocation MUST include this brief verbatim.** A reviewer that does not know what was asked for reports the work the team deliberately did not do, and the coordinator pays for it in filtering time on every PR.
+**Every implementer prompt, every verify prompt, and every reviewer invocation MUST include this brief verbatim.** A reviewer that does not know what was asked for reports the work the team deliberately did not do, and the coordinator pays for it in filtering time on every PR.
 
 ### The sprawl STOP rule for autonomous runs
 
@@ -98,7 +152,7 @@ This rule and the "do NOT pause to confirm scope" rule above are the same rule s
 - **One team per session, no nested teams:** you cannot create additional named teams or share a team across sessions, and teammates **cannot spawn their own teammates** (only the lead manages the team). This is an official platform limitation, and it is exactly why the coordinator owns the whole SDLC (see the Critical Architecture Rule above).
 - The team config and shared task list live under a **session-derived** name — the literal string `session-` followed by the first 8 chars of the session ID, e.g. `session-1a2b3c4d` — at `~/.claude/teams/{session-team-name}/config.json` and `~/.claude/tasks/{session-team-name}/`. Claude Code writes and updates these automatically — never edit or pre-author them.
 
-Skip straight to STEP 2 and start defining tasks; the team springs into existence when you spawn the first coder in STEP 3.
+Skip straight to STEP 2 and start defining tasks; the team springs into existence when you spawn the first implementer in STEP 3.
 
 ## STEP 2: Create and Organize Tasks
 
@@ -109,13 +163,13 @@ Use `TaskCreate` for every task identified in Step 0. Set up dependencies with `
 - Acceptance criteria
 - Which spec task(s) it maps to (if from a spec)
 
-## STEP 2.5: Worktree Isolation Setup (MANDATORY for concurrent coders)
+## STEP 2.5: Worktree Isolation Setup (MANDATORY for concurrent implementers)
 
-**Why this step exists:** `isolation: "worktree"` on the Agent tool does nothing for teammates — a spawned teammate runs as a full independent session in the lead's working directory, not in an isolated worktree (see STEP 3). Without real isolation, every concurrent coder shares the coordinator's single working tree and git HEAD and they corrupt each other. The coordinator MUST pre-create one git worktree per coder that will run concurrently, each on its own branch, and pin each teammate to its worktree via a prompt preamble.
+**Why this step exists:** `isolation: "worktree"` on the Agent tool does nothing for teammates — a spawned teammate runs as a full independent session in the lead's working directory, not in an isolated worktree (see STEP 3). Without real isolation, every concurrent implementer shares the coordinator's single working tree and git HEAD and they corrupt each other. The coordinator MUST pre-create one git worktree per implementer that will run concurrently, each on its own branch, and pin each teammate to its worktree via a prompt preamble.
 
-**Skip this step only if you will run coders strictly one-at-a-time** (fully sequential, never two coders alive at once). In that single-writer case the shared tree is safe. The moment you want parallelism, this step is required.
+**Skip this step only if you will run implementers strictly one-at-a-time** (fully sequential, never two implementers alive at once). In that single-writer case the shared tree is safe. The moment you want parallelism, this step is required.
 
-### 2.5.1 Create one worktree per concurrent coder
+### 2.5.1 Create one worktree per concurrent implementer
 
 Worktrees **MUST** live under the repo's own `.claude/worktrees/` directory — this matches Claude Code's native worktree convention, keeps them inside the (writable) repo, and survives a read-only parent filesystem. **NEVER** put them in `/tmp`, `$HOME`, or a sibling path outside the repo.
 
@@ -123,12 +177,12 @@ Worktrees **MUST** live under the repo's own `.claude/worktrees/` directory — 
 cd <REPO_ROOT>
 git fetch origin --quiet
 mkdir -p .claude/worktrees
-# one per coder — name the worktree after the task/change, branch off origin/main
+# one per implementer — name the worktree after the task/change, branch off origin/main
 git worktree add .claude/worktrees/<slug> -b <branch> origin/main
 # e.g. git worktree add .claude/worktrees/0004 -b refactor/0004-unified-config-service origin/main
 ```
 
-**Ensure `.claude/worktrees/` is ignored** before creating any (most projects already ignore `.claude/`, but verify — this one may not). A nested worktree dir otherwise shows up as untracked in the main repo and can get swept into a coder's `git add`. Use the repo-local, **untracked** `.git/info/exclude` so this scaffolding never dirties the coordinator's working tree or risks landing in a feature PR — do NOT append to the tracked `.gitignore`:
+**Ensure `.claude/worktrees/` is ignored** before creating any (most projects already ignore `.claude/`, but verify — this one may not). A nested worktree dir otherwise shows up as untracked in the main repo and can get swept into an implementer's `git add`. Use the repo-local, **untracked** `.git/info/exclude` so this scaffolding never dirties the coordinator's working tree or risks landing in a feature PR — do NOT append to the tracked `.gitignore`:
 
 ```bash
 git check-ignore .claude/worktrees/x >/dev/null 2>&1 || \
@@ -144,15 +198,15 @@ mkdir -p .claude/team/waits
 ln -s <REPO_ROOT>/node_modules <REPO_ROOT>/.claude/worktrees/<slug>/node_modules
 ```
 
-### 2.5.2 Smoke-test isolation BEFORE spawning real coders
+### 2.5.2 Smoke-test isolation BEFORE spawning real implementers
 
 Spawn ONE cheap probe teammate (size **small** — see the size table in STEP 3) pinned to a worktree. Have it write a marker file in the worktree and confirm (a) the marker is **absent** in the main repo, (b) `pwd`/branch/toplevel are the worktree's, then clean up. Only proceed once it reports isolation OK. This catches a broken setup before any real code is written. (If the probe lands in the main repo, the workaround failed — stop and re-check paths.)
 
 A confirmed gotcha: **the teammate's shell cwd RESETS to the main repo root after EVERY bash command** ("Shell cwd was reset to …"). That is exactly why the preamble below forces an absolute `cd` on every command — relative paths silently resolve against the MAIN repo, not the worktree.
 
-### 2.5.3 Pin each coder to its worktree (prompt preamble)
+### 2.5.3 Pin each implementer to its worktree (prompt preamble)
 
-Every coder/verify/fix teammate that must operate in a worktree **MUST** have its spawn `prompt` START with this preamble (substitute the absolute path):
+Every implementer/verify/fix teammate that must operate in a worktree **MUST** have its spawn `prompt` START with this preamble (substitute the absolute path). An implementer's prompt opens with its one-line dev skill load (the template at the top of this skill), and the preamble follows immediately after it:
 
 ```
 CRITICAL — WORKTREE ISOLATION. Your working directory is <ABS_WORKTREE_PATH>.
@@ -162,7 +216,8 @@ The shell cwd resets to the main repo after every command, so:
 - Pass `path: <ABS_WORKTREE_PATH>` to EVERY Glob and Grep call.
 - Relative paths resolve to the MAIN repo, NOT your worktree — never rely on them.
 Your branch <branch> is already created and checked out in this worktree; do NOT
-create a new branch or run `git checkout`. Commit and push from inside the worktree.
+create a new branch or run `git checkout`. Commit (and push, only if this prompt says to)
+from inside the worktree.
 ```
 
 ### 2.5.4 Track the worktrees for cleanup
@@ -171,16 +226,16 @@ Remember each `(worktree path, branch, node_modules symlink)` triple you created
 
 ## STEP 3: Execute Tasks (Coordinator-Driven SDLC)
 
-**Load the dev skill** (`Skill tool: skill='fx-dev:dev'`) and read its SDLC steps. The dev skill is the single source of truth for the development workflow — do not duplicate its instructions here.
+You loaded `fx-dev:dev` as your first action (top of this skill). It is the single source of truth for the development workflow — do not duplicate its instructions here.
 
 For each task (or group of parallel tasks), walk through the dev skill's SDLC steps yourself. For each step, decide:
 
 1. **Can I handle this step directly?** (e.g., invoking a skill, running a `gh` command) → Do it yourself.
-2. **Does this step require writing/modifying code?** → Spawn a focused agent with a single-purpose prompt for just that step.
+2. **Does this step require writing/modifying code?** → Spawn a focused agent with a single-purpose prompt for just that step. Implementation and fix agents load `dev` in its Implementer role, through the template at the top of this skill.
 
 ### ⛔ ALL Agent spawns MUST pass `name` (BLOCKING)
 
-**Every single `Agent` tool call you make as the team coordinator — coder, verify, fix, anything — MUST pass `name`.** `name` is what makes a teammate addressable via `SendMessage` and visible in the team config's `members[]` array; omitting it produces an effectively anonymous worker you can't message or steer by name, defeating the point of `/team`.
+**Every single `Agent` tool call you make as the team coordinator — implementer, verify, fix, anything — MUST pass `name`.** `name` is what makes a teammate addressable via `SendMessage` and visible in the team config's `members[]` array; omitting it produces an effectively anonymous worker you can't message or steer by name, defeating the point of `/team`.
 
 **Do NOT pass `team_name`.** As of v2.1.178 the `team_name` input on the `Agent` tool is **accepted but ignored** (and the `team_name` field in hook payloads is deprecated). There is one implicit, session-scoped team; every `Agent` spawn joins it automatically. Passing `team_name` does nothing — drop it.
 
@@ -192,10 +247,10 @@ Agent tool:
   isolation: "worktree"                      # NO-OP for teammates — see STEP 2.5; pre-create real worktrees instead
   mode: "bypassPermissions"
   prompt: "..."
-  run_in_background: true                    # usually
+  run_in_background: true                    # usually — false in a headless session (see Waiting and reconciliation)
 ```
 
-The `name` should be specific and human-readable so it's useful in logs and `SendMessage` (e.g., `coder-0105A`, `verify-pr-371`, `fix-0106-types`). One-shot generic names like `agent1` are bad.
+The `name` should be specific and human-readable so it's useful in logs and `SendMessage` (e.g., `impl-0105A`, `verify-pr-371`, `fix-0106-types`). One-shot generic names like `agent1` are bad.
 
 **Self-check before EVERY Agent call:** "Did I pass `name`? Did I pick a `model` size?" If either is missing, fix the call before sending it. This rule is non-negotiable.
 
@@ -205,11 +260,11 @@ Choose by the **shape of the task**, not by how important it feels. Sizes are na
 
 | Size | `model` | Use for |
 |---|---|---|
-| **large** | `opus` | Coder agents doing implementation. Fix agents on an **undiagnosed** bug. Anything requiring design judgment. |
+| **large** | `opus` | Implementer agents doing implementation. Fix agents on an **undiagnosed** bug. Anything requiring design judgment. |
 | **medium** | `sonnet` | PR preparer. Browser verification. Fix agents handed an **exact, specified** patch. Mechanical work with a clear spec. |
 | **small** | `haiku` | The worktree isolation probe (STEP 2.5.2). Pure inspection or summarisation with no judgment call. |
 
-**Coders stay `large`. Do not "optimise" them downward.** Implementation is judgment-heavy, and a weaker coder that needs more iterations costs *more* than a stronger one that needs fewer — turn count, not per-turn price, is what dominates. A downgrade that adds two review rounds is a large net loss that looks like a saving.
+**Implementers stay `large`. Do not "optimise" them downward.** Implementation is judgment-heavy, and a weaker implementer that needs more iterations costs *more* than a stronger one that needs fewer — turn count, not per-turn price, is what dominates. A downgrade that adds two review rounds is a large net loss that looks like a saving.
 
 Two constraints worth knowing rather than rediscovering:
 
@@ -218,19 +273,19 @@ Two constraints worth knowing rather than rediscovering:
 
 ### Key orchestration principles
 
-**Implementation steps** (planning, coding, testing) → Spawn focused agents. For any coder that will run **concurrently** with another, give it an isolated worktree via STEP 2.5 and start its prompt with the worktree preamble — do NOT rely on `isolation: "worktree"` (it's a no-op for teammates; see the prohibition above). Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Do NOT tell it to follow the full SDLC. Always pass `name` (see above).
+**Implementation steps** (planning, coding, testing) → Spawn focused agents. For any implementer that will run **concurrently** with another, give it an isolated worktree via STEP 2.5 and start its prompt with the worktree preamble — do NOT rely on `isolation: "worktree"` (it's a no-op for teammates; see the prohibition above). Give each agent ONLY its specific job — the change doc path, spec path, plan, and acceptance criteria. Implementers get the template at the top of this skill (dev, Implementer role); planning and analysis agents load their own skills, as in dev Steps 2 and 3. Do NOT tell any agent to follow the full SDLC. Always pass `name` (see above).
 
-When you spawn the coder for the FINAL piece of a change, your prompt MUST include: "This is the final implementing PR for <change>. In the same commit, flip `**Status:** draft` → `**Status:** complete` in `docs/changes/<NNNN>-*.md` AND flip `status: draft` → `status: complete` for that change's entry in `docs/index.yml`. Sync `docs/index.md` if present." For every NON-final coder on the same change, your prompt MUST include: "Leave the change-doc `**Status:**` field and `docs/index.yml` entry untouched — the final PR flips them." This split prevents rebase-conflict storms across multi-PR changes and ensures the final PR carries the Status flip atomically.
+When you spawn the implementer for the FINAL piece of a change, your prompt MUST include: "This is the final implementing PR for <change>. In the same commit, flip `**Status:** draft` → `**Status:** complete` in `docs/changes/<NNNN>-*.md` AND flip `status: draft` → `status: complete` for that change's entry in `docs/index.yml`. Sync `docs/index.md` if present." For every NON-final implementer on the same change, your prompt MUST include: "Leave the change-doc `**Status:**` field and `docs/index.yml` entry untouched — the final PR flips them." This split prevents rebase-conflict storms across multi-PR changes and ensures the final PR carries the Status flip atomically.
 
-**⛔ Every spawn prompt that may open or edit a PR MUST carry the PR conventions block verbatim (BLOCKING).** Load `fx-dev:github` BEFORE you author your first spawn prompt, and paste its **"PR conventions block"** into the prompt of every agent that might run `gh pr create` or `gh pr edit` — coder, fix agent, PR preparer, anything. A convention that lives only in a skill nobody loads does not survive delegation: a spawned agent inherits your prompt, not your skills.
+**⛔ Every spawn prompt that may open or edit a PR MUST carry the PR conventions block verbatim (BLOCKING).** Load `fx-dev:github` BEFORE you author your first spawn prompt, and paste its **"PR conventions block"** into the prompt of every agent that might run `gh pr create` or `gh pr edit` — PR preparer, fix agent, anything. A convention that lives only in a skill nobody loads does not survive delegation: a spawned agent inherits your prompt, not your skills.
 
-This is not hypothetical. In an observed run, all three coders received the TITLE rule — because this skill restates it inline below and gates it at merge — and none received the BODY rule, which lives only in `fx-dev:github`. All three PRs shipped hard-wrapped bodies that render ragged on GitHub, while PRs prepared through `fx-dev:pr-preparer` in the same repo did not. Restating a rule here is what makes it propagate; anything you do not restate or gate, you will not get.
+This is not hypothetical. In an observed run, all three implementers received the TITLE rule — because this skill restates it inline below and gates it at merge — and none received the BODY rule, which lives only in `fx-dev:github`. All three PRs shipped hard-wrapped bodies that render ragged on GitHub, while PRs prepared through `fx-dev:pr-preparer` in the same repo did not. Restating a rule here is what makes it propagate; anything you do not restate or gate, you will not get.
 
-**PR creation** → Either do it yourself via `gh pr create`, spawn a focused PR preparer agent, or let a coder open its own PR. Load `fx-dev:github` skill first, and pass its PR conventions block into the prompt whenever you delegate. **⛔ Whoever creates the PR — you or an agent you spawned — the `--title` MUST be a conventional-commit subject — `type(scope): description` — matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (see the github skill's "Use Conventional Formats"). Do NOT write a prose title; running `gh pr create` directly does NOT exempt you from the conventional-commit rule. Verify the title against the regex before AND after creation.** (Prose titles the coordinator wrote directly — bypassing pr-preparer — are exactly how non-conventional titles have slipped onto `main`.)
+**PR creation** → Either do it yourself via `gh pr create`, or spawn a focused PR preparer agent (`fx-dev:pr-preparer`). Implementers do not open PRs (dev § Roles → Implementer). **Open a PR only for a branch whose dev Step 4.5 Codex review has converged** (the restated rule at the top of this skill). Load `fx-dev:github` skill first, and pass its PR conventions block into the prompt whenever you delegate. **⛔ Whoever creates the PR — you or an agent you spawned — the `--title` MUST be a conventional-commit subject — `type(scope): description` — matching the canonical regex `^(feat|fix|docs|refactor|chore|test|perf|build|ci|style|revert)(\(.+\))?!?: .+` (see the github skill's "Use Conventional Formats"). Do NOT write a prose title; running `gh pr create` directly does NOT exempt you from the conventional-commit rule. Verify the title against the regex before AND after creation.** (Prose titles the coordinator wrote directly — bypassing pr-preparer — are exactly how non-conventional titles have slipped onto `main`.)
 
 **Review and CI steps** (Copilot review, CodeRabbit review, CI monitoring, feedback resolution) → **Handle these DIRECTLY as the coordinator.** These are lightweight skill/command invocations that must not be delegated. **Pass the STEP 0 Scope Brief into every reviewer invocation that accepts one, and apply it when triaging every reviewer that does not** (Copilot and the CodeRabbit GitHub App accept nothing). A finding covered by the brief's out-of-scope list is recorded as deferred with the covering exclusion — never silently fixed, never silently dropped, and never a reason to widen a teammate's PR. Use each reviewer's waiter or read-only inspection first, classify and deduplicate findings under `fx-dev:dev` Step 2.5, then invoke feedback resolvers only for the classified disposition. Never let a resolver implement unclassified feedback or modify task trackers for deferred feedback.
 
-**⛔ Never block on a reviewer or CI wait** — see **Waiting and reconciliation** below, which holds this coordinator's wait policy. In particular, never run `gh pr checks --watch`.
+**⛔ Never block on a reviewer or CI wait** — see **Waiting and reconciliation** below, which holds this coordinator's wait policy, including its one exception for headless sessions. In particular, never run `gh pr checks --watch`.
 
 **Merge gates** → Always handle directly. See MANDATORY MERGE GATE CHECKLIST below.
 
@@ -238,16 +293,22 @@ This is not hypothetical. In an observed run, all three coders received the TITL
 
 ### Parallelization
 
-- Spawn multiple coder agents simultaneously for independent tasks — but ONLY after giving each its own **pre-created worktree** per STEP 2.5 (the `isolation: "worktree"` flag does NOT work for teammates). Each coder works in its own worktree on its own branch.
-- For dependent tasks, wait until the blocking task's PR is merged before spawning the next coder
+- Spawn multiple implementer agents simultaneously for independent tasks — but ONLY after giving each its own **pre-created worktree** per STEP 2.5 (the `isolation: "worktree"` flag does NOT work for teammates). Each implementer works in its own worktree on its own branch.
+- For dependent tasks, wait until the blocking task's PR is merged before spawning the next implementer
 - After merging, repeat for newly-unblocked tasks
-- If you skip STEP 2.5, you MUST run coders strictly one-at-a-time (never two alive at once) — concurrent coders without real worktrees share one working tree and clobber each other
+- If you skip STEP 2.5, you MUST run implementers strictly one-at-a-time (never two alive at once) — concurrent implementers without real worktrees share one working tree and clobber each other
 
 ### Waiting and reconciliation (NON-NEGOTIABLE)
 
 **⛔ You never `sleep`. You never poll. You never block.** The rule, its rationale, and the ways a hand-rolled wait fails are in `fx-dev/skills/dev/references/background-waits.md` — read it once and apply it to every wait below.
 
 **Everything you wait on is backgrounded and notifies you.** Reviewer waiters, CI waiters, and teammate agents all wake you on completion. That is your only scheduling mechanism.
+
+#### ⛔ Headless sessions: never end the turn with a wait outstanding
+
+All of the above assumes a host that can wake you. **If this session is headless** — your instructions say it is non-interactive, there is no user to reply mid-run, or ending your turn ends the process — nothing will: the notification arrives after the process is gone. Observed: a headless agent ended its turn to "be woken by the notification" and skipped every review and CI gate.
+
+In a headless session, **never end your turn while a teammate, reviewer, or CI wait is outstanding.** Run every waiter in the foreground with a budget inside the tool's timeout and relaunch it on `STATUS=PENDING`; spawn teammates as foreground calls (several in one message run concurrently) and wait for them to return; and carry the run through its last merge and STEP 4 shutdown before replying. The exact mechanics are `fx-dev/skills/dev/references/background-waits.md` § Headless sessions. `sleep` polling stays forbidden, and the silence backstop below cannot fire after the process exits, so do not rely on it.
 
 #### ⛔ `idle` is not `completed` — silence is never progress
 
@@ -259,7 +320,7 @@ Reading an `idle_notification` as "still working, it will wake me when it lands"
 - **On unexplained silence, call `ListAgents` before waiting any longer.** Any teammate showing `idle` that you believe is still working needs a message, not more patience.
 - **Suspect a stall whenever a teammate reports progress rather than a result** — check the artifact it says it is waiting on (log mtime, process, PR) yourself.
 
-**The no-polling rule binds every teammate you spawn, not just you** (`fx-dev/skills/dev/references/background-waits.md` § The rule binds delegates too). Carry it into every coder prompt that could wait on a long-running tool.
+**The no-polling rule binds every teammate you spawn, not just you** (`fx-dev/skills/dev/references/background-waits.md` § The rule binds delegates too). Carry it into every implementer prompt that could wait on a long-running tool.
 
 #### The ledger
 
@@ -318,12 +379,14 @@ duvet# A pull request MUST NOT be merged while any review thread on it from a co
 | 5b | **PR title is clean AND conventional** | Title (a) is a conventional-commit subject — run the canonical check from the `fx-dev:github` skill's "Use Conventional Formats" (a plain prose title with no `type:` prefix FAILS) — AND (b) has NO stray `#<number>` (only a real PR/issue ref) and NO wave/phase/step/change-doc number. Fix with `gh pr edit <N> --title "type(scope): …"` before merge — squash bakes the title into `main` | YES |
 | 5c | **PR body is NOT hard-wrapped** | Run the canonical **"Mechanical body check"** from the `fx-dev:github` skill — it exempts lists, tables and code blocks, judges only prose, and exits 1 printing `HARD-WRAPPED` when prose clusters in the 60-100 column band. Do NOT substitute a `sort -rn \| head` on line lengths: the longest lines are usually exempt ones, so it passes a body whose prose is entirely wrapped. Fix with `gh pr edit <N> --body-file <file>` and re-run before merging | YES |
 | 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
+| 7 | **Codex pre-PR review converged on this change** | Your own ledger shows that your dev Step 4.5 run — `fx-dev:codex-review` with the Scope Brief, run by you on this branch — converged before the branch was pushed and the PR opened, and any later fix delta was verified per dev Step 4.5. An implementer's claim to have run Codex does not count. No converged pass, no merge | YES |
+| 8 | **Every implementer spawn loaded dev in the Implementer role** | Every implementer and fix agent behind this PR was spawned with the template at the top of this skill: its prompt began `Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role`. A hand-written prompt without that load means its work skipped dev's rules — have it redone or re-verified first | YES |
 
 ### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
 
-> **Codex runs LOCALLY first — and it is the ONLY local reviewer.** Implementing sub-agents run local Codex via the `fx-dev:codex-review` skill during pre-PR self-review, passing the Scope Brief. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer it **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **There is no local CodeRabbit pass; the `cr` CLI is not used.** Gate 2b is the PR-level CodeRabbit review, which applies only when the GitHub App is configured — its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown.
+> **Codex runs LOCALLY first — and it is the ONLY local reviewer.** You, the lead, run local Codex via the `fx-dev:codex-review` skill on each implementer's branch before it is pushed (dev Step 4.5, restated at the top of this skill), passing the Scope Brief and recording findings in your ledger; implementers never run it, and Gate 7 checks your run converged. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer it **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **There is no local CodeRabbit pass; the `cr` CLI is not used.** Gate 2b is the PR-level CodeRabbit review, which applies only when the GitHub App is configured — its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown.
 
-**As coordinator, YOU handle reviewer waits directly — but you never *block* on them.** Launch every configured reviewer's waiter in ONE message, each redirecting to its own log, per `fx-dev/skills/dev/references/background-waits.md`. They run concurrently; a completion notification wakes you per reviewer.
+**As coordinator, YOU handle reviewer waits directly — but you never *block* on them**, except in a headless session, where you run them in the foreground and never end the turn with one outstanding (**Waiting and reconciliation** above). Launch every configured reviewer's waiter in ONE message, each redirecting to its own log, per `fx-dev/skills/dev/references/background-waits.md`. They run concurrently; a completion notification wakes you per reviewer.
 
 Waiters exist for Copilot and CodeRabbit only, and those are the only two this workflow requests. Should some other automated reviewer the repo has configured post threads anyway, they still gate the merge and you settle them by hand (`fx-dev/skills/dev/references/scope-contract.md` § Injecting the brief into reviews) — a clean `fx-dev:resolve-pr-feedback` report does not cover them.
 
@@ -385,7 +448,7 @@ There are two places to flip:
 
 ### Whose job is it?
 
-**The implementing coder is responsible for the flip** when they are shipping the final piece of a change. That coder's PR description should already note "this completes 0094"; they MUST also include the Status flip in the same PR.
+**The implementer is responsible for the flip** when they are shipping the final piece of a change. They MUST include the Status flip in their commits, so it lands in the same PR, and whoever opens that PR notes "this completes 0094" in its description.
 
 **The coordinator's job, BEFORE merging, is to verify the flip is in the PR's diff.** Add this to your PR-inspection step (Gate 3 — implementation matches spec). If the flip is missing:
 
@@ -398,7 +461,7 @@ This MUST NOT become a follow-up PR. Doing it post-merge means main spent some w
 
 ### Multi-PR changes
 
-When a change decomposes into multiple PRs (e.g., 0090 split into 0090A and 0090B): only the LAST implementing PR flips Status. Earlier sub-PRs MUST leave Status as `draft`. The coordinator decides which PR is "last" — typically the final task in the change doc's task list. Tell THAT coder explicitly in their spawn prompt to include the Status flip; tell every other coder to leave Status alone (multi-PR rebases against a flipped Status field create spurious conflicts).
+When a change decomposes into multiple PRs (e.g., 0090 split into 0090A and 0090B): only the LAST implementing PR flips Status. Earlier sub-PRs MUST leave Status as `draft`. The coordinator decides which PR is "last" — typically the final task in the change doc's task list. Tell THAT implementer explicitly in their spawn prompt to include the Status flip; tell every other implementer to leave Status alone (multi-PR rebases against a flipped Status field create spurious conflicts).
 
 If you mis-identified which PR was last and you've already merged a sub-PR with `Status: complete` flipped early, the doc is wrong on main until the remaining PRs land — open a tiny corrective PR flipping it back to `draft` until the real final PR lands.
 
@@ -428,11 +491,13 @@ When all tasks are complete and all PRs merged:
 
 ## Coordinator Rules (NON-NEGOTIABLE)
 
-- **ALWAYS pass `name` to EVERY `Agent` call** — coder, verify, fix, anything. `name` is what makes the teammate addressable via `SendMessage` and visible in `members[]`; omitting it produces an anonymous worker you can't steer by name. No exceptions.
+- **ALWAYS pass `name` to EVERY `Agent` call** — implementer, verify, fix, anything. `name` is what makes the teammate addressable via `SendMessage` and visible in `members[]`; omitting it produces an anonymous worker you can't steer by name. No exceptions.
 - **NEVER pass `team_name` and NEVER call `TeamCreate`/`TeamDelete`** — all three were removed/deprecated in v2.1.178. The team is implicit and session-scoped: it forms on the first `Agent` spawn and is cleaned up automatically on session exit. `team_name` on the `Agent` tool is accepted-but-ignored.
-- **NEVER rely on `isolation: "worktree"` for a teammate** — a teammate runs as a full session in the lead's working directory, so the flag is a no-op. For any coders that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run coders strictly one-at-a-time. Always tear the worktrees down in STEP 4.
-- **NEVER write code yourself** — all implementation goes through coder agents
-- **NEVER create branches or commits** — coder agents handle this
+- **NEVER rely on `isolation: "worktree"` for a teammate** — a teammate runs as a full session in the lead's working directory, so the flag is a no-op. For any implementers that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run implementers strictly one-at-a-time. Always tear the worktrees down in STEP 4.
+- **NEVER write code yourself** — all implementation goes through implementer agents
+- **ALWAYS spawn implementers and fix agents with the template at the top of this skill** — the prompt begins `Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role`, and carries a handle, a size, and the Scope Brief. Never hand-write an implementer prompt without that load
+- **NEVER push for review or open a PR before dev Step 4.5 (local Codex review) has converged on the branch** — and run that review yourself, never through an implementer
+- **NEVER create branches or commits** — implementer agents handle this
 - **NEVER delegate the full SDLC to a single agent** — agents cannot spawn sub-agents, so they will inline everything and skip later steps
 - **ALWAYS paste the `fx-dev:github` PR conventions block into every spawn prompt whose agent may open or edit a PR** — load that skill before authoring your first prompt. A spawned agent inherits your prompt, not your skills; a rule you do not restate is a rule that does not reach it.
 - **NEVER skip PR inspection** — every PR gets reviewed before marking ready
@@ -440,18 +505,19 @@ When all tasks are complete and all PRs merged:
 - **NEVER merge without Copilot review** — always invoke `fx-dev:copilot-review` yourself. No exceptions.
 - **ALWAYS attempt CodeRabbit when configured, but never block on its rate limits** — invoke `fx-dev:coderabbit-review`; resolve feedback already received, then record `skipped (rate-limited)` and continue immediately if throttled.
 - **NEVER `sleep`, poll, or block on a wait** (`fx-dev/skills/dev/references/background-waits.md`). Reconcile on the completion notification. The only timer permitted in a run is one long `ScheduleWakeup` silence backstop.
+- **In a headless session, NEVER end your turn while a teammate, reviewer, or CI wait is outstanding** — wait in the foreground (`fx-dev/skills/dev/references/background-waits.md` § Headless sessions) and run through the last merge and shutdown before replying.
 - **NEVER mark a teammate's PR as ready** until you've inspected it
-- **ALWAYS handle Copilot review and CI monitoring directly** — these are coordinator responsibilities, not sub-agent responsibilities. Launch their waiters backgrounded, all in one message.
-- **ALWAYS pass a deliberate `model` size to every `Agent` call** — see the size table in STEP 3. Coders are `large`; never downgrade them.
+- **ALWAYS handle Copilot review and CI monitoring directly** — these are coordinator responsibilities, not sub-agent responsibilities. Launch their waiters backgrounded, all in one message (in the foreground when headless).
+- **ALWAYS pass a deliberate `model` size to every `Agent` call** — see the size table in STEP 3. Implementers are `large`; never downgrade them.
 - **ALWAYS use `fx-dev:project-management`** to verify task tracking
 - **ALWAYS run the full merge gate checklist** even for "trivial" or "follow-up" PRs
 - **NEVER merge without browser verification** — spawn a verify agent if needed. CI alone does NOT catch runtime errors.
-- **NEVER merge the FINAL PR of a change doc with `Status: draft` still in the diff.** The flip to `complete` rides in that PR, in both `docs/changes/<NNNN>-*.md` and `docs/index.yml`. If the coder forgot, push a fix commit to their branch and wait for CI before merging. Do NOT defer to a follow-up PR. See PRE-MERGE: Change-Doc Status Flip above.
+- **NEVER merge the FINAL PR of a change doc with `Status: draft` still in the diff.** The flip to `complete` rides in that PR, in both `docs/changes/<NNNN>-*.md` and `docs/index.yml`. If the implementer forgot, push a fix commit to their branch and wait for CI before merging. Do NOT defer to a follow-up PR. See PRE-MERGE: Change-Doc Status Flip above.
 
 ## Handling Agent Issues
 
-If a coder agent reports problems:
+If an implementer agent reports problems:
 
 1. Read the error details from their message
-2. Spawn a new focused agent to fix the specific issue
+2. Spawn a new focused agent to fix the specific issue — dev in its Implementer role, through the template at the top of this skill
 3. If stuck after 2 retries, report to user and ask for guidance

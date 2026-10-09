@@ -194,7 +194,7 @@ This applies however the body is authored — heredoc, `--body-file`, or `gh api
 
 ### PR conventions block (paste verbatim into any agent prompt that may open or edit a PR)
 
-A convention that lives only in this skill does not survive delegation: an agent spawned with an ad-hoc prompt never loads it. Whenever you delegate PR creation — a `/team` coder opening its own PR, a fix agent editing a body, any sub-agent running `gh pr create` — paste this block into that agent's prompt verbatim. Quote it by name ("the github skill's PR conventions block") when referring to it from another skill.
+A convention that lives only in this skill does not survive delegation: an agent spawned with an ad-hoc prompt never loads it. Whenever you delegate PR creation — a `/team` PR preparer opening a PR, a fix agent editing a body, any sub-agent running `gh pr create` — paste this block into that agent's prompt verbatim. Quote it by name ("the github skill's PR conventions block") when referring to it from another skill.
 
 ~~~markdown
 ### PR conventions (mandatory)

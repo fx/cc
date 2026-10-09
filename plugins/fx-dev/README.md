@@ -8,13 +8,12 @@ The fx-dev plugin provides a comprehensive suite of skills for the entire softwa
 
 ## Components
 
-### Skills (26)
+### Skills (25)
 
 #### SDLC Skills
-- **dev** - Orchestrates the complete SDLC workflow including planning, implementation, review, and finalization
+- **dev** - Runs the SDLC for one change and stops at the first PR boundary (never merges on its own). Two roles: **Lifecycle** (the default — orchestrates planning, implementation, review, and finalization) and **Implementer** (a sub-agent given one focused job: implement, test, commit — no PRs, waits, or merges)
 - **fix** - Test-first bug fix workflow (write failing test, then fix, then verify)
-- **team** - Coordinated multi-sub-agent implementation for specs and multi-task features
-- **coder** - Implements features, bug fixes, and refactorings; when used within the SDLC workflow, PR creation is handled by **pr-preparer**
+- **team** - A wrapper around **dev**: runs its lifecycle for every change in an approved scope with parallel implementers, merges each PR itself once the merge gates pass, and keeps going until everything is merged
 - **requirements-analyzer** - Fetches and analyzes GitHub issues, extracts requirements, gathers context
 - **planner** - Creates comprehensive implementation plans based on requirements
 - **issue-updater** - Updates GitHub issues with planning information and status changes
@@ -83,7 +82,7 @@ Planning (planner skill)
     ↓
 Issue Update (issue-updater skill)
     ↓
-Implementation (coder skill)
+Implementation (dev skill, Implementer role)
     ↓
 Local Review (codex-review skill — the only local reviewer)
     ↓
@@ -103,16 +102,13 @@ Issue Done (issue-updater skill)
 ### SDLC Skills
 
 #### dev
-Orchestrates the complete software development lifecycle by coordinating sub-agents through planning, implementation, review, and finalization phases.
-
-#### coder
-Implements new features, fixes bugs, refactors code, or makes any code changes to the project.
+Orchestrates the complete software development lifecycle for one change by coordinating sub-agents through planning, implementation, review, and finalization phases, then hands the ready PR to you — it never merges on its own. A sub-agent spawned with one focused job loads it in its **Implementer** role instead: implement, run tests, commit, and report back, with no PR creation, reviewer or CI waits, or merging.
 
 #### fix
 Test-first bug fix workflow. Mandates writing a failing test that reproduces the bug before implementing any fix.
 
 #### team
-Spawns coordinated sub-agent teams for parallel implementation of specs or multi-task features. The main session acts as coordinator.
+A wrapper around **dev** that is mostly additive: it runs every dev step automatically for every change in the approved scope (waves, parallel implementers in worktrees), merges each PR itself once dev's merge gates pass, and keeps going until everything in scope is merged. The main session acts as coordinator.
 
 #### requirements-analyzer
 Fetches and analyzes GitHub issues, extracts requirements, gathers context from referenced URLs.
