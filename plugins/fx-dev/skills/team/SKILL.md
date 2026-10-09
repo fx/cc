@@ -54,19 +54,16 @@ Observed: a team lead skipped loading `dev`, so it never saw dev's implementer s
                 deliver what is in scope, then stop and report
               - Atomic conventional commits; no '#<number>' and no wave/phase
                 wording in any commit subject; never skip a test
-              - Then run dev Step 4.5 on your branch: the local Codex review
-                (fx-dev:codex-review, passing the Scope Brief) until it converges,
-                fixing blocking findings only. Report the reviewed SHA and every
-                finding with its classification
-              - Push the branch only once Codex has converged. Do NOT open a PR,
-                wait on reviewers or CI, or merge
+              - Report your commits and test results when done. Do NOT push,
+                run any reviewer (Codex included), open a PR, wait on CI, or
+                merge — the lead runs Codex on your branch, then pushes
               - [THE CHANGE-DOC STATUS LINE FROM STEP 3 — final or non-final]
               - Never sleep-poll a long-running tool or match its process by
                 pattern (dev references/background-waits.md)"
      description: "Implement <task>"
    ```
 
-2. **Every PR passes dev Step 4.5 before it is pushed or opened** — the local Codex review, converged, with the Scope Brief. A branch with no converged Codex pass does not get a PR.
+2. **Every PR passes dev Step 4.5 before it is pushed or opened** — the local Codex review, converged, with the Scope Brief. **You, the lead, run it** — never an implementer, because review is never delegated (dev CRITICAL RULES). When an implementer reports done, run `fx-dev:codex-review` with the Scope Brief on its branch (from inside its worktree when it has one), record the findings in your ledger, hand blocking ones to an implementer as a fix list, and rerun per dev Step 4.5 until it converges. Only then push the branch and open the PR. A branch with no converged Codex pass does not get a PR.
 
 Both are merge gates (rows 7 and 8 of the MANDATORY MERGE GATE CHECKLIST).
 
@@ -219,7 +216,8 @@ The shell cwd resets to the main repo after every command, so:
 - Pass `path: <ABS_WORKTREE_PATH>` to EVERY Glob and Grep call.
 - Relative paths resolve to the MAIN repo, NOT your worktree — never rely on them.
 Your branch <branch> is already created and checked out in this worktree; do NOT
-create a new branch or run `git checkout`. Commit and push from inside the worktree.
+create a new branch or run `git checkout`. Commit (and push, only if this prompt says to)
+from inside the worktree.
 ```
 
 ### 2.5.4 Track the worktrees for cleanup
@@ -381,12 +379,12 @@ duvet# A pull request MUST NOT be merged while any review thread on it from a co
 | 5b | **PR title is clean AND conventional** | Title (a) is a conventional-commit subject — run the canonical check from the `fx-dev:github` skill's "Use Conventional Formats" (a plain prose title with no `type:` prefix FAILS) — AND (b) has NO stray `#<number>` (only a real PR/issue ref) and NO wave/phase/step/change-doc number. Fix with `gh pr edit <N> --title "type(scope): …"` before merge — squash bakes the title into `main` | YES |
 | 5c | **PR body is NOT hard-wrapped** | Run the canonical **"Mechanical body check"** from the `fx-dev:github` skill — it exempts lists, tables and code blocks, judges only prose, and exits 1 printing `HARD-WRAPPED` when prose clusters in the 60-100 column band. Do NOT substitute a `sort -rn \| head` on line lengths: the longest lines are usually exempt ones, so it passes a body whose prose is entirely wrapped. Fix with `gh pr edit <N> --body-file <file>` and re-run before merging | YES |
 | 6 | **Browser verification completed** | Spawn a verify agent if needed (see below) | YES |
-| 7 | **Codex pre-PR review converged on this change** | The implementer's report (or your own run) shows dev Step 4.5 — `fx-dev:codex-review` with the Scope Brief — converged on the branch before the PR was opened, and any later fix delta was verified per dev Step 4.5. No converged pass, no merge | YES |
+| 7 | **Codex pre-PR review converged on this change** | Your own ledger shows that your dev Step 4.5 run — `fx-dev:codex-review` with the Scope Brief, run by you on this branch — converged before the branch was pushed and the PR opened, and any later fix delta was verified per dev Step 4.5. An implementer's claim to have run Codex does not count. No converged pass, no merge | YES |
 | 8 | **Every implementer spawn loaded dev in the Implementer role** | Every implementer and fix agent behind this PR was spawned with the template at the top of this skill: its prompt began `Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role`. A hand-written prompt without that load means its work skipped dev's rules — have it redone or re-verified first | YES |
 
 ### ⛔ Reviewer Gates (Gates 2 + 2b) — CRITICAL
 
-> **Codex runs LOCALLY first — and it is the ONLY local reviewer.** Implementing sub-agents run local Codex via the `fx-dev:codex-review` skill during pre-PR self-review (dev Step 4.5, assigned by the implementer template at the top of this skill), passing the Scope Brief, and Gate 7 checks it converged. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer it **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **There is no local CodeRabbit pass; the `cr` CLI is not used.** Gate 2b is the PR-level CodeRabbit review, which applies only when the GitHub App is configured — its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown.
+> **Codex runs LOCALLY first — and it is the ONLY local reviewer.** You, the lead, run local Codex via the `fx-dev:codex-review` skill on each implementer's branch before it is pushed (dev Step 4.5, restated at the top of this skill), passing the Scope Brief and recording findings in your ledger; implementers never run it, and Gate 7 checks your run converged. **Not `codex review --base main`** — that CLI rejects `--base` together with a prompt, so the promptless form cannot carry the brief and reports the work the change deliberately did not do. Prefer it **converged** (`fx-dev/skills/dev/references/scope-contract.md` § Convergence — no blocking finding left unresolved, not zero output). **There is no local CodeRabbit pass; the `cr` CLI is not used.** Gate 2b is the PR-level CodeRabbit review, which applies only when the GitHub App is configured — its waiter reports `STATUS=NOT_CONFIGURED` otherwise, which is terminal and expected for most repos. If CodeRabbit rate-limits, resolve findings already received, record `skipped (rate-limited)`, and continue; never wait for its cooldown.
 
 **As coordinator, YOU handle reviewer waits directly — but you never *block* on them**, except in a headless session, where you run them in the foreground and never end the turn with one outstanding (**Waiting and reconciliation** above). Launch every configured reviewer's waiter in ONE message, each redirecting to its own log, per `fx-dev/skills/dev/references/background-waits.md`. They run concurrently; a completion notification wakes you per reviewer.
 
@@ -498,7 +496,7 @@ When all tasks are complete and all PRs merged:
 - **NEVER rely on `isolation: "worktree"` for a teammate** — a teammate runs as a full session in the lead's working directory, so the flag is a no-op. For any implementers that run concurrently, pre-create real worktrees under `.claude/worktrees/` and pin each via the prompt preamble (STEP 2.5). If you don't, run implementers strictly one-at-a-time. Always tear the worktrees down in STEP 4.
 - **NEVER write code yourself** — all implementation goes through implementer agents
 - **ALWAYS spawn implementers and fix agents with the template at the top of this skill** — the prompt begins `Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role`, and carries a handle, a size, and the Scope Brief. Never hand-write an implementer prompt without that load
-- **NEVER push for review or open a PR before dev Step 4.5 (local Codex review) has converged on the branch**
+- **NEVER push for review or open a PR before dev Step 4.5 (local Codex review) has converged on the branch** — and run that review yourself, never through an implementer
 - **NEVER create branches or commits** — implementer agents handle this
 - **NEVER delegate the full SDLC to a single agent** — agents cannot spawn sub-agents, so they will inline everything and skip later steps
 - **ALWAYS paste the `fx-dev:github` PR conventions block into every spawn prompt whose agent may open or edit a PR** — load that skill before authoring your first prompt. A spawned agent inherits your prompt, not your skills; a rule you do not restate is a rule that does not reach it.
