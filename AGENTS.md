@@ -205,7 +205,7 @@ Do not write frontmatter descriptions that auto-trigger on generic task semantic
 
 A workflow's instructions apply only to the request that invoked it and end at its documented handoff. Later standalone requests do not inherit the old workflow's orchestration rules. In particular, a simple status query, branch synchronization, PR metadata change, or explicitly approved merge should be handled directly unless the user explicitly starts another workflow.
 
-Internal delegation remains valid: `/dev` may name `coder`, `planner`, and reviewer skills as part of its active lifecycle. That does not authorize those skills to load themselves for unrelated user requests.
+Internal delegation remains valid: `/dev` may name `planner`, reviewer skills, and itself in its Implementer role as part of its active lifecycle. That does not authorize those skills to load themselves for unrelated user requests.
 
 ## Development Workflow
 

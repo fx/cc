@@ -70,10 +70,9 @@ Default to `docs/tasks.md` and `docs/changes/` task lists.
 - **`Plan`** — Design implementation plans (built-in subagent type)
 
 ### Development Skills
-- **`fx-dev:coder`** — Implement features, fix bugs
 - **`fx-dev:planner`** — Create detailed implementation plans
 - **`fx-dev:pr-preparer`** — Prepare and create pull requests
-- **`fx-dev:dev`** — Orchestrate complete SDLC workflow
+- **`fx-dev:dev`** — Orchestrate the complete SDLC workflow (Lifecycle role), or implement one focused job — features, bug fixes — when a sub-agent is told to act in its Implementer role
 
 ## Workflows
 

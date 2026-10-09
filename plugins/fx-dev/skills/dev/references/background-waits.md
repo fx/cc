@@ -29,16 +29,19 @@ are gating the next line of your own script, a bounded in-command poll is right.
 **⛔ Never `sleep`, poll, or block waiting on one of these.** Every such wait runs
 **backgrounded** (`run_in_background: true`), redirecting stdout and stderr to a
 log file, and the completion notification wakes you. That notification is the only
-scheduling mechanism there is.
+scheduling mechanism there is — unless the session is headless, where nothing wakes
+you and § Headless sessions applies instead.
 
 ```bash
 mkdir -p .claude/team/waits && \
 bash <wait-script> <args> > .claude/team/waits/<name>.log 2>&1
 ```
 
-This works identically in every context — root session, `fx-dev:team`
-coordinator, or sub-agent — so there is nothing to select and no "can I spawn
-sub-agents?" branch. **Do not spawn sub-agents for waits; they buy nothing.**
+This works identically in every context that can be woken — root session,
+`fx-dev:team` coordinator, or sub-agent — so there is no "can I spawn
+sub-agents?" branch. **Do not spawn sub-agents for waits; they buy nothing.** The
+one thing to select is whether anything *can* wake you: a headless session cannot,
+and § Headless sessions replaces this rule for it.
 
 **Never background a wait without the redirect.** The caller reacts to what the
 script prints; without a log there is nothing to read on the wake.
@@ -86,6 +89,42 @@ finishes, so an early read teaches you nothing and costs a full context read eve
 time. For a coordinator this is the single most expensive thing you can do — every
 wake re-reads the largest context in the team, and it gets more expensive with
 every turn added.
+
+## Headless sessions: wait in the foreground
+
+Everything above assumes a host that wakes you when a backgrounded wait finishes.
+**A headless session has no such host.** Treat the session as headless when your
+instructions say it is non-interactive, when there is no user to reply mid-run, or
+when ending your turn ends the process. In that session the completion
+notification never arrives: the process is gone by then. Observed: a headless agent
+followed "end your turn and let the notification wake you", ended its turn, and
+so skipped every review and CI gate without a single error.
+
+**⛔ In a headless session, never end your turn while a teammate, reviewer, or CI
+wait is outstanding.** Instead:
+
+- **Run every waiter in the foreground**, still redirecting to its log, with a
+  budget that lands its `STATUS=` line inside the tool's timeout — pass the
+  script's `TIMEOUT_SECONDS` argument (for example `540`) and give the Bash call
+  the maximum `timeout` (600 000 ms). Read the log when the call returns and branch
+  on `STATUS=` as usual. On `STATUS=PENDING`, relaunch it the same way; that is a
+  bounded re-wait with a verdict at its tail, not a poll.
+- **A one-shot tool with no budget argument** (the Codex review) is still a wait
+  you must not walk away from. If the host can block on a backgrounded task until
+  it completes, launch it backgrounded as usual and block on that; that is waiting
+  for the completion signal, not polling. Otherwise run it in the foreground at the
+  maximum timeout. A call killed at the cap leaves no `STATUS=` tail — a dead run,
+  not a verdict: report it, never record it as a pass.
+- **Wait for teammates in the foreground.** Spawn them as foreground calls — several
+  in one message run concurrently and return together — rather than backgrounded
+  teammates whose completion notification nothing will deliver.
+- **Finish the whole workflow before replying**: `fx-dev:dev` through its Step 8.4
+  hand-off, `fx-dev:team` through its last merge and shutdown.
+
+**`sleep` loops and hand-rolled polls stay forbidden** — the bundled waiter
+scripts are the only waits, foreground or not. The "never block in the foreground;
+end your turn and let the notification wake you" rule above applies only to a host
+that can wake you.
 
 ## ⛔ Never invent your own wait
 

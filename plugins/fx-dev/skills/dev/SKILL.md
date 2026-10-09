@@ -15,9 +15,33 @@ This skill defines the **mandatory** workflow for one explicitly invoked `/dev` 
 - Incidental questions and operations are not new lifecycle stages. Handle status checks, branch synchronization, PR metadata edits, and an explicitly authorized merge directly when they require no substantive implementation judgment.
 - A user may explicitly narrow, waive, or stop a procedural pass. Mandatory correctness, security, privacy, and merge-gate requirements remain in force, but the skill must not argue that its own orchestration mechanics outrank a direct user instruction.
 
+## Roles
+
+This skill is loaded in one of two roles. Know which one you are in before doing anything else.
+
+### Lifecycle (default)
+
+You are in the Lifecycle role when the user explicitly invokes `/dev`, or when `fx-dev:team` runs it for one change. Run Steps 0–8 below for **one** change and **stop at the first PR boundary**: the PR is open, reviewed, CI is green, the Step 8.1 gates are verified, and it is handed to the user (Step 8.4). **`dev` never merges on its own** — a later "merge it" is a standalone user request (Step 8.4). The only workflow that merges autonomously is `fx-dev:team`, which replaces the Step 8.4 hand-off with its own merge.
+
+### Implementer
+
+You are in the Implementer role when a coordinator — this skill's own Lifecycle, `fx-dev:team`, or another active workflow — spawns you with a plan, a fix list, or a single focused job and tells you to act in the Implementer role. **A sub-agent spawned with a specific job and told to load `dev` is in the Implementer role unless its prompt explicitly says to run the Lifecycle.**
+
+Do exactly that job and nothing else:
+
+- **Implement, run the tests, and make atomic conventional commits** on the branch you were given. Include the tracking update the prompt names (a checked-off task, a change-doc Status flip), and nothing it does not name. Push only when the prompt says to.
+- **Do NOT** create or edit a PR, wait on reviewers or CI, merge, spawn further agents, or run Steps 0–8 yourself. Those belong to the coordinator. The one exception is a pre-PR Codex pass (Step 4.5) on your own branch when your prompt explicitly assigns it — run it exactly as Step 4.5 says and report each finding with its classification to the coordinator, which owns the ledger.
+- **Carry the Scope Brief.** It is binding: stay inside it and pass it verbatim into any reviewer your prompt assigns. If the prompt carries none, reconstruct one from the user's own words the prompt quotes before writing code (`references/scope-contract.md`). When the work turns out to need materially more than the brief implies, deliver everything unambiguously in scope, then **stop and report** to the coordinator per **Scope Discipline** below — never stop with nothing done, and never widen the change on your own.
+- **Standards:** follow every `AGENTS.md` rule; write the failing test first for a bug fix; match the surrounding code's style; follow security best practices. The **Test Policy** below binds you in full.
+- **Commit subjects: no `#<number>`, no waves/phases.** A commit subject auto-links `#N` to PR/issue #N, and it propagates into the PR title (GitHub pre-fills the title from a single commit's subject) and the squash-merge commit subject — so the PR-title rule applies here too: never put `#<number>` (`#4`, `(#4)`, `#123`) in a commit subject unless N is a real PR/issue ref on this repo, and never use a wave/phase/step/change-doc number there. See the `fx-dev:github` skill's "`#<number>` PR-Title Rule".
+- **Never `sleep`-poll a long-running tool or match its process by pattern** (`references/background-waits.md` § The rule binds delegates too).
+- **Report back** the commits you made, the test results, and anything you stopped on.
+
 ## CRITICAL RULES
 
-**Use the Agent tool for the substantive delegated roles owned by the active lifecycle: requirements analysis, planning, implementation, and independent review. Each such sub-agent loads the appropriate skill via the Skill tool. Do not spawn a sub-agent for a mechanical operation the coordinator can perform directly.**
+These rules are the Lifecycle coordinator's. An Implementer follows § Roles → Implementer, the Scope Discipline STOP rule, and the Test Policy below.
+
+**Use the Agent tool for the substantive delegated roles owned by the active lifecycle: requirements analysis, planning, implementation, and independent review. Each such sub-agent loads the appropriate skill via the Skill tool. Do not spawn a sub-agent for a mechanical operation the coordinator can perform directly.** Implementation sub-agents load **this** skill and act in its Implementer role: `Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role, then:`.
 
 ### How to Launch Sub-Agents with Skills
 
@@ -73,6 +97,8 @@ duvet# During an explicitly invoked `fx-dev:dev` lifecycle, the coordinator MUST
 - ✅ ALWAYS verify each lifecycle gate before proceeding, except where the user explicitly waives a procedural pass that is not a mandatory correctness, security, privacy, test, or merge gate
 - ✅ ALWAYS fix, replace, refactor, or remove tests - never skip them
 - ✅ ALWAYS carry the Scope Brief (Step 2.5) verbatim into every delegated lifecycle role and reviewer call
+- ✅ ALWAYS delegate implementation to a sub-agent in this skill's Implementer role — never hand a sub-agent the Lifecycle role
+- ⛔ In a **headless** session, NEVER end your turn while a reviewer, CI, or sub-agent wait is outstanding — wait in the foreground and finish through the Step 8.4 hand-off before replying (`references/background-waits.md` § Headless sessions)
 
 **FAILURE TO DELEGATE A SUBSTANTIVE LIFECYCLE ROLE = WORKFLOW FAILURE. Spawning a sub-agent for a mechanical coordinator operation is also a workflow failure.**
 
@@ -210,7 +236,7 @@ and every reviewer invocation in Steps 3, 4, 4.5, 6, and 8.** A reviewer without
 it reports the work you deliberately did not do, and every such finding costs a
 full review cycle to filter by hand.
 
-**Then freeze the implementation contract.** If the task is sourced from, names, or discovers a relevant `docs/changes/*.md` file, read it and the spec sections it links. Confirm implementation approval from the conversation or the change's recorded workflow state; if approval is unclear, STOP and ask the user. Record the contract path and approval evidence in the working brief. The change document, its linked specs, and all mandatory project rules form the implementation contract: the plan and coder prompt MUST map work to that contract and MUST NOT infer adjacent product or architecture work.
+**Then freeze the implementation contract.** If the task is sourced from, names, or discovers a relevant `docs/changes/*.md` file, read it and the spec sections it links. Confirm implementation approval from the conversation or the change's recorded workflow state; if approval is unclear, STOP and ask the user. Record the contract path and approval evidence in the working brief. The change document, its linked specs, and all mandatory project rules form the implementation contract: the plan and implementer prompt MUST map work to that contract and MUST NOT infer adjacent product or architecture work.
 
 The coordinator owns one in-memory finding ledger for the run; reviewer sub-agents return findings to the coordinator and MUST NOT mutate the ledger concurrently. Give every finding a stable fingerprint (`category + file + line/range + normalized claim`) and record its source, first-seen revision, classification, materiality tier, disposition, and verification evidence. Classification and materiality are independent fields — see Step 4.5 for how the tier is assigned. The tier is `n/a` for a contract blocker: filter 2 stops before the bar, so a rule violation is never ranked, and inventing a tier for one is the mistake that lets it be argued down. Classify each finding exactly once as:
 
@@ -264,11 +290,11 @@ Agent tool:
 
 ### STEP 4: Implementation
 
-**MANDATORY: Launch a sub-agent that loads the coder skill.**
+**MANDATORY: Launch a sub-agent that loads this skill in its Implementer role** (§ Roles).
 
 ```
 Agent tool:
-  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+  prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role, then:
 
            [PASTE THE STEP 2.5 SCOPE BRIEF VERBATIM HERE]
 
@@ -316,7 +342,7 @@ Skill tool: skill="fx-dev:codex-review", args="<Scope Brief>"
 
 **Codex is the ONLY local reviewer.** The reviewer roster for this SDLC is exactly Codex locally, then Copilot and — where its GitHub App is installed — CodeRabbit at the PR level (Step 6.1). There is no local CodeRabbit pass (the `cr` CLI is not used anywhere in this SDLC), and no Claude-side review pass: do not run `/code-review`, `/simplify`, or a general-purpose reviewing sub-agent as an SDLC gate. The user may still invoke those directly; they are not part of this lifecycle.
 
-The Codex CLI takes the scope as its review prompt, so this pass is the one where a missing brief is most expensive — it will confidently report every deliberate omission. If the `codex` CLI is unavailable or not authenticated, report it once and proceed without this pass. NEVER run `codex login`.
+The Codex CLI takes the scope as its review prompt, so this pass is the one where a missing brief is most expensive — it will confidently report every deliberate omission. If the `codex` CLI is unavailable or not authenticated, report it once and proceed without this pass. NEVER run `codex login`. In a **headless** session the Codex run is a wait like any other: do not end the turn while it is outstanding (`references/background-waits.md` § Headless sessions).
 
 #### Remediation and Delta Verification
 
@@ -528,10 +554,10 @@ gh pr edit [PR_NUMBER] --body "$UPDATED_BODY"
 #### 5.5.6 Handle Failures
 
 If any Test Plan items failed verification:
-1. Launch a sub-agent with the coder skill to fix:
+1. Launch an Implementer sub-agent to fix:
    ```
    Agent tool:
-     prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+     prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role, then:
 
               Fix these verification failures:
               [FAILURE DETAILS]
@@ -549,7 +575,7 @@ If any Test Plan items failed verification:
 
 **MANDATORY: Execute ALL sub-steps.**
 
-**There is no Claude-side self-review sub-step.** PR-level review is Copilot and CodeRabbit, exactly as Step 4.5 named the roster: do not spawn a reviewing sub-agent to read the PR first, and do not invoke a general-purpose reviewer skill here. Blocking findings from the two reviewers are fixed by their resolvers inside 6.1, not by a separate coder pass.
+**There is no Claude-side self-review sub-step.** PR-level review is Copilot and CodeRabbit, exactly as Step 4.5 named the roster: do not spawn a reviewing sub-agent to read the PR first, and do not invoke a general-purpose reviewer skill here. Blocking findings from the two reviewers are fixed by their resolvers inside 6.1, not by a separate implementer pass.
 
 #### 6.1 Automated Reviewer Wait (Copilot + CodeRabbit)
 
@@ -578,6 +604,8 @@ mkdir -p .claude/team/waits && \
 bash [SKILL_BASE_DIR]/skills/coderabbit-review/scripts/wait-for-coderabbit-review.sh [PR_NUMBER] \
      > .claude/team/waits/rabbit-[PR_NUMBER].log 2>&1
 ```
+
+> **⛔ Headless sessions wait in the foreground instead.** If this session is non-interactive — your instructions say so, there is no user to reply mid-run, or ending your turn ends the process — nothing will wake you after you end your turn, so a backgrounded waiter is a gate you will silently skip. **Never end the turn while any reviewer, CI, or sub-agent wait is outstanding.** Run each waiter in the foreground with a budget below the tool's timeout and relaunch it on `STATUS=PENDING`, exactly as `references/background-waits.md` § Headless sessions specifies, and carry the lifecycle through the Step 8.4 hand-off before you reply. `sleep` polling stays forbidden.
 
 ###### Then, per reviewer, on its notification
 
@@ -617,7 +645,7 @@ transition to manage in this workflow.
 
 #### 7.1 Wait for CI Checks to Start and Complete
 
-**⛔ Run the bundled CI check script in the BACKGROUND**, per `references/background-waits.md`, then read the log when the completion notification arrives:
+**⛔ Run the bundled CI check script in the BACKGROUND**, per `references/background-waits.md`, then read the log when the completion notification arrives. In a **headless** session, run it in the foreground instead and relaunch on `PENDING` (`references/background-waits.md` § Headless sessions) — never end the turn with CI outstanding:
 
 ```bash
 mkdir -p .claude/team/waits && \
@@ -649,7 +677,7 @@ Skill tool: skill="fx-dev:resolve-ci-failures"
 
 Pass the failure details from the script output to the skill. The skill will:
 1. Analyze failure logs and identify root causes
-2. Delegate fixes to a sub-agent with the coder skill
+2. Delegate fixes to a sub-agent in this skill's Implementer role
 3. Push the fixes
 
 **After the skill completes and fixes are pushed, GO BACK TO Step 7.1** — re-run the wait script to monitor the new check run. This creates a loop:
@@ -751,7 +779,7 @@ Once identified, update the doc to mark completed tasks:
 
 ```
 Agent tool:
-  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+  prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role, then:
 
            Update task tracking in [DOC_PATH]:
            - Read the doc and identify tasks completed by PR #[NUMBER]
@@ -799,6 +827,8 @@ duvet# A `fx-dev:dev` run MUST obtain explicit approval from the user before mer
 
 After this handoff, a later user message such as "merge it" is a standalone mechanical request, not a new `/dev` phase. Recheck the live gates and merge directly in the coordinator session. Do not re-invoke `/dev`, reload its internal skills, or spawn a merge sub-agent.
 
+This hand-off is where a `/dev` Lifecycle ends. When `fx-dev:team` runs this lifecycle for a change, team's own autonomous merge replaces this step (`fx-dev:team` § What team adds to dev); nothing in `/dev` itself merges.
+
 ---
 
 ## Workflow Variations
@@ -834,7 +864,7 @@ After this handoff, a later user message such as "merge it" is a standalone mech
 |-------|--------|
 | Sub-agent fails | Retry once with adjusted params, then STOP and report |
 | Git conflict | STOP, report to user, wait for resolution |
-| Tests fail | coder sub-agent fixes, rerun until pass |
+| Tests fail | Implementer sub-agent fixes, rerun until pass |
 | Auth fails | STOP, request `gh auth login` |
 
 ---
@@ -848,7 +878,7 @@ All sub-agents are launched via the Agent tool. Each loads its skill via the Ski
 | 2 | Requirements Analyzer | `fx-dev:requirements-analyzer` |
 | 3 | Planner | `fx-dev:planner` |
 | 3,8 | Issue Updater | `fx-dev:issue-updater` |
-| 4,8.2 | Coder | `fx-dev:coder` |
+| 4,5.5.6,8.2 | Implementer | `fx-dev:dev` (this skill, Implementer role) |
 | 4.5 | Pre-PR Self-Review | `fx-dev:codex-review` (local `codex`, the ONLY local reviewer) — initial pass complete, blocking findings resolved, latest affected delta verified |
 | 5 | PR Preparer | `fx-dev:pr-preparer` |
 | 5.5.2 | Browser Verification | `fx-dev:verify-web-change` |
@@ -872,7 +902,7 @@ Workflow complete when ALL true:
 - ✅ Feature branch created from main
 - ✅ Requirements documented
 - ✅ Plan created
-- ✅ Code implemented with atomic commits
+- ✅ Code implemented with atomic commits by an Implementer sub-agent (this skill, Implementer role)
 - ✅ Pre-PR Codex review completed (or permitted degradation documented), findings classified in the shared ledger, blocking findings resolved, and the latest affected delta verified within the stopping bounds
 - ✅ PR created with description (including links to related specs/changes and test plan)
 - ✅ ALL test plan items addressed: browser-verified, programmatically verified, or user-confirmed manual verification (NEVER silently skipped)

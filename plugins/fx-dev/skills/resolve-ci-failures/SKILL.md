@@ -5,7 +5,7 @@ description: "Explicit-use only — invoke when the user explicitly names this s
 
 # Resolve CI Failures
 
-Meta-skill that analyzes failing CI checks on a PR, fetches failure logs, categorizes failures, and delegates fixes via the coder skill.
+Meta-skill that analyzes failing CI checks on a PR, fetches failure logs, categorizes failures, and delegates fixes to Implementer sub-agents (`fx-dev:dev`, Implementer role).
 
 ## WHEN TO USE THIS SKILL
 
@@ -120,20 +120,20 @@ gh api repos/OWNER/REPO/actions/jobs/JOB_ID/logs
 
 | Category | Indicator | Action |
 |----------|-----------|--------|
-| **Test failure** | Test runner output, assertion errors, `FAIL` in test logs | Delegate to coder to fix test or code |
-| **Build error** | Compilation errors, missing deps, `tsc` errors, module not found | Delegate to coder to fix build |
-| **Lint/Format error** | ESLint, Prettier, stylelint, `--fix` suggestions | Delegate to coder to run formatter/fix lint |
-| **Security scan** | Vulnerability alerts, `npm audit`, Dependabot | Delegate to coder to update deps or fix |
+| **Test failure** | Test runner output, assertion errors, `FAIL` in test logs | Delegate to an implementer to fix test or code |
+| **Build error** | Compilation errors, missing deps, `tsc` errors, module not found | Delegate to an implementer to fix build |
+| **Lint/Format error** | ESLint, Prettier, stylelint, `--fix` suggestions | Delegate to an implementer to run formatter/fix lint |
+| **Security scan** | Vulnerability alerts, `npm audit`, Dependabot | Delegate to an implementer to update deps or fix |
 | **Flaky test** | Test passed locally, intermittent failure, no code change caused it | Note as flaky — may pass on re-run without changes |
 | **Infrastructure** | Runner errors, timeout, network failures, Docker pull errors | Report to user — not fixable by code changes |
 
 ### 5. Delegate Fixes
 
-For each fixable failure, launch a sub-agent with the coder skill:
+For each fixable failure, launch an Implementer sub-agent (`fx-dev:dev`, Implementer role):
 
 ```
 Agent tool:
-  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+  prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role, then:
 
            Fix the following CI failure on PR #[NUMBER]:
 
@@ -160,7 +160,7 @@ git status
 git push
 ```
 
-If the coder sub-agent already pushed, verify with:
+If the implementer sub-agent already pushed, verify with:
 
 ```bash
 git log --oneline -3
@@ -208,7 +208,7 @@ git push
 ## Success Criteria
 
 1. ✅ All fixable CI failures analyzed and root causes identified
-2. ✅ Fixes delegated via coder skill and committed
+2. ✅ Fixes delegated to Implementer sub-agents (`fx-dev:dev`, Implementer role) and committed
 3. ✅ Changes pushed to PR branch
 4. ✅ Summary table output with categories and actions
 5. ✅ Non-fixable failures (infrastructure/flaky) clearly reported to user
@@ -216,7 +216,7 @@ git push
 ## Error Handling
 
 - If no PR found: Ask user for PR number
-- If coder sub-agent fails to fix: Report the failure with full context including logs
+- If the implementer sub-agent fails to fix: Report the failure with full context including logs
 - If failure is infrastructure-related: Report to user, do not attempt fix
-- If check logs cannot be fetched: Use check name and conclusion to infer the issue, delegate to coder with available context
+- If check logs cannot be fetched: Use check name and conclusion to infer the issue, delegate to an implementer with available context
 - If `gh run view --log-failed` is too large: Fetch individual job logs instead

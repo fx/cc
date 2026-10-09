@@ -108,11 +108,11 @@ Follow all conventions documented there. Key rules:
 
 #### 2.3 Implement the changes
 
-Launch a sub-agent with the coder skill:
+Launch an Implementer sub-agent (`fx-dev:dev`, Implementer role):
 
 ```
 Agent tool:
-  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+  prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role, then:
 
            In the fx/ui repo at [UI_DIR], implement [DESCRIPTION].
 
@@ -180,11 +180,11 @@ Now that fx/ui has the upstreamed changes, update the consumer repo to:
 - Remove any CSS variables that are now provided by fx/ui's globals.css (if applicable)
 - Run tests and build again to confirm
 
-Launch a sub-agent with the coder skill:
+Launch an Implementer sub-agent (`fx-dev:dev`, Implementer role):
 
 ```
 Agent tool:
-  prompt: "Load the coder skill (Skill tool: skill='fx-dev:coder'), then:
+  prompt: "Load the dev skill (Skill tool: skill='fx-dev:dev') and act in its Implementer role, then:
 
            In [CONSUMER_ROOT], update the local component to use the
            new exports from @fx/ui (currently linked locally).
