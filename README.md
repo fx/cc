@@ -14,9 +14,13 @@ Claude Code plugins for development workflows, research, and productivity.
 Complete development workflow including SDLC, pull requests, and GitHub integration.
 
 **Components**:
-- 7 agents: sdlc, planner, requirements-analyzer, issue-updater, pr-preparer, pr-check-monitor, workflow-runner
-- 1 skill: copilot-feedback-resolver
-- 2 commands: /dev, /gitingest
+- 25 skills, invoked explicitly by name:
+  - Lifecycle: dev (attended SDLC), team (autonomous wrapper around dev), fix, workflow-runner
+  - Planning and docs: requirements-analyzer, planner, spec-writer, project-management, issue-updater, setup, upgrade
+  - Pull requests and CI: pr-preparer, pr-check-monitor, resolve-ci-failures, resolve-codecov-feedback, resolve-pr-feedback, github
+  - Reviewers: review, copilot-review, coderabbit-review, codex-review
+  - Feedback resolvers: copilot-feedback-resolver, rabbit-feedback-resolver
+  - Other: verify-web-change, upstream-contrib
 
 ### fx-research
 Research tools for finding and evaluating technologies and libraries.
